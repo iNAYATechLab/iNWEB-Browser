@@ -22,7 +22,7 @@ written in Kotlin.
 | Item | State |
 |---|---|
 | Development phase | **Phase 4 — Ad / Popup Protection: in progress** (adblock patch-series design complete; execution awaits B-001) |
-| Current step | 14 |
+| Current step | 15 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 115 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag) |
@@ -106,6 +106,7 @@ git-ignored here by design (ADR-004): the tree is always reproducible as
 | [`docs/BUILD-INFRASTRUCTURE.md`](docs/BUILD-INFRASTRUCTURE.md) | CI/CD design, build host specification, reproducibility |
 | [`docs/PHASE2-INTEGRATION-PLAN.md`](docs/PHASE2-INTEGRATION-PLAN.md) | Patch-by-patch plan binding `src/` into the Chromium Android build |
 | [`docs/PHASE4-ADBLOCK-DESIGN.md`](docs/PHASE4-ADBLOCK-DESIGN.md) | `adblock/` patch-series design — request interception, type mapping, verification |
+| [`docs/PHASE4-POPUP-PROTECTION-DESIGN.md`](docs/PHASE4-POPUP-PROTECTION-DESIGN.md) | `popup_protection/` patch-series design — popups, redirects, notifications, downloads |
 | [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md) | Security threat model (living document) |
 
 ## Development model

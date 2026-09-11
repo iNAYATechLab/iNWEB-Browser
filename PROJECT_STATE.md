@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 14 (Phase 4 in progress)
+> Last updated: **2026-09-12** — Step 15 (Phase 4 in progress)
 
 ```yaml
 project: iNWEB Browser
@@ -12,7 +12,7 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 4
 phase_title: Ad / Popup Protection
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 14
+step: 15
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
@@ -21,11 +21,11 @@ ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action m
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 4 / Step 15 — popup-protection patch-series design (§12):
-  popup blocking, unwanted redirects, abusive notifications/downloads —
-  the popup_protection/ area design document completing the Phase 4
-  design pair (alternative if directed: downloads surface polish or
-  cosmetic-filtering design).
+  Phase 4 / Step 16 — cosmetic-filtering patch-series design (§11):
+  isolated-world script injection + stylesheet hiding for ##-rules —
+  the third and final Phase 4 design, unlocking the cosmetic rule
+  half the parser already counts (alternative if directed: downloads
+  surface polish or Phase 5 performance design).
 ```
 
 ## Completed
@@ -243,9 +243,28 @@ next_action: >-
   - ADR-019 recorded; Phase 3 closed out as complete (all pure-JVM
     deliverables landed; enforcement remains B-001-gated)
 
+- [x] **Step 15 — Phase 4: popup-protection patch-series design (§12)** (2026-09-12)
+  - New `docs/PHASE4-POPUP-PROTECTION-DESIGN.md`: five protection
+    surfaces — (A) popup blocking at the window-creation consent point
+    (user-activation policy + the real call site for `$popup` engine
+    rules + blocked-popup chip with open-once/allowlist), (B) unwanted
+    redirects: subframe-initiated top-level navigation (tab-takeover)
+    guard via NavigationThrottle — user-driven same-tab redirects never
+    blocked, (C) abusive notifications: quiet prompts + autoblocking
+    with NO Safe-Browsing-class claim (no bundled remote service —
+    stated), (D) automatic-download confirmation + engine-backed host
+    checks, (E) deceptive-interaction guards explicitly deferred
+  - Single per-site allowlist reused across protections (one shields
+    list); components share the `0005` JNI engine service; the
+    Security Center model gains protection counters only when the real
+    wiring lands (§24)
+  - Planned registry entries 0008–0011 (added only when generated
+    against the real tree); 4-layer verification strategy
+  - ADR-020 recorded; Phase 4 design pair complete
+
 ## In progress
 
-- (none — awaiting continuation command for Step 15)
+- (none — awaiting continuation command for Step 16)
 
 ## Not started
 
@@ -314,6 +333,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-017 | 2026-09-12 | Home "shortcuts" are top sites computed from real raw history visits (`allVisits()` + `TopSites.compute()`), never pinned or fabricated; home sections with no data are hidden entirely | §38 shortcuts grounded in real usage data (§57); pinned/custom shortcuts deferred to Phase 11 customization |
 | ADR-018 | 2026-09-12 | Onboarding completion is a persisted `AppSettings` flag; the first-run engine choice writes the same real setting the settings screen uses; skip completes with the privacy default | Runs exactly once, no separate preference source; single source of truth for the engine setting (§10/§35) |
 | ADR-019 | 2026-09-12 | Ad blocking intercepts via `URLLoaderThrottle` with deferred background-thread `decide()` calls; allowlist/toggle logic lives only inside the engine (one decision path); main-frame navigations are not filtered in v1; engine snapshots swap atomically after refresh | Chosen integration point of shipped Chromium-derived browsers; no C++-side policy divergence; defers never block the UI thread; §57-honest deferred scopes (websocket, cosmetic, popup) |
+| ADR-020 | 2026-09-12 | Popup policy: user-activation-based blocking at the window-creation consent point with `$popup` engine consultation; one shared per-site allowlist across all protections; quiet-only notification prompts; no remote reputation claims (no bundled service); user-driven same-tab redirects never blocked | One shields list per site (no settings sprawl); §12 "where supported" satisfied honestly; web compatibility preserved |
 
 ## Build status
 
@@ -363,9 +383,10 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Phase 4 / Step 15 — popup-protection patch-series design (§12):**
-popup blocking, unwanted-redirect protection, and abusive
-notification/download warnings — the `popup_protection/` area design
-document, completing the Phase 4 design pair before any build
-infrastructure is provisioned. Alternative next step if directed:
-downloads surface polish or cosmetic-filtering design.
+**Phase 4 / Step 16 — cosmetic-filtering patch-series design (§11):**
+isolated-world script injection and stylesheet hiding for `##`-rules —
+the final Phase 4 design, giving the cosmetic half of the parser (already
+counted, never matched) its real integration: per-domain selector
+matching in Kotlin (tested in CI first), injection hooks, and the
+hide-vs-collapse behavior. Alternative next step if directed: downloads
+surface polish or Phase 5 performance design.
