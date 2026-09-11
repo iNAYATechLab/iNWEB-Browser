@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Omnibox -->
+    <string name="omnibox_hint">সার্চ করুন বা ঠিকানা লিখুন</string>
+    <string name="omnibox_security">সংযোগ নিরাপত্তা</string>
+    <string name="omnibox_reload">রিলোড করুন</string>
+    <string name="omnibox_stop">লোড থামান</string>
+
+    <!-- Navigation -->
+    <string name="action_back">পেছনে</string>
+    <string name="action_forward">সামনে</string>
+    <string name="action_home">হোম</string>
+    <string name="action_tabs">ট্যাব</string>
+    <string name="action_menu">মেনু</string>
+    <string name="tabs_count">%1$d টি ট্যাব খোলা</string>
+
+    <!-- Tab actions -->
+    <string name="action_new_tab">নতুন ট্যাব</string>
+    <string name="action_new_private_tab">নতুন প্রাইভেট ট্যাব</string>
+    <string name="action_close_tab">ট্যাব বন্ধ করুন</string>
+    <string name="private_tab_badge">প্রাইভেট</string>
+
+    <!-- Menu -->
+    <string name="action_bookmarks">বুকমার্ক</string>
+    <string name="action_history">হিস্টোরি</string>
+    <string name="action_downloads">ডাউনলোড</string>
+    <string name="action_share">শেয়ার</string>
+    <string name="action_find_in_page">পেজে খুঁজুন</string>
+    <string name="action_desktop_site">ডেস্কটপ সাইট</string>
+    <string name="action_settings">সেটিংস</string>
+
+    <!-- Home / new tab -->
+    <string name="home_search_prompt">নিরাপদে ওয়েব সার্চ করুন</string>
+    <string name="home_shortcuts">শর্টকাট</string>
+    <string name="home_recent_pages">সাম্প্রতিক পেজ</string>
+
+    <!-- Downloads -->
+    <string name="downloads_in_progress">%1$d টি ডাউনলোড চলছে</string>
+    <string name="download_state_paused">স্থগিত</string>
+    <string name="download_state_completed">সম্পন্ন</string>
+    <string name="download_state_failed">ব্যর্থ</string>
+    <string name="download_state_cancelled">বাতিল</string>
+
+    <!-- Settings -->
+    <string name="settings_search_engine">সার্চ ইঞ্জিন</string>
+    <string name="settings_theme">থিম</string>
+    <string name="theme_system">সিস্টেম ডিফল্ট</string>
+    <string name="theme_light">লাইট</string>
+    <string name="theme_dark">ডার্ক</string>
+    <string name="settings_homepage">হোমপেজ</string>
+    <string name="settings_about">পরিচিতি</string>
+
+    <!-- Engine integration (explicit, honest binding-point label) -->
+    <string name="engine_binding_point">এই বিল্ড কনফিগারেশনে Chromium কনটেন্ট সারফেস যুক্ত নেই। ইঞ্জিন অ্যাডাপ্টার Chromium বিল্ডের সাথে আসবে (ইন্টিগ্রেশন প্ল্যান দেখুন)।</string>
+</resources>

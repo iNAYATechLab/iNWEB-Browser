@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base theme: the Compose iNWEBTheme handles colors; this is the
+         minimal XML base required by the platform before Compose starts. -->
+    <style name="Theme.iNWEB" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

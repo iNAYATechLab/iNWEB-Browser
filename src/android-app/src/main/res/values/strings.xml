@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand -->
+    <string name="app_name" translatable="false">iNWEB Browser</string>
+
+    <!-- Omnibox -->
+    <string name="omnibox_hint">Search or enter address</string>
+    <string name="omnibox_security">Connection security</string>
+    <string name="omnibox_reload">Reload</string>
+    <string name="omnibox_stop">Stop loading</string>
+
+    <!-- Navigation -->
+    <string name="action_back">Back</string>
+    <string name="action_forward">Forward</string>
+    <string name="action_home">Home</string>
+    <string name="action_tabs">Tabs</string>
+    <string name="action_menu">Menu</string>
+    <string name="tabs_count">%1$d open tabs</string>
+
+    <!-- Tab actions -->
+    <string name="action_new_tab">New tab</string>
+    <string name="action_new_private_tab">New private tab</string>
+    <string name="action_close_tab">Close tab</string>
+    <string name="private_tab_badge">Private</string>
+
+    <!-- Menu -->
+    <string name="action_bookmarks">Bookmarks</string>
+    <string name="action_history">History</string>
+    <string name="action_downloads">Downloads</string>
+    <string name="action_share">Share</string>
+    <string name="action_find_in_page">Find in page</string>
+    <string name="action_desktop_site">Desktop site</string>
+    <string name="action_settings">Settings</string>
+
+    <!-- Home / new tab -->
+    <string name="home_search_prompt">Search the web privately</string>
+    <string name="home_shortcuts">Shortcuts</string>
+    <string name="home_recent_pages">Recent pages</string>
+
+    <!-- Downloads -->
+    <string name="downloads_in_progress">%1$d downloads in progress</string>
+    <string name="download_state_paused">Paused</string>
+    <string name="download_state_completed">Completed</string>
+    <string name="download_state_failed">Failed</string>
+    <string name="download_state_cancelled">Cancelled</string>
+
+    <!-- Settings -->
+    <string name="settings_search_engine">Search engine</string>
+    <string name="settings_theme">Theme</string>
+    <string name="theme_system">System default</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="settings_homepage">Homepage</string>
+    <string name="settings_about">About</string>
+
+    <!-- Engine integration (explicit, honest binding-point label) -->
+    <string name="engine_binding_point">Chromium content surface is not bound in this build configuration. The engine adapter ships with the Chromium build (see the integration plan).</string>
+</resources>

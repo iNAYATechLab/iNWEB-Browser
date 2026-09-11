@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.inweb.browser">
+
+    <!-- Least privilege (MASTER-SPEC §40): only what the browser shell needs. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:label="@string/app_name"
+        android:theme="@style/Theme.iNWEB"
+        android:allowBackup="false"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="false">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
