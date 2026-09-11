@@ -21,58 +21,68 @@ written in Kotlin.
 
 | Item | State |
 |---|---|
-| Development phase | **Phase 0 — Discovery & Feasibility: COMPLETE** |
-| Current step | 1 |
+| Development phase | **Phase 1 — Chromium Foundation: in progress** (authoring foundation complete) |
+| Current step | 2 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
+| Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — **implemented & unit-tested (21/21)** |
+| CI | **Live** on GitHub-hosted runners: unit tests + registry validation; weekly upstream baseline drift watch |
 | Build | **Not yet executed** — requires external build infrastructure (blocker B-001) |
-| Tests | **Not yet applicable** — Phase 0 intentionally produced no compilable code |
 | Open defects | None recorded |
 
 Machine-readable, always-current progress: [`PROJECT_STATE.md`](PROJECT_STATE.md)
 
 ## Repository layout
 
-Current (Phase 0):
-
 ```text
 inweb-browser/
 ├── README.md                        # This file
 ├── PROJECT_STATE.md                 # Machine-readable project state (§60)
 ├── .gitignore                       # Chromium tree / artifacts are never committed
-└── docs/
-    ├── MASTER-SPEC.md               # Governing master specification (verbatim)
-    ├── PHASE0-ENVIRONMENT-ASSESSMENT.md
-    ├── PHASE0-CHROMIUM-BASELINE.md
-    ├── ARCHITECTURE.md
-    ├── LICENSING.md
-    ├── BUILD-INFRASTRUCTURE.md
-    └── THREAT-MODEL.md
-```
-
-Planned (introduced in later phases, never containing the Chromium source itself):
-
-```text
+├── docs/
+│   ├── MASTER-SPEC.md               # Governing master specification (verbatim)
+│   ├── COMMUNICATION-PROTOCOL.md    # Step-completion format (user-amended)
+│   ├── PHASE0-ENVIRONMENT-ASSESSMENT.md
+│   ├── PHASE0-CHROMIUM-BASELINE.md
+│   ├── ARCHITECTURE.md
+│   ├── LICENSING.md
+│   ├── BUILD-INFRASTRUCTURE.md
+│   └── THREAT-MODEL.md
 ├── iNWEB_PATCHES/                   # Tracked patch series (§5)
-│   ├── MANIFEST.yaml                # Patch registry: order, metadata, rebase notes
-│   ├── privacy/  security/  adblock/  popup_protection/
-│   ├── extension/  performance/  ui/  offline/  settings/
-│   └── tests/                       # Per-patch validation tests
-├── src/                             # iNWEB Android application source (Kotlin, M3)
-├── scripts/                         # fetch / apply-patches / verify / build orchestration
-├── build/config/inweb/              # Committed GN args per channel
-├── ci/                              # Build container image (Dockerfile) and tooling
-└── .github/workflows/               # CI/CD pipeline definitions (§46)
+│   ├── MANIFEST.yaml                # Patch registry — the single patch authority
+│   ├── README.md                    # Rules, lifecycle, tooling usage
+│   └── privacy/ security/ adblock/ popup_protection/ extension/
+│       performance/ ui/ offline/ settings/ tests/
+├── scripts/
+│   ├── apply_patches.py             # Series convergence: apply / verify / hash (tested)
+│   ├── lint_manifest.py             # Registry validation (tested)
+│   ├── check_baseline.py            # Upstream Android-stable drift check (live)
+│   ├── fetch_chromium.sh            # BUILD HOST: pinned tag checkout (authored)
+│   ├── build_android.sh             # BUILD HOST: GN + ninja build (authored)
+│   └── bootstrap_env.sh             # Authoring-sandbox session bootstrap
+├── config/chromium/
+│   ├── BASELINE                     # Pinned Chromium tag
+│   ├── args-development.gn          # Draft GN args (validated at first build)
+│   └── args-release.gn
+├── ci/
+│   ├── Dockerfile                   # Chromium build container (authored)
+│   └── README.md
+├── tests/                           # Unit tests (run locally and in CI)
+└── .github/workflows/
+    ├── ci-authoring.yml             # LIVE: unit tests + registry validation
+    └── upstream-watch.yml           # LIVE: weekly baseline drift check
 ```
 
 The Chromium checkout (`chromium/`, ~100 GB) exists **only on build infrastructure** and is
-git-ignored here by design.
+git-ignored here by design (ADR-004): the tree is always reproducible as
+`pristine@tag + ordered patch series`.
 
 ## Documentation index
 
 | Document | Purpose |
 |---|---|
 | [`docs/MASTER-SPEC.md`](docs/MASTER-SPEC.md) | Governing master specification (single source of truth) |
+| [`docs/COMMUNICATION-PROTOCOL.md`](docs/COMMUNICATION-PROTOCOL.md) | Step-completion communication format (user-amended) |
 | [`docs/PHASE0-ENVIRONMENT-ASSESSMENT.md`](docs/PHASE0-ENVIRONMENT-ASSESSMENT.md) | Measured environment, Chromium build feasibility, blocker B-001 |
 | [`docs/PHASE0-CHROMIUM-BASELINE.md`](docs/PHASE0-CHROMIUM-BASELINE.md) | Baseline pin, fork strategy, rebase & patch policy |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System architecture and module map |
@@ -84,10 +94,13 @@ git-ignored here by design.
 
 1. **Authoring environment (this repository).** Specifications, architecture, the tracked
    patch series, iNWEB application source, tests, and CI definitions are authored and
-   reviewed here.
+   reviewed here. Lightweight validation (unit tests, registry lint, baseline watch) runs
+   live on GitHub-hosted runners.
 2. **Build environment (external, user-provisioned).** A self-hosted GitHub Actions runner
    or cloud VM that satisfies the upstream Chromium build requirements. The exact
-   specification is in `docs/BUILD-INFRASTRUCTURE.md`.
+   specification is in `docs/BUILD-INFRASTRUCTURE.md`. Until provisioned (B-001),
+   `fetch_chromium.sh` / `build_android.sh` / the Docker image are **authored but not yet
+   executed** — no build result is claimed.
 3. **Release engineering.** Channel-based releases (development → beta → stable) with
    semantic versioning starting at `1.0.0-alpha.1`.
 
