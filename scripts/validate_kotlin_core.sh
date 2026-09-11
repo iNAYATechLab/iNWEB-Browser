@@ -63,9 +63,12 @@ TEST_CLASSES=(
   com.inweb.browser.shell.TabStateTest
   com.inweb.browser.shell.TabsControllerTest
   com.inweb.browser.shell.SessionStoreTest
+  com.inweb.browser.shell.SessionManagerTest
   com.inweb.browser.shell.OmniboxParserTest
   com.inweb.browser.shell.SearchEngineTest
   com.inweb.browser.shell.DownloadRecordTest
+  com.inweb.browser.shell.DownloadsStoreTest
+  com.inweb.browser.shell.HistoryStoreTest
   com.inweb.browser.shell.SettingsTest
 )
 
