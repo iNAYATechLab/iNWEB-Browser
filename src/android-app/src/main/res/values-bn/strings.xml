@@ -36,6 +36,9 @@
 
     <!-- Downloads -->
     <string name="downloads_in_progress">%1$d টি ডাউনলোড চলছে</string>
+    <string name="downloads_empty">এখনো কোনো ডাউনলোড নেই</string>
+    <string name="download_state_queued">অপেক্ষমাণ</string>
+    <string name="download_state_running">ডাউনলোড হচ্ছে</string>
     <string name="download_state_paused">স্থগিত</string>
     <string name="download_state_completed">সম্পন্ন</string>
     <string name="download_state_failed">ব্যর্থ</string>

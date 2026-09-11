@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -14,16 +15,26 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import com.inweb.browser.BrowserViewModel
 import com.inweb.browser.R
+import com.inweb.browser.Screen
 import com.inweb.browser.shell.AppSettings
 
 /**
- * Root browser scaffold: omnibox on top, page content in the middle,
- * navigation bar at the bottom (MASTER-SPEC §37–§39).
+ * Root shell: switches between the browser scaffold and overlay surfaces
+ * (settings, downloads) — MASTER-SPEC §37–§39.
  */
 @Composable
 fun BrowserScreen(viewModel: BrowserViewModel = remember { BrowserViewModel() }) {
+    when (viewModel.screen) {
+        Screen.BROWSER -> BrowserScaffold(viewModel)
+        Screen.SETTINGS -> SettingsScreen(viewModel)
+        Screen.DOWNLOADS -> DownloadsScreen(viewModel)
+    }
+}
+
+@Composable
+private fun BrowserScaffold(viewModel: BrowserViewModel) {
     val tab = viewModel.selectedTab
-    androidx.compose.material3.Scaffold(
+    Scaffold(
         topBar = { OmniboxBar(viewModel) },
         bottomBar = { BrowserBottomBar(viewModel) },
     ) { padding ->

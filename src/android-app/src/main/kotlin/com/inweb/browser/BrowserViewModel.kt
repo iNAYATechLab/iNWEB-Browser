@@ -5,14 +5,28 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.inweb.browser.shell.AppSettings
 import com.inweb.browser.shell.BrowserEngine
+import com.inweb.browser.shell.DownloadRecord
+import com.inweb.browser.shell.InMemoryDownloadsStore
+import com.inweb.browser.shell.InMemoryHistoryStore
+import com.inweb.browser.shell.InMemorySettingsStore
+import com.inweb.browser.shell.InMemorySessionPersistence
 import com.inweb.browser.shell.OmniboxInput
 import com.inweb.browser.shell.OmniboxParser
+import com.inweb.browser.shell.PrivacyFilterHistory
+import com.inweb.browser.shell.SessionManager
+import com.inweb.browser.shell.SessionPersistence
+import com.inweb.browser.shell.SettingsStore
 import com.inweb.browser.shell.TabState
+import com.inweb.browser.shell.ThemeMode
 import com.inweb.browser.shell.TabsController
+
+/** Overlay screens of the shell. */
+enum class Screen { BROWSER, SETTINGS, DOWNLOADS }
 
 /**
  * Browser-shell view model: binds the pure-JVM core (TabsController,
- * OmniboxParser, AppSettings) to the UI.
+ * OmniboxParser, AppSettings, SessionManager, HistoryStore, DownloadsStore)
+ * to the UI.
  *
  * The engine port is a binding point: the Chromium adapter provides the real
  * implementation via the ui/ patch area. Until that adapter ships, browsing
@@ -20,36 +34,58 @@ import com.inweb.browser.shell.TabsController
  */
 class BrowserViewModel(
     private val engine: BrowserEngine = DevelopmentEngineBinding,
-    private val initialSettings: AppSettings = AppSettings(),
+    private val settingsStore: SettingsStore = InMemorySettingsStore(),
+    private val sessionPersistence: SessionPersistence = InMemorySessionPersistence(),
 ) {
 
-    var settings by mutableStateOf(initialSettings)
+    var settings by mutableStateOf(AppSettings())
         private set
 
     var selectedTab by mutableStateOf<TabState?>(null)
         private set
 
+    var screen by mutableStateOf(Screen.BROWSER)
+        private set
+
+    var downloads by mutableStateOf<List<DownloadRecord>>(emptyList())
+        private set
+
     val tabIds: List<String> get() = controller.tabIds
 
     private val controller = TabsController()
+    private val sessionManager = SessionManager(sessionPersistence)
+    private val downloadsStore = InMemoryDownloadsStore()
+    private val history = PrivacyFilterHistory(InMemoryHistoryStore())
 
     init {
-        openTab()
+        settings = settingsStore.load()
+        // Crash-safe session restore (§51); corrupted/missing snapshots
+        // fall back to a fresh session.
+        sessionManager.restore(controller)
+        if (controller.tabCount == 0) openTab() else refresh()
     }
 
     /** Submits omnibox input: URL navigation or search, per core parser rules. */
     fun submitOmniboxInput(rawInput: String) {
         val tab = controller.selectedTab ?: controller.openTab()
         when (val parsed = OmniboxParser.parse(rawInput, settings.searchEngine)) {
-            is OmniboxInput.Url -> {
-                controller.updateTab(tab.navigate(parsed.url))
-                engine.loadUrl(tab.id, parsed.url)
-            }
-            is OmniboxInput.Search -> {
-                controller.updateTab(tab.navigate(parsed.searchUrl))
-                engine.loadUrl(tab.id, parsed.searchUrl)
-            }
+            is OmniboxInput.Url -> navigate(tab, parsed.url)
+            is OmniboxInput.Search -> navigate(tab, parsed.searchUrl)
         }
+    }
+
+    private fun navigate(tab: TabState, url: String) {
+        controller.updateTab(tab.navigate(url))
+        // History: private tabs are excluded by the history policy (§13/§14).
+        // The engine adapter refines recording to page-load events
+        // (docs/PHASE2-INTEGRATION-PLAN.md).
+        history.recordVisit(
+            url = url,
+            title = url,
+            visitedAtMillis = System.currentTimeMillis(),
+            isPrivate = tab.isPrivate,
+        )
+        engine.loadUrl(tab.id, url)
         refresh()
     }
 
@@ -76,9 +112,7 @@ class BrowserViewModel(
     }
 
     fun reload() {
-        controller.selectedTab?.let { tab ->
-            tab.currentUrl?.let { url -> engine.reload(tab.id) }
-        }
+        controller.selectedTab?.let { tab -> engine.reload(tab.id) }
     }
 
     fun openTab(isPrivate: Boolean = false) {
@@ -97,12 +131,42 @@ class BrowserViewModel(
         refresh()
     }
 
-    fun updateTheme(mode: com.inweb.browser.shell.ThemeMode) {
+    // --- Settings (real behavior, persisted via SettingsStore) ---------------
+
+    fun updateSearchEngine(id: String) {
+        settings = settings.copy(searchEngineId = id)
+        settingsStore.save(settings)
+    }
+
+    fun updateTheme(mode: ThemeMode) {
         settings = settings.copy(theme = mode)
+        settingsStore.save(settings)
+    }
+
+    // --- Overlay screens -----------------------------------------------------
+
+    fun openSettings() {
+        screen = Screen.SETTINGS
+    }
+
+    fun openDownloads() {
+        screen = Screen.DOWNLOADS
+    }
+
+    fun closeOverlay() {
+        screen = Screen.BROWSER
+    }
+
+    // --- Session lifecycle (§51) ----------------------------------------------
+
+    /** Snapshots the session; called from the activity lifecycle (onStop). */
+    fun persistSession() {
+        sessionManager.persist(controller)
     }
 
     private fun refresh() {
         selectedTab = controller.selectedTab
+        downloads = downloadsStore.all()
     }
 }
 

@@ -4,24 +4,49 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import com.inweb.browser.settings.SharedPreferencesSettingsStore
+import com.inweb.browser.session.FileSessionPersistence
+import com.inweb.browser.shell.ThemeMode
 import com.inweb.browser.ui.BrowserScreen
 import com.inweb.browser.ui.theme.iNWEBTheme
 
 /**
  * Single-activity browser shell (MASTER-SPEC §37: Material 3, adaptive layouts).
  *
- * The Chromium content surface binds through the engine adapter
- * (docs/PHASE2-INTEGRATION-PLAN.md); this activity owns only the shell UI.
+ * Owns the shell lifecycle: theme from persisted settings, crash-safe
+ * session restore on start and session snapshot on stop (§51). The Chromium
+ * content surface binds through the engine adapter
+ * (docs/PHASE2-INTEGRATION-PLAN.md).
  */
 class MainActivity : ComponentActivity() {
+
+    private val viewModel by lazy {
+        BrowserViewModel(
+            settingsStore = SharedPreferencesSettingsStore(this),
+            sessionPersistence = FileSessionPersistence(this),
+        )
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            iNWEBTheme {
-                BrowserScreen()
+            val darkTheme = when (viewModel.settings.theme) {
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
+            iNWEBTheme(darkTheme = darkTheme) {
+                BrowserScreen(viewModel)
             }
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Crash-safe session persistence: snapshot whenever we leave the
+        // foreground (MASTER-SPEC §51).
+        viewModel.persistSession()
     }
 }

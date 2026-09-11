@@ -110,8 +110,18 @@ private fun MenuButton(viewModel: BrowserViewModel, modifier: Modifier = Modifie
             },
         )
         androidx.compose.material3.DropdownMenuItem(
+            text = { androidx.compose.material3.Text(stringResource(R.string.action_downloads)) },
+            onClick = {
+                expanded = false
+                viewModel.openDownloads()
+            },
+        )
+        androidx.compose.material3.DropdownMenuItem(
             text = { androidx.compose.material3.Text(stringResource(R.string.action_settings)) },
-            onClick = { expanded = false }, // opens the settings surface (Phase 2 continuation)
+            onClick = {
+                expanded = false
+                viewModel.openSettings()
+            },
         )
     }
 }

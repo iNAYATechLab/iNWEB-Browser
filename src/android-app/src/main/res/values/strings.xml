@@ -39,6 +39,9 @@
 
     <!-- Downloads -->
     <string name="downloads_in_progress">%1$d downloads in progress</string>
+    <string name="downloads_empty">No downloads yet</string>
+    <string name="download_state_queued">Queued</string>
+    <string name="download_state_running">Downloading</string>
     <string name="download_state_paused">Paused</string>
     <string name="download_state_completed">Completed</string>
     <string name="download_state_failed">Failed</string>
