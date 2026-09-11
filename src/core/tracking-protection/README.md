@@ -27,6 +27,7 @@ per-site allowlisting, and real decision statistics.
 | `FilterListVersion` | `! Version:` / `! Last modified:` header extraction (first occurrence, never invented) |
 | `UpdatePolicy` | Refresh-due decision (interval, startup fetch, enabled); no timers of its own |
 | `FilterListManager` | Lifecycle orchestration: startup (cache first), conditional refresh, graceful cached fallback on failure; per-source `ListUpdateStatus` report |
+| `SecurityCenter` / `SecurityCenterModel` | §24 dashboard contract built strictly from real decision statistics, real policy inputs, and real filter-list state (top blocked domains, per-list version/rules); `enforcementActive` stays false until the engine patches wire `decide()` (B-001) |
 
 ## Supported syntax subset
 
