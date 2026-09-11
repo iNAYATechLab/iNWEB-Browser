@@ -91,7 +91,12 @@ run_module "src/core/tracking-protection" \
   com.inweb.browser.privacy.FilterListParserTest \
   com.inweb.browser.privacy.RuleMatcherTest \
   com.inweb.browser.privacy.TrackingProtectionEngineTest \
-  com.inweb.browser.privacy.DomainClassifierTest
+  com.inweb.browser.privacy.DomainClassifierTest \
+  com.inweb.browser.privacy.lists.FileFilterListCacheTest \
+  com.inweb.browser.privacy.lists.FilterListManagerTest \
+  com.inweb.browser.privacy.lists.FilterListVersionTest \
+  com.inweb.browser.privacy.lists.HttpFilterListFetcherTest \
+  com.inweb.browser.privacy.lists.UpdatePolicyTest
 
 echo ""
 echo "[kotlin-core] ALL MODULES PASSED"
