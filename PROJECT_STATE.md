@@ -4,26 +4,27 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 4 (Phase 2 in progress)
+> Last updated: **2026-09-12** — Step 5 (Phase 3 in progress)
 
 ```yaml
 project: iNWEB Browser
 repository: iNAYATechLab/iNWEB-Browser
-phase: 2
-phase_title: Browser Shell
-phase_status: in_progress   # core shell logic implemented & tested; UI authored; engine integration awaits B-001
-step: 4
+phase: 3
+phase_title: Privacy & Tracking Protection
+phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
+step: 5
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 30 Python + 70 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 30 Python + 107 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs; upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 3 / Step 5 — tracking-protection core: filter-list model, parser
-  and matching engine (pure JVM, tested), per-site allowlist, and the
-  privacy policy model that engine patches will enforce.
+  Phase 3 / Step 6 — filter-list management layer: download, cache,
+  versioning and update scheduling for EasyList-family lists (pure JVM,
+  tested) feeding the tracking-protection engine; defines the fetch/cache
+  contract that the engine patches (B-001) will consume.
 ```
 
 ## Completed
@@ -67,15 +68,34 @@ next_action: >-
     `SharedPreferencesSettingsStore`
   - Lifecycle binding: session restore on start, snapshot on onStop (§51)
   - 3 new localized strings (downloads empty/queued/running) — 39 total
+- [x] **Step 5 — Phase 3: Tracking-protection core (decision engine)** (2026-09-12)
+  - New pure-JVM module `src/core/tracking-protection` (package
+    `com.inweb.browser.privacy`), validated by the multi-module core script + CI
+  - EasyList-family parser (documented subset): comments/headers counted,
+    cosmetic rules recognized + counted but ignored, `@@` exceptions,
+    `||` / `|…|` anchors, `*` / `^` wildcards, `$` options (type, party,
+    `domain=` includes/excludes, `match-case` ignored); unknown options
+    (csp=, rewrite=, removeparam=, …) counted as unsupported and excluded
+    from matching — never silently treated as matching
+  - URL-matching engine with per-rule lazy regex; `domain=` matches the
+    document host or its subdomains; third-party decided by registrable domain
+  - Request-decision API: `RequestContext` → `FilterDecision`
+    (BLOCK / ALLOW / PASS) with matched-rule attribution and real decision
+    statistics (`EngineStatistics`: block/allow/pass counts, blockedByDomain)
+    — the contract the Chromium adblock/privacy patches will call (B-001)
+  - Policy model: `CookiePolicy` + `TrackingProtectionSettings` with
+    per-site allowlist semantics
+  - Domain classifier with a multi-part public-suffix subset (co.uk, com.bd, …)
+  - `scripts/validate_kotlin_core.sh` rewritten as multi-module
+    (browser-shell 70 + tracking-protection 37 = 107 Kotlin tests)
 
 ## In progress
 
-- (none — awaiting continuation command for Step 5)
+- (none — awaiting continuation command for Step 6)
 
 ## Not started
 
-- Phase 3 remainder: privacy UI surfaces, storage controls (engine patches)
-- Phase 4 — Ad / Popup Protection
+- Phase 3 remainder: filter-list download/cache management, privacy UI surfaces, storage controls (engine patches)
 - Phase 4 — Ad / Popup Protection
 - Phase 5 — Performance
 - Phase 6 — Extensions
@@ -132,6 +152,8 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-009 | 2026-09-12 | Engine-independent shell logic lives in a pure-JVM module (`src/core/browser-shell`); the product APK is produced only by the Chromium/GN build (no parallel AGP product build) | Core logic continuously testable in CI without Android SDK; single source of truth for the product build |
 | ADR-010 | 2026-09-12 | DuckDuckGo is the default search engine | Privacy-preserving defaults (§10); user-changeable in settings |
 | ADR-011 | 2026-09-12 | History privacy contract enforced in a single decorator (`PrivacyFilterHistory`); session persistence writes atomically and falls back to a fresh session on corruption | One enforcement point regardless of backing store (§13/§14); crash-safe restore (§50/§51) |
+| ADR-012 | 2026-09-12 | One pure-JVM Gradle module per concern under `src/core/` (browser-shell, tracking-protection), each registered in the shared multi-module core validation script | Independent testability and review per concern; CI stays toolchain-pinned and Android-SDK-free (ADR-009) |
+| ADR-013 | 2026-09-12 | Filter engine v1 implements a documented EasyList-family subset with per-rule lazy regex; unknown options count as unsupported and are excluded from matching; combined-matcher optimization deferred | Honest, testable subset now (§57); correctness first, performance pass in Phase 4/5 |
 
 ## Build status
 
@@ -144,12 +166,18 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 - **Python: 30/30 passing** — patch-series tooling, registry validation, baseline
   parsing, string-resource validation (`python3 -m unittest discover -s tests -t .`).
-- **Kotlin: 70/70 passing** — `src/core/browser-shell` compiled with pinned
-  kotlinc 2.4.20 + JUnit 4.13.2 (`bash scripts/validate_kotlin_core.sh`):
-  tab navigation stack, controller, session round-trip/corruption + manager,
-  omnibox parsing (incl. Bengali queries and scheme edge cases), search
-  engines, download state machine + catalog, history store with private
-  exclusion, settings.
+- **Kotlin: 107/107 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
+  kotlinc 2.4.20 + JUnit 4.13.2, multi-module):
+  - `src/core/browser-shell` — 70 tests: tab navigation stack, controller,
+    session round-trip/corruption + manager, omnibox parsing (incl. Bengali
+    queries and scheme edge cases), search engines, download state machine +
+    catalog, history store with private exclusion, settings.
+  - `src/core/tracking-protection` — 37 tests: filter parsing (anchors,
+    options, exceptions, cosmetic/unsupported/invalid counting), pattern
+    matching (domain anchor, separators, wildcards, left/right anchors,
+    type/party/domain constraints), engine decisions (block/allow/pass,
+    per-site allowlist, statistics), domain classification (multi-part
+    suffixes, third-party).
 - **Live checks:** registry lint OK; string parity OK; baseline drift CURRENT.
 - CI runs the Python suite, string validation, and the Kotlin core suite on every
   push/PR touching `scripts/`, `tests/`, `iNWEB_PATCHES/`, `src/`.
@@ -167,8 +195,8 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Phase 3 / Step 5 — tracking-protection core:** filter-list data model and parser
-(EasyList-family syntax subset), URL-matching engine with exception (@@) rules and
-per-site allowlist, request-decision API for the network-stack patches, and the
-privacy policy model — all pure JVM with unit tests; engine enforcement wiring
-documented for the adblock/tracking patch areas.
+**Phase 3 / Step 6 — filter-list management layer:** download, cache, versioning
+and update scheduling for EasyList-family lists (pure JVM, tested), feeding the
+tracking-protection engine; defines the fetch/cache contract that the engine
+patches (B-001) will consume. Alternative next step if directed: history UI
+surface backed by the real `HistoryStore`.

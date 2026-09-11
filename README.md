@@ -21,14 +21,15 @@ written in Kotlin.
 
 | Item | State |
 |---|---|
-| Development phase | **Phase 2 — Browser Shell: in progress** (shell surfaces + persistence complete; engine integration awaits B-001) |
-| Current step | 4 |
+| Development phase | **Phase 3 — Privacy & Tracking Protection: in progress** (decision engine complete; enforcement wiring awaits B-001) |
+| Current step | 5 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 70 Kotlin tests** (tabs, omnibox, session, history, downloads, settings) |
+| Privacy core (`src/core/tracking-protection`) | **Implemented & unit-tested — 37 Kotlin tests** (EasyList-family parser, URL matching, request decisions, per-site allowlist, statistics) |
 | Android shell UI (`src/android-app`) | Authored — Compose + Material 3, bn/en strings; compiles in the Chromium build (B-001) |
 | Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — tested |
-| CI | **Live**: Python (30 tests) + registry + string parity; Kotlin core (70 tests); weekly upstream watch |
+| CI | **Live**: Python (30 tests) + registry + string parity; Kotlin core (107 tests, 2 modules); weekly upstream watch |
 | Build | **Not yet executed** — requires external build infrastructure (blocker B-001) |
 | Open defects | None recorded |
 
@@ -60,7 +61,7 @@ inweb-browser/
 │   ├── lint_manifest.py             # Registry validation (tested)
 │   ├── check_baseline.py            # Upstream Android-stable drift check (live)
 │   ├── validate_strings.py          # bn/en string parity + placeholder validation (tested)
-│   ├── validate_kotlin_core.sh      # Compile + run core module tests (kotlinc + JUnit)
+│   ├── validate_kotlin_core.sh      # Compile + run core module tests, multi-module (kotlinc + JUnit)
 │   ├── fetch_chromium.sh            # BUILD HOST: pinned tag checkout (authored)
 │   ├── build_android.sh             # BUILD HOST: GN + ninja build (authored)
 │   └── bootstrap_env.sh             # Authoring-sandbox session bootstrap
@@ -68,6 +69,9 @@ inweb-browser/
 │   ├── core/browser-shell/          # Pure-JVM core (Gradle project; validated by script + CI)
 │   │   ├── build.gradle.kts
 │   │   └── src/{main,test}/kotlin/com/inweb/browser/shell/
+│   ├── core/tracking-protection/     # Pure-JVM privacy core (parser, matcher, decision engine)
+│   │   ├── build.gradle.kts
+│   │   └── src/{main,test}/kotlin/com/inweb/browser/privacy/
 │   └── android-app/src/main/        # Android shell UI (compiled by the Chromium build, ADR-009)
 │       ├── AndroidManifest.xml
 │       ├── kotlin/com/inweb/browser/   (shell, ui, session, settings)
