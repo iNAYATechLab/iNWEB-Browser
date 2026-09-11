@@ -12,19 +12,19 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 5
 phase_title: Performance
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 17
+step: 18
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 30 Python + 207 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 30 Python + 217 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action majors); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 5 / Step 18 — combined matcher (token-index candidate
-  selection) for the filter engine, with a decision-equivalence test
-  against v1 and re-measured benchmark per ADR-022 / the Phase 5 plan
-  (alternative if directed: downloads surface polish).
+  Phase 6 / Step 19 — extension support patch-series design
+  (WebExtensions on Android scope) + Phase 5 close-out note (core
+  deliverables done; device budgets remain B-001-gated) (alternative
+  if directed: downloads/history surface polish).
 ```
 
 ## Completed
@@ -297,9 +297,26 @@ next_action: >-
     batterystats A/B vs vanilla); benchmark log
   - ADR-022 recorded
 
+- [x] **Step 18 — Phase 5: combined matcher (ADR-022 contract)** (2026-09-12)
+  - `CombinedMatcher`: rules indexed by longest literal run (≥3 chars,
+    specials `*`/`^` split runs); wildcard-only/short patterns →
+    always-check bucket; substring-based URL lookup (no whole-token
+    trap — pattern `banner123` found inside URL run `banner123x`);
+    each rule in exactly one bucket → no dedupe; ordinals sorted to
+    preserve first-exception/first-block semantics
+  - `TrackingProtectionEngine.decide()` now evaluates only candidates;
+    `matchingRulesNaive()` kept as the v1 equivalence oracle
+  - 10 new tests incl. the 1200-rule mixed-corpus decision-EQUIVALENCE
+    suite and the superset-semantics case (candidate ≠ match)
+  - **Re-measured (same protocol/hardware):** block 16.5 ms → 0.10 ms
+    (~165×), pass 18.1 ms → 0.07 ms (~259×), heap ~111 MB → ~21 MB,
+    identical outcomes — target ≥100× met with zero differences;
+    decision cache stays deferred (not warranted by 0.07–0.10 ms)
+  - Kotlin total 217 (browser-shell 115 + tracking-protection 102)
+
 ## In progress
 
-- (none — awaiting continuation command for Step 18)
+- (none — awaiting continuation command for Step 19)
 
 ## Not started
 
@@ -383,7 +400,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 - **Python: 30/30 passing** — patch-series tooling, registry validation, baseline
   parsing, string-resource validation (`python3 -m unittest discover -s tests -t .`).
-- **Kotlin: 207/207 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
+- **Kotlin: 217/217 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
   kotlinc 2.4.20 + JUnit 4.13.2, multi-module):
   - `src/core/browser-shell` — 115 tests: tab navigation stack, controller
     (incl. `allTabs` switcher view), top-sites computation,
@@ -404,7 +421,9 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
     fallback); Security Center model (§24 — real-state aggregation,
     honest empty/bypass semantics, top-domain ranking); cosmetic
     filtering (selector parsing, domain semantics, exception
-    cancellation, grouped CSS, manager integration).
+    cancellation, grouped CSS, manager integration); combined matcher
+    (token index, always-check bucket, substring lookup, order
+    preservation, decision-equivalence vs the v1 full scan).
 - **Live checks:** registry lint OK; string parity OK; baseline drift CURRENT.
 - CI runs the Python suite, string validation, and the Kotlin core suite on every
   push/PR touching `scripts/`, `tests/`, `iNWEB_PATCHES/`, `src/`.

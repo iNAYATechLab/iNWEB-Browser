@@ -22,14 +22,14 @@ written in Kotlin.
 | Item | State |
 |---|---|
 | Development phase | **Phase 5 — Performance: in progress** (measured baseline + design complete; combined matcher next; device budgets await B-001) |
-| Current step | 17 |
+| Current step | 18 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 115 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag) |
-| Privacy core (`src/core/tracking-protection`) | **Implemented & unit-tested — 92 Kotlin tests** (EasyList-family parser, URL matching, request decisions, per-site allowlist, statistics; filter-list download/cache/update management; Security Center model §24; cosmetic filtering engine) |
+| Privacy core (`src/core/tracking-protection`) | **Implemented & unit-tested — 102 Kotlin tests** (EasyList-family parser, URL matching, request decisions, per-site allowlist, statistics; filter-list download/cache/update management; Security Center model §24; cosmetic filtering engine; combined matcher ~165–259× faster, equivalence-verified) |
 | Android shell UI (`src/android-app`) | Authored — Compose + Material 3 (browser, tab switcher, home page with real data, onboarding, settings, downloads, history, bookmarks), bn/en strings; compiles in the Chromium build (B-001) |
 | Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — tested |
-| CI | **Live**: Python (30 tests) + registry + string parity; Kotlin core (207 tests, 2 modules); weekly upstream watch; benchmark on demand (not in CI) |
+| CI | **Live**: Python (30 tests) + registry + string parity; Kotlin core (217 tests, 2 modules); weekly upstream watch; benchmark on demand (not in CI) |
 | Build | **Not yet executed** — requires external build infrastructure (blocker B-001) |
 | Open defects | None recorded |
 
