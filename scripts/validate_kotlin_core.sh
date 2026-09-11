@@ -94,6 +94,9 @@ run_module "src/core/browser-shell" \
 run_module "src/core/extensions" \
   com.inweb.browser.extensions.ExtensionRegistryTest
 
+run_module "src/core/offline" \
+  com.inweb.browser.offline.OfflineLibraryTest
+
 run_module "src/core/tracking-protection" \
   com.inweb.browser.privacy.FilterListParserTest \
   com.inweb.browser.privacy.RuleMatcherTest \
