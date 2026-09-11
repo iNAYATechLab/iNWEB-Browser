@@ -104,7 +104,16 @@ uBlock-style **token-index candidate selection**, keeping the public API
 | Generation | Decision (block) | Decision (pass) | Heap | Hardware |
 |---|---|---|---|---|
 | v1 regex-per-rule (Step 17) | 16.5 ms | 18.1 ms | ~111 MB | sandbox, 2 vCPU, OpenJDK 11 |
-| v2 combined matcher (pending Step 18) | — | — | — | — |
+| v2 combined matcher (Step 18) | **0.10 ms** | **0.07 ms** | ~21 MB | sandbox, 2 vCPU, OpenJDK 11 |
+
+**Step 18 result:** block-path **~165×**, pass-path **~259×** faster than
+v1; heap ~5× lower (only candidate rules' regexes compile); decision
+outputs identical (equivalence suite + all 102 module tests green; the
+benchmark confirmed the same 120/200 block and 200/200 pass outcomes as
+v1). The ≥ 100× target is met with zero decision differences. The
+decision cache (§4) is NOT warranted by these numbers — 0.07–0.10 ms is
+within the §2 budget; cache stays deferred unless device measurement
+(§5) says otherwise.
 
 ## 7. Honest boundaries
 
