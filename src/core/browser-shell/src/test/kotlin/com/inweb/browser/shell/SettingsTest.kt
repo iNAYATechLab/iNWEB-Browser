@@ -21,6 +21,20 @@ class SettingsTest {
     }
 
     @Test
+    fun onboardingStartsIncomplete() {
+        assertEquals(false, AppSettings().onboardingCompleted)
+    }
+
+    @Test
+    fun onboardingCompletionRoundTripsWithEngineChoice() {
+        val store = InMemorySettingsStore()
+        store.save(AppSettings(searchEngineId = "google", onboardingCompleted = true))
+        val loaded = store.load()
+        assertEquals(true, loaded.onboardingCompleted)
+        assertEquals("google", loaded.searchEngineId)
+    }
+
+    @Test
     fun inMemoryStoreRoundTrip() {
         val store = InMemorySettingsStore()
         store.save(AppSettings(theme = ThemeMode.DARK, searchEngineId = "google"))

@@ -12,6 +12,8 @@ data class AppSettings(
     val searchEngineId: String = SearchEngine.DUCK_DUCK_GO.id,
     val theme: ThemeMode = ThemeMode.SYSTEM,
     val homepageUrl: String = DEFAULT_HOMEPAGE,
+    /** First-run onboarding (§35) completed? Fresh installs start false. */
+    val onboardingCompleted: Boolean = false,
 ) {
     /** Resolves the configured engine, falling back to the privacy default. */
     val searchEngine: SearchEngine
