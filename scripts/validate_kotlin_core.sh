@@ -91,6 +91,9 @@ run_module "src/core/browser-shell" \
   com.inweb.browser.shell.TopSitesTest \
   com.inweb.browser.shell.SettingsTest
 
+run_module "src/core/extensions" \
+  com.inweb.browser.extensions.ExtensionRegistryTest
+
 run_module "src/core/tracking-protection" \
   com.inweb.browser.privacy.FilterListParserTest \
   com.inweb.browser.privacy.RuleMatcherTest \
