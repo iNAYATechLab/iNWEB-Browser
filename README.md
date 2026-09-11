@@ -22,14 +22,14 @@ written in Kotlin.
 | Item | State |
 |---|---|
 | Development phase | **Phase 3 — Privacy & Tracking Protection: in progress** (decision engine complete; enforcement wiring awaits B-001) |
-| Current step | 6 |
+| Current step | 7 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
-| Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 70 Kotlin tests** (tabs, omnibox, session, history, downloads, settings) |
+| Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 81 Kotlin tests** (tabs, omnibox, session, history incl. persistent file store, downloads, settings) |
 | Privacy core (`src/core/tracking-protection`) | **Implemented & unit-tested — 70 Kotlin tests** (EasyList-family parser, URL matching, request decisions, per-site allowlist, statistics; filter-list download/cache/update management) |
-| Android shell UI (`src/android-app`) | Authored — Compose + Material 3, bn/en strings; compiles in the Chromium build (B-001) |
+| Android shell UI (`src/android-app`) | Authored — Compose + Material 3 (browser, settings, downloads, history), bn/en strings; compiles in the Chromium build (B-001) |
 | Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — tested |
-| CI | **Live**: Python (30 tests) + registry + string parity; Kotlin core (140 tests, 2 modules); weekly upstream watch |
+| CI | **Live**: Python (30 tests) + registry + string parity; Kotlin core (151 tests, 2 modules); weekly upstream watch |
 | Build | **Not yet executed** — requires external build infrastructure (blocker B-001) |
 | Open defects | None recorded |
 
