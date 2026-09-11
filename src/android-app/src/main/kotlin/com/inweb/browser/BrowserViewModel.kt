@@ -4,10 +4,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.inweb.browser.shell.AppSettings
+import com.inweb.browser.shell.BookmarkEntry
+import com.inweb.browser.shell.BookmarkStore
 import com.inweb.browser.shell.BrowserEngine
 import com.inweb.browser.shell.DownloadRecord
 import com.inweb.browser.shell.HistoryEntry
 import com.inweb.browser.shell.HistoryStore
+import com.inweb.browser.shell.InMemoryBookmarkStore
 import com.inweb.browser.shell.InMemoryDownloadsStore
 import com.inweb.browser.shell.InMemoryHistoryStore
 import com.inweb.browser.shell.InMemorySettingsStore
@@ -23,7 +26,7 @@ import com.inweb.browser.shell.ThemeMode
 import com.inweb.browser.shell.TabsController
 
 /** Overlay screens of the shell. */
-enum class Screen { BROWSER, SETTINGS, DOWNLOADS, HISTORY }
+enum class Screen { BROWSER, SETTINGS, DOWNLOADS, HISTORY, BOOKMARKS }
 
 /**
  * Browser-shell view model: binds the pure-JVM core (TabsController,
@@ -39,6 +42,7 @@ class BrowserViewModel(
     private val settingsStore: SettingsStore = InMemorySettingsStore(),
     private val sessionPersistence: SessionPersistence = InMemorySessionPersistence(),
     private val historyStore: HistoryStore = InMemoryHistoryStore(),
+    private val bookmarkStore: BookmarkStore = InMemoryBookmarkStore(),
 ) {
 
     var settings by mutableStateOf(AppSettings())
@@ -57,6 +61,9 @@ class BrowserViewModel(
         private set
 
     var historyQuery by mutableStateOf("")
+        private set
+
+    var bookmarks by mutableStateOf<List<BookmarkEntry>>(emptyList())
         private set
 
     val tabIds: List<String> get() = controller.tabIds
@@ -191,6 +198,39 @@ class BrowserViewModel(
         } else {
             historyStore.search(historyQuery, HISTORY_LIMIT)
         }
+    }
+
+    // --- Bookmarks surface (explicit user action only, §28/§31) --------------
+
+    fun openBookmarks() {
+        refreshBookmarks()
+        screen = Screen.BOOKMARKS
+    }
+
+    /**
+     * Bookmarks the currently open page. Bookmarks are never automatic:
+     * this runs only on explicit user action. Returns true when a new
+     * bookmark was stored.
+     */
+    fun addBookmarkForCurrentTab(): Boolean {
+        val url = selectedTab?.currentUrl ?: return false
+        if (url == AppSettings.DEFAULT_HOMEPAGE) return false
+        bookmarkStore.add(
+            url = url,
+            title = url,
+            createdAtMillis = System.currentTimeMillis(),
+        )
+        refreshBookmarks()
+        return bookmarkStore.isBookmarked(url)
+    }
+
+    fun deleteBookmark(id: String) {
+        bookmarkStore.delete(id)
+        refreshBookmarks()
+    }
+
+    private fun refreshBookmarks() {
+        bookmarks = bookmarkStore.all()
     }
 
     fun closeOverlay() {

@@ -29,6 +29,7 @@ fun BrowserScreen(viewModel: BrowserViewModel = remember { BrowserViewModel() })
         Screen.SETTINGS -> SettingsScreen(viewModel)
         Screen.DOWNLOADS -> DownloadsScreen(viewModel)
         Screen.HISTORY -> HistoryScreen(viewModel)
+        Screen.BOOKMARKS -> BookmarkScreen(viewModel)
     }
 }
 

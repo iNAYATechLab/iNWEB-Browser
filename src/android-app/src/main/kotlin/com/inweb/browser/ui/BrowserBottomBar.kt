@@ -110,6 +110,13 @@ private fun MenuButton(viewModel: BrowserViewModel, modifier: Modifier = Modifie
             },
         )
         androidx.compose.material3.DropdownMenuItem(
+            text = { androidx.compose.material3.Text(stringResource(R.string.action_bookmarks)) },
+            onClick = {
+                expanded = false
+                viewModel.openBookmarks()
+            },
+        )
+        androidx.compose.material3.DropdownMenuItem(
             text = { androidx.compose.material3.Text(stringResource(R.string.action_history)) },
             onClick = {
                 expanded = false

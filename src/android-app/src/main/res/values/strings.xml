@@ -37,6 +37,11 @@
     <string name="home_shortcuts">Shortcuts</string>
     <string name="home_recent_pages">Recent pages</string>
 
+    <!-- Bookmarks -->
+    <string name="bookmarks_empty">No bookmarks yet</string>
+    <string name="bookmark_add_current">Bookmark this page</string>
+    <string name="bookmark_delete_entry">Remove bookmark</string>
+
     <!-- History -->
     <string name="history_empty">No history yet</string>
     <string name="history_search_hint">Search history</string>

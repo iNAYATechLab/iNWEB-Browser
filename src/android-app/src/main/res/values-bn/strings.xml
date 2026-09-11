@@ -34,6 +34,11 @@
     <string name="home_shortcuts">শর্টকাট</string>
     <string name="home_recent_pages">সাম্প্রতিক পেজ</string>
 
+    <!-- Bookmarks -->
+    <string name="bookmarks_empty">এখনো কোনো বুকমার্ক নেই</string>
+    <string name="bookmark_add_current">এই পেজটি বুকমার্ক করুন</string>
+    <string name="bookmark_delete_entry">বুকমার্ক সরান</string>
+
     <!-- History -->
     <string name="history_empty">এখনো কোনো ইতিহাস নেই</string>
     <string name="history_search_hint">ইতিহাস খুঁজুন</string>
