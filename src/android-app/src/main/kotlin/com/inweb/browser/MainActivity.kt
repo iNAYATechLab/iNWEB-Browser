@@ -7,7 +7,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.inweb.browser.settings.SharedPreferencesSettingsStore
 import com.inweb.browser.session.FileSessionPersistence
+import com.inweb.browser.shell.FileHistoryStore
 import com.inweb.browser.shell.ThemeMode
+import java.io.File
 import com.inweb.browser.ui.BrowserScreen
 import com.inweb.browser.ui.theme.iNWEBTheme
 
@@ -25,6 +27,7 @@ class MainActivity : ComponentActivity() {
         BrowserViewModel(
             settingsStore = SharedPreferencesSettingsStore(this),
             sessionPersistence = FileSessionPersistence(this),
+            historyStore = FileHistoryStore(File(filesDir, "history.tsv")),
         )
     }
 

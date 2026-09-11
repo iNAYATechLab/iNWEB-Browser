@@ -85,6 +85,7 @@ run_module "src/core/browser-shell" \
   com.inweb.browser.shell.DownloadRecordTest \
   com.inweb.browser.shell.DownloadsStoreTest \
   com.inweb.browser.shell.HistoryStoreTest \
+  com.inweb.browser.shell.FileHistoryStoreTest \
   com.inweb.browser.shell.SettingsTest
 
 run_module "src/core/tracking-protection" \

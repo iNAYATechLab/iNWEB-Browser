@@ -6,6 +6,8 @@ import androidx.compose.runtime.setValue
 import com.inweb.browser.shell.AppSettings
 import com.inweb.browser.shell.BrowserEngine
 import com.inweb.browser.shell.DownloadRecord
+import com.inweb.browser.shell.HistoryEntry
+import com.inweb.browser.shell.HistoryStore
 import com.inweb.browser.shell.InMemoryDownloadsStore
 import com.inweb.browser.shell.InMemoryHistoryStore
 import com.inweb.browser.shell.InMemorySettingsStore
@@ -21,7 +23,7 @@ import com.inweb.browser.shell.ThemeMode
 import com.inweb.browser.shell.TabsController
 
 /** Overlay screens of the shell. */
-enum class Screen { BROWSER, SETTINGS, DOWNLOADS }
+enum class Screen { BROWSER, SETTINGS, DOWNLOADS, HISTORY }
 
 /**
  * Browser-shell view model: binds the pure-JVM core (TabsController,
@@ -36,6 +38,7 @@ class BrowserViewModel(
     private val engine: BrowserEngine = DevelopmentEngineBinding,
     private val settingsStore: SettingsStore = InMemorySettingsStore(),
     private val sessionPersistence: SessionPersistence = InMemorySessionPersistence(),
+    private val historyStore: HistoryStore = InMemoryHistoryStore(),
 ) {
 
     var settings by mutableStateOf(AppSettings())
@@ -50,12 +53,18 @@ class BrowserViewModel(
     var downloads by mutableStateOf<List<DownloadRecord>>(emptyList())
         private set
 
+    var history by mutableStateOf<List<HistoryEntry>>(emptyList())
+        private set
+
+    var historyQuery by mutableStateOf("")
+        private set
+
     val tabIds: List<String> get() = controller.tabIds
 
     private val controller = TabsController()
     private val sessionManager = SessionManager(sessionPersistence)
     private val downloadsStore = InMemoryDownloadsStore()
-    private val history = PrivacyFilterHistory(InMemoryHistoryStore())
+    private val history = PrivacyFilterHistory(historyStore)
 
     init {
         settings = settingsStore.load()
@@ -153,6 +162,37 @@ class BrowserViewModel(
         screen = Screen.DOWNLOADS
     }
 
+    // --- History surface (backed by the real HistoryStore, §14) --------------
+
+    fun openHistory() {
+        historyQuery = ""
+        refreshHistory()
+        screen = Screen.HISTORY
+    }
+
+    fun setHistoryQuery(query: String) {
+        historyQuery = query
+        refreshHistory()
+    }
+
+    fun deleteHistoryEntry(id: String) {
+        history.delete(id)
+        refreshHistory()
+    }
+
+    fun clearHistory() {
+        history.clearAll()
+        refreshHistory()
+    }
+
+    private fun refreshHistory() {
+        history = if (historyQuery.isBlank()) {
+            historyStore.recent(HISTORY_LIMIT)
+        } else {
+            historyStore.search(historyQuery, HISTORY_LIMIT)
+        }
+    }
+
     fun closeOverlay() {
         screen = Screen.BROWSER
     }
@@ -167,6 +207,11 @@ class BrowserViewModel(
     private fun refresh() {
         selectedTab = controller.selectedTab
         downloads = downloadsStore.all()
+    }
+
+    private companion object {
+        /** Safety cap for the history surface; full data stays on disk. */
+        const val HISTORY_LIMIT = 200
     }
 }
 

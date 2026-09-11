@@ -34,6 +34,15 @@
     <string name="home_shortcuts">শর্টকাট</string>
     <string name="home_recent_pages">সাম্প্রতিক পেজ</string>
 
+    <!-- History -->
+    <string name="history_empty">এখনো কোনো ইতিহাস নেই</string>
+    <string name="history_search_hint">ইতিহাস খুঁজুন</string>
+    <string name="history_clear_all">সব মুছে ফেলুন</string>
+    <string name="history_clear_confirm_title">ব্রাউজিং ইতিহাস মুছে ফেলবেন?</string>
+    <string name="history_clear_confirm_text">এতে এই ডিভাইসের সমস্ত ব্রাউজিং ইতিহাস মুছে যাবে। এই কাজটি আর ফেরানো যাবে না।</string>
+    <string name="history_delete_entry">এন্ট্রি মুছে ফেলুন</string>
+    <string name="action_cancel">বাতিল</string>
+
     <!-- Downloads -->
     <string name="downloads_in_progress">%1$d টি ডাউনলোড চলছে</string>
     <string name="downloads_empty">এখনো কোনো ডাউনলোড নেই</string>

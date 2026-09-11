@@ -37,6 +37,15 @@
     <string name="home_shortcuts">Shortcuts</string>
     <string name="home_recent_pages">Recent pages</string>
 
+    <!-- History -->
+    <string name="history_empty">No history yet</string>
+    <string name="history_search_hint">Search history</string>
+    <string name="history_clear_all">Clear all</string>
+    <string name="history_clear_confirm_title">Clear browsing history?</string>
+    <string name="history_clear_confirm_text">This removes all browsing history from this device. This action cannot be undone.</string>
+    <string name="history_delete_entry">Delete entry</string>
+    <string name="action_cancel">Cancel</string>
+
     <!-- Downloads -->
     <string name="downloads_in_progress">%1$d downloads in progress</string>
     <string name="downloads_empty">No downloads yet</string>
