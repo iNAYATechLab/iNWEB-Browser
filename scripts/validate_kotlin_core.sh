@@ -97,6 +97,9 @@ run_module "src/core/extensions" \
 run_module "src/core/offline" \
   com.inweb.browser.offline.OfflineLibraryTest
 
+run_module "src/core/vpn" \
+  com.inweb.browser.vpn.VpnConfigParserTest
+
 run_module "src/core/tracking-protection" \
   com.inweb.browser.privacy.FilterListParserTest \
   com.inweb.browser.privacy.RuleMatcherTest \
