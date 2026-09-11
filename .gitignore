@@ -1,0 +1,58 @@
+# =====================================================================
+# iNWEB Browser — .gitignore
+# The Chromium source tree and all build outputs are NEVER committed.
+# The tree is reproduced on build infrastructure as: pinned tag + patch series.
+# =====================================================================
+
+# Chromium source checkout (exists only on build infrastructure)
+/chromium/
+/depot_tools/
+/out/
+/src/out/
+
+# Build artifacts
+*.apk
+*.aab
+*.ap_
+*.dex
+*.so
+*.o
+*.a
+*.tar.gz
+*.zip
+
+# Android / Gradle
+.gradle/
+build/
+app/build/
+local.properties
+*.iml
+.idea/
+captures/
+.keystore
+*.jks
+!debug.keystore.template
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Node (tooling only, if introduced)
+node_modules/
+
+# CI / runner scratch
+/scratch/
+/cache/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets — never commit
+*.keystore
+*.pem
+*.key
+secrets.*
