@@ -1,0 +1,19 @@
+# =============================================================================
+# iNWEB Browser — GN arguments: RELEASE channel
+#
+# STATUS: DRAFT — authored in Phase 1; validated at the first real build on
+# build infrastructure (blocker B-001). Corrections are committed back here.
+#
+# Size levers (MASTER-SPEC §7) are evaluated with real builds: bundle/trichrome
+# distribution strategy, resource shrinking, unused component removal.
+# =============================================================================
+
+target_os = "android"
+target_cpu = "arm64"
+
+is_official_build = true
+is_component_build = false
+is_debug = false
+symbol_level = 0
+
+android_channel = "stable"

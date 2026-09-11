@@ -1,0 +1,5 @@
+# Pinned upstream Chromium baseline (ADR-002).
+# Consumed by scripts/fetch_chromium.sh, scripts/build_android.sh,
+# and scripts/check_baseline.py (upstream drift watch).
+CHROMIUM_TAG=154.0.8037.21
+PINNED_ON=2026-09-12

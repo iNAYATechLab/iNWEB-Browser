@@ -1,0 +1,20 @@
+# =============================================================================
+# iNWEB Browser — GN arguments: DEVELOPMENT channel
+#
+# STATUS: DRAFT — authored in Phase 1; validated at the first real build on
+# build infrastructure (blocker B-001). Corrections are committed back here.
+#
+# Reference: upstream docs/android_build_instructions.md
+# =============================================================================
+
+# Android target on an x86-64 Linux build host, 64-bit ARM device target.
+target_os = "android"
+target_cpu = "arm64"
+
+# Fast iteration for patch development.
+is_debug = true
+is_component_build = true
+symbol_level = 1
+
+# Distribution outside Play Store during development.
+android_channel = "default"
