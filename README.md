@@ -21,17 +21,18 @@ written in Kotlin.
 
 | Item | State |
 |---|---|
-| Development phase | **Phase 8 — VPN / Security: in progress** (design complete; VPN config core next; execution awaits B-001) — Phases 4–7 core work complete |
-| Current step | 23 |
+| Development phase | **Phase 8 — VPN / Security: in progress** (design + config core complete; patch execution awaits B-001) — Phases 4–7 core work complete |
+| Current step | 24 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 115 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag) |
 | Privacy core (`src/core/tracking-protection`) | **Implemented & unit-tested — 102 Kotlin tests** (EasyList-family parser, URL matching, request decisions, per-site allowlist, statistics; filter-list download/cache/update management; Security Center model §24; cosmetic filtering engine; combined matcher ~165–259× faster, equivalence-verified) |
 | Extension core (`src/core/extensions`) | **Implemented & unit-tested — 17 Kotlin tests** (§16 management model: install/review/enable/disable/update/remove state machine with upgrade consent, version comparison, permission-review records) |
 | Offline core (`src/core/offline`) | **Implemented & unit-tested — 14 Kotlin tests** (§17 library: real byte quota, LRU eviction with pinning, same-URL replace, atomic quota failure, persistence seam) |
+| VPN core (`src/core/vpn`) | **Implemented & unit-tested — 17 Kotlin tests** (§15 config validation: WireGuard-style parsing, strict fields/CIDR/endpoints/keys, secrets opaque by construction) |
 | Android shell UI (`src/android-app`) | Authored — Compose + Material 3 (browser, tab switcher, home page with real data, onboarding, settings, downloads, history, bookmarks), bn/en strings; compiles in the Chromium build (B-001) |
 | Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — tested |
-| CI | **Live**: Python (30 tests) + registry + string parity; Kotlin core (248 tests, 4 modules); weekly upstream watch; benchmark on demand (not in CI) |
+| CI | **Live**: Python (30 tests) + registry + string parity; Kotlin core (265 tests, 5 modules); weekly upstream watch; benchmark on demand (not in CI) |
 | Build | **Not yet executed** — requires external build infrastructure (blocker B-001) |
 | Open defects | None recorded |
 
@@ -75,6 +76,7 @@ inweb-browser/
 │   ├── core/tracking-protection/     # Pure-JVM privacy core (parser, matcher, decision engine)
 │   ├── core/extensions/               # Pure-JVM extension management core (§16 state machine)
 │   ├── core/offline/                   # Pure-JVM offline library core (§17 quota + LRU eviction)
+│   ├── core/vpn/                        # Pure-JVM VPN config validation core (§15)
 │   │   ├── build.gradle.kts
 │   │   └── src/{main,test}/kotlin/com/inweb/browser/privacy/
 │   └── android-app/src/main/        # Android shell UI (compiled by the Chromium build, ADR-009)

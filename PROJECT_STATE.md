@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 23 (Phase 8 in progress; Phases 0–7 core done)
+> Last updated: **2026-09-12** — Step 24 (Phase 8 in progress; Phases 0–7 core done)
 
 ```yaml
 project: iNWEB Browser
@@ -12,21 +12,20 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 8
 phase_title: VPN / Security
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 23
+step: 24
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 30 Python + 248 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 30 Python + 265 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action majors); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 8 / Step 24 — VPN configuration validation core in Kotlin
-  (pure JVM, CI-tested): WireGuard-style config parsing + structural
-  validation (required fields, base64 key length, CIDR/endpoint
-  syntax, section handling) — secrets opaque to the core, never
-  logged (alternative if directed: downloads/history surface
-  polish).
+  Phase 9 / Step 25 — profiles / sync / backup patch-series design
+  (§28/§29/§30/§32) + Phase 8 close-out note: profile model,
+  cloud-sync honesty scoping (no backend, no sync claims — §26/§41
+  discipline), offline sync, backup/restore format (alternative if
+  directed: downloads/history surface polish).
 ```
 
 ## Completed
@@ -410,9 +409,26 @@ next_action: >-
     offline work is patch-side (B-001)
   - ADR-025 recorded
 
+- [x] **Step 24 — Phase 8: VPN configuration validation core (§15 model)** (2026-09-12)
+  - NEW MODULE `src/core/vpn` (pure JVM, 17 tests): `VpnConfigParser` —
+    WireGuard-style INI parsing with STRICT structural validation
+    (exact section/field names; unknown sections/fields REJECTED, never
+    silently ignored — wg-quick host features named explicitly);
+    required keys; base64 keys of exactly 32 bytes; IPv4/IPv6 + CIDR
+    with correct prefix ranges (leading-zero prefixes rejected);
+    host:port endpoints (domain / IPv4 / [IPv6]); port/keepalive
+    ranges; list fields may span lines, scalars may not repeat; ALL
+    issues collected, never fail-fast
+  - `SecretValue`: private/preshared keys opaque by construction —
+    toString always redacts (tested); the PUBLIC key is documented as
+    public; no crypto in the core — the Android layer owns key
+    handling (ADR-025)
+  - Kotlin total 265 across FIVE modules (browser-shell 115 +
+    extensions 17 + offline 14 + vpn 17 + tracking-protection 102)
+
 ## In progress
 
-- (none — awaiting continuation command for Step 24)
+- (none — awaiting continuation command for Step 25)
 
 ## Not started
 
@@ -499,8 +515,8 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 - **Python: 30/30 passing** — patch-series tooling, registry validation, baseline
   parsing, string-resource validation (`python3 -m unittest discover -s tests -t .`).
-- **Kotlin: 248/248 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
-  kotlinc 2.4.20 + JUnit 4.13.2, 4 modules):
+- **Kotlin: 265/265 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
+  kotlinc 2.4.20 + JUnit 4.13.2, 5 modules):
   - `src/core/browser-shell` — 115 tests: tab navigation stack, controller
     (incl. `allTabs` switcher view), top-sites computation,
     session round-trip/corruption + manager, omnibox parsing (incl. Bengali
@@ -509,6 +525,12 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
     history (round-trips, corruption fallback, sanitization, unique ids),
     bookmark store semantics (dedupe, folders, rename/move) + file-backed
     persistent bookmarks, settings.
+  - `src/core/vpn` — 17 tests: config parsing (valid client configs,
+    multi-line list fields, optional-but-validated preshared key),
+    structural errors (missing/duplicate sections, unknown fields,
+    duplicate scalars, fail-fast-free issue collection), value
+    validation (key length, CIDR/IPv6 forms, endpoints, ports, DNS),
+    secret opacity (toString redaction, public-vs-private key).
   - `src/core/offline` — 14 tests: library registry (insertion order,
     same-URL replace, validation), access monotonicity, delete, quota
     eviction order (LRU first, tie by creation, pinned skipped, atomic
