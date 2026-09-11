@@ -100,6 +100,9 @@ run_module "src/core/offline" \
 run_module "src/core/vpn" \
   com.inweb.browser.vpn.VpnConfigParserTest
 
+run_module "src/core/profiles" \
+  com.inweb.browser.profiles.ProfileRegistryTest
+
 run_module "src/core/tracking-protection" \
   com.inweb.browser.privacy.FilterListParserTest \
   com.inweb.browser.privacy.RuleMatcherTest \
