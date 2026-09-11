@@ -21,8 +21,8 @@ written in Kotlin.
 
 | Item | State |
 |---|---|
-| Development phase | **Phase 7 — Offline / Data Saving: in progress** (design + library core complete; patch execution awaits B-001) — Phases 4–6 core work complete |
-| Current step | 22 |
+| Development phase | **Phase 8 — VPN / Security: in progress** (design complete; VPN config core next; execution awaits B-001) — Phases 4–7 core work complete |
+| Current step | 23 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 115 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag) |
@@ -116,6 +116,7 @@ git-ignored here by design (ADR-004): the tree is always reproducible as
 | [`docs/PHASE5-PERFORMANCE-DESIGN.md`](docs/PHASE5-PERFORMANCE-DESIGN.md) | Performance budgets, measured v1 baseline, combined-matcher & cache design, device plan |
 | [`docs/PHASE6-EXTENSION-DESIGN.md`](docs/PHASE6-EXTENSION-DESIGN.md) | Extension system design — API table, models, patch plan, build-time audit |
 | [`docs/PHASE7-OFFLINE-DESIGN.md`](docs/PHASE7-OFFLINE-DESIGN.md) | Offline reading, snapshots, cache controls, honest data saver — patch plan |
+| [`docs/PHASE8-VPN-SECURITY-DESIGN.md`](docs/PHASE8-VPN-SECURITY-DESIGN.md) | Bring-your-own VPN, biometric app lock, encryption model, documented 2FA absence |
 | [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md) | Security threat model (living document) |
 
 ## Development model
