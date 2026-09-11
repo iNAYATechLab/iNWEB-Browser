@@ -68,6 +68,8 @@ class FileHistoryStore(private val file: File) : HistoryStore {
             .take(limit)
     }
 
+    override fun allVisits(): List<HistoryEntry> = entries.toList()
+
     override fun delete(id: String): Boolean {
         val removed = entries.removeAll { it.id == id }
         if (removed) persist()

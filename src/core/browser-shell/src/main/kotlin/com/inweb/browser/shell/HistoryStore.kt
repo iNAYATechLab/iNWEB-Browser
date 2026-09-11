@@ -32,6 +32,13 @@ interface HistoryStore {
     /** Case-insensitive substring search over URL and title, newest first. */
     fun search(query: String, limit: Int): List<HistoryEntry>
 
+    /**
+     * All raw stored visits in chronological order (oldest first),
+     * including repeated URLs. Private visits are never present — they
+     * are not stored at all. Feeds top-site computation (§38).
+     */
+    fun allVisits(): List<HistoryEntry>
+
     /** Deletes one entry by id. Returns true if something was deleted. */
     fun delete(id: String): Boolean
 
@@ -99,6 +106,8 @@ class InMemoryHistoryStore : HistoryStore {
             .distinctBy { it.url }
             .take(limit)
     }
+
+    override fun allVisits(): List<HistoryEntry> = entries.toList()
 
     override fun delete(id: String): Boolean = entries.removeAll { it.id == id }
 

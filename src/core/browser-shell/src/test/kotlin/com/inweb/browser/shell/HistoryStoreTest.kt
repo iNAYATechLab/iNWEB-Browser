@@ -91,4 +91,20 @@ class HistoryStoreTest {
         assertEquals(1, backing.entryCount())
         assertEquals(1, store.recent(10).size)
     }
+
+    @Test
+    fun allVisitsReturnsRawVisitsIncludingDuplicatesOldestFirst() {
+        val store = InMemoryHistoryStore()
+        store.recordVisit("https://a.example.com/", "A", 1_000)
+        store.recordVisit("https://b.example.com/", "B", 2_000)
+        store.recordVisit("https://a.example.com/", "A2", 3_000)
+        store.recordVisit("https://a.example.com/", "A3", 4_000, isPrivate = true) // never stored
+
+        val visits = store.allVisits()
+        assertEquals(3, visits.size)
+        assertEquals(
+            listOf("https://a.example.com/", "https://b.example.com/", "https://a.example.com/"),
+            visits.map { it.url },
+        )
+    }
 }

@@ -88,6 +88,7 @@ run_module "src/core/browser-shell" \
   com.inweb.browser.shell.FileHistoryStoreTest \
   com.inweb.browser.shell.BookmarkStoreTest \
   com.inweb.browser.shell.FileBookmarkStoreTest \
+  com.inweb.browser.shell.TopSitesTest \
   com.inweb.browser.shell.SettingsTest
 
 run_module "src/core/tracking-protection" \

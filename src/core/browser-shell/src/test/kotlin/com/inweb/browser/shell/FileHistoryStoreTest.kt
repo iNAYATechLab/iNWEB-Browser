@@ -170,4 +170,15 @@ class FileHistoryStoreTest {
         assertEquals(3, ids.size)
         assertEquals(ids.size, ids.toSet().size)
     }
+
+    @Test
+    fun allVisitsPersistAcrossStoreInstances() {
+        FileHistoryStore(file).apply {
+            recordVisit("https://a.example.com/", "A", 1_000)
+            recordVisit("https://a.example.com/", "A again", 2_000)
+        }
+        val visits = FileHistoryStore(file).allVisits()
+        assertEquals(2, visits.size)
+        assertEquals("A again", visits.last().title)
+    }
 }
