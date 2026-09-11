@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 11 (Phase 3 in progress)
+> Last updated: **2026-09-12** — Step 12 (Phase 3 in progress)
 
 ```yaml
 project: iNWEB Browser
@@ -12,19 +12,19 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 3
 phase_title: Privacy & Tracking Protection
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 11
+step: 12
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
 test_status: unit-tests-passing    # 30 Python + 185 Kotlin tests (local + CI)
-ci_status: authoring-pipeline-live # Python + Kotlin core jobs; upstream watch live
+ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action majors); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 3 / Step 12 — close-out & quality pass: documentation accuracy
-  sweep (PHASE2-INTEGRATION-PLAN updated for every new surface the
-  engine adapter must bind), CI workflow version bumps, README refresh
-  (alternative if directed: downloads surface polish).
+  Phase 3 / Step 13 — Security Center data model (§24): pure-JVM
+  aggregation of real decision statistics + policy state into a
+  dashboard model, tested (alternative if directed: Phase 4 adblock
+  patch-series design document).
 ```
 
 ## Completed
@@ -192,10 +192,26 @@ next_action: >-
     onboarding instead of the browser
   - 11 new strings (en + bn)
   - Kotlin total 185 (browser-shell 115 + tracking-protection 70)
+- [x] **Step 12 — Phase 3: close-out & quality pass** (2026-09-12)
+  - CI workflows bumped to current action majors (checkout v4→v7,
+    setup-python v5→v7, setup-java v4→v6, cache v4→v6) — clears the
+    Node 20 deprecation annotations; Kotlin job renamed to reflect the
+    two modules it validates
+  - `docs/PHASE2-INTEGRATION-PLAN.md`: new "Surface-by-surface
+    engine-adapter binding contract" (§3) covering tabs, omnibox,
+    history, bookmarks, downloads, home, onboarding/settings, and
+    tracking protection — plus an expanded build-time validation
+    checklist per surface; honest-state table updated to Steps 4–11
+  - `docs/ARCHITECTURE.md`: new §4a "Implemented today" table for the
+    two core modules + authored UI
+  - New `src/core/browser-shell/README.md` (module doc mirroring the
+    tracking-protection module README)
+  - Full validation sweep re-run: Kotlin 185/185, Python 30/30,
+    strings OK; CI green on the bumped actions
 
 ## In progress
 
-- (none — awaiting continuation command for Step 12)
+- (none — awaiting continuation command for Step 13)
 
 ## Not started
 
@@ -311,9 +327,9 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Phase 3 / Step 12 — close-out & quality pass:** the authored shell is
-now feature-complete for the pre-engine phase; before Phase 4 planning,
-refresh the integration plan so the engine adapter contract covers every
-new surface (history/bookmarks/tabs/home/onboarding bindings), bump the
-CI action versions, and sweep the documentation for accuracy.
-Alternative next step if directed: downloads surface polish.
+**Phase 3 / Step 13 — Security Center data model (§24):** a pure-JVM
+model aggregating real `EngineStatistics`, `TrackingProtectionSettings`
+and filter-list state into the dashboard contract the Security Center UI
+will render — tested with unit tests, honest about being empty until the
+engine patches feed real decisions. Alternative next step if directed:
+Phase 4 adblock patch-series design document.
