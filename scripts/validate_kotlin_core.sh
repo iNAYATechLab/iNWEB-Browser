@@ -95,6 +95,7 @@ run_module "src/core/tracking-protection" \
   com.inweb.browser.privacy.FilterListParserTest \
   com.inweb.browser.privacy.RuleMatcherTest \
   com.inweb.browser.privacy.SecurityCenterTest \
+  com.inweb.browser.privacy.CosmeticFilterTest \
   com.inweb.browser.privacy.TrackingProtectionEngineTest \
   com.inweb.browser.privacy.DomainClassifierTest \
   com.inweb.browser.privacy.lists.FileFilterListCacheTest \

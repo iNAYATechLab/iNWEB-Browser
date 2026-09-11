@@ -16,6 +16,7 @@ per-site allowlisting, and real decision statistics.
 | `EngineStatistics` | Real block/allow/pass counters + per-domain blocks (feeds the Security Center, §24) |
 | `DomainClassifier` | Simplified registrable-domain classification (built-in multi-part suffix table; replaced by Chromium's full PSL at engine integration) |
 | `TrackingProtectionSettings` / `CookiePolicy` | Policy model consumed by the engine patches (not yet user-facing UI — §57) |
+| `CosmeticFilterParser` / `CosmeticFilterEngine` | Cosmetic (`##`) half: domain-constrained selector parsing with `#@#` exceptions; per-host grouped hiding CSS (`#?#`/`#$#`/`#%#` counted, not matched — ADR-021) |
 
 ### Filter-list management layer (`lists` subpackage, Step 6)
 

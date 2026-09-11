@@ -1,6 +1,9 @@
 package com.inweb.browser.privacy.lists
 
+import com.inweb.browser.privacy.CosmeticFilterEngine
+import com.inweb.browser.privacy.CosmeticFilterParser
 import com.inweb.browser.privacy.FilterListParser
+import com.inweb.browser.privacy.ParsedCosmeticList
 import com.inweb.browser.privacy.ParsedFilterList
 import com.inweb.browser.privacy.TrackingProtectionEngine
 import com.inweb.browser.privacy.TrackingProtectionSettings
@@ -42,6 +45,7 @@ class FilterListManager(
         var body: String,
         var metadata: FilterListMetadata,
         var parsed: ParsedFilterList,
+        val parsedCosmetic: ParsedCosmeticList,
     )
 
     private val lists = LinkedHashMap<String, ManagedList>()
@@ -134,6 +138,17 @@ class FilterListManager(
 
     fun totalNetworkRules(): Int = lists.values.sumOf { it.parsed.networkRules.size }
 
+    /** Current parsed cosmetic lists — snapshot for [CosmeticFilterEngine]. */
+    fun parsedCosmeticLists(): List<ParsedCosmeticList> = lists.values.map { it.parsedCosmetic }
+
+    /**
+     * Builds a fresh cosmetic-filter engine from the current lists
+     * (stylesheet hiding; see ADR-021 for the v1 subset).
+     */
+    fun buildCosmeticEngine(): CosmeticFilterEngine = CosmeticFilterEngine(parsedCosmeticLists())
+
+    fun totalCosmeticRules(): Int = lists.values.sumOf { it.parsedCosmetic.rules.size }
+
     fun metadataOf(sourceId: String): FilterListMetadata? = lists[sourceId]?.metadata
 
     fun lastReport(): Map<String, ListUpdateStatus> = lastStatus.toMap()
@@ -142,6 +157,7 @@ class FilterListManager(
 
     private fun storeAndRecord(source: FilterListSource, result: FetchResult.Success, nowMillis: Long) {
         val parsed = FilterListParser.parse(result.body, source.id)
+        val parsedCosmetic = CosmeticFilterParser.parse(result.body, source.id)
         val metadata = FilterListMetadata(
             sourceId = source.id,
             downloadedAtMillis = nowMillis,
@@ -151,7 +167,7 @@ class FilterListManager(
             ruleCount = parsed.networkRules.size,
         )
         cache.store(source, result.body, metadata)
-        put(source, result.body, metadata, parsed)
+        put(source, result.body, metadata, parsed, parsedCosmetic)
         record(source.id, ListUpdateStatus.Updated(metadata.version, parsed.networkRules.size))
     }
 
@@ -160,8 +176,9 @@ class FilterListManager(
         body: String,
         metadata: FilterListMetadata,
         parsed: ParsedFilterList = FilterListParser.parse(body, source.id),
+        parsedCosmetic: ParsedCosmeticList = CosmeticFilterParser.parse(body, source.id),
     ) {
-        lists[source.id] = ManagedList(source, body, metadata, parsed)
+        lists[source.id] = ManagedList(source, body, metadata, parsed, parsedCosmetic)
     }
 
     private fun loadFromCacheOrNull(source: FilterListSource): ManagedList? {
