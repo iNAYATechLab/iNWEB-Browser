@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 5 (Phase 3 in progress)
+> Last updated: **2026-09-12** — Step 6 (Phase 3 in progress)
 
 ```yaml
 project: iNWEB Browser
@@ -12,19 +12,19 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 3
 phase_title: Privacy & Tracking Protection
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 5
+step: 6
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 30 Python + 107 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 30 Python + 140 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs; upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 3 / Step 6 — filter-list management layer: download, cache,
-  versioning and update scheduling for EasyList-family lists (pure JVM,
-  tested) feeding the tracking-protection engine; defines the fetch/cache
-  contract that the engine patches (B-001) will consume.
+  Phase 3 / Step 7 — history UI surface backed by the real HistoryStore:
+  in-app history screen (list, search, delete) wired through the Android
+  layer, reusing the Step-4 data layer (alternative if directed: downloads
+  surface polish or onboarding).
 ```
 
 ## Completed
@@ -88,10 +88,28 @@ next_action: >-
   - Domain classifier with a multi-part public-suffix subset (co.uk, com.bd, …)
   - `scripts/validate_kotlin_core.sh` rewritten as multi-module
     (browser-shell 70 + tracking-protection 37 = 107 Kotlin tests)
+- [x] **Step 6 — Phase 3: Filter-list management layer** (2026-09-12)
+  - `lists` subpackage in `src/core/tracking-protection` (ADR-012 module):
+    `FilterListSource` (EasyList + EasyPrivacy defaults, sanitized ids),
+    `FilterListFetcher` port + real `HttpFilterListFetcher`
+    (HttpURLConnection, timeouts, `If-None-Match`/`If-Modified-Since`
+    revalidation, 304 handling, hard body-size cap)
+  - `FileFilterListCache`: atomic (temp + rename) two-file cache per list
+    (`<id>.txt` + `<id>.meta`), corrupt metadata degrades to missing —
+    tested against real temp directories
+  - `FilterListVersion`: `! Version:` / `! Last modified:` header extraction
+  - `UpdatePolicy`: refresh-due decision (interval / startup fetch / enabled)
+    — the policy never runs timers itself
+  - `FilterListManager`: startup (cache first, download only what is
+    missing), conditional refresh, graceful cached fallback on failure,
+    per-source `ListUpdateStatus` report, `buildEngine()` snapshot
+  - HTTP behavior tested against the JDK's real HttpServer (live sockets,
+    captured conditional headers, 200/304/404/dead-server/size-cap paths)
+  - 33 new tests → tracking-protection 70; Kotlin total 140
 
 ## In progress
 
-- (none — awaiting continuation command for Step 6)
+- (none — awaiting continuation command for Step 7)
 
 ## Not started
 
@@ -154,6 +172,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-011 | 2026-09-12 | History privacy contract enforced in a single decorator (`PrivacyFilterHistory`); session persistence writes atomically and falls back to a fresh session on corruption | One enforcement point regardless of backing store (§13/§14); crash-safe restore (§50/§51) |
 | ADR-012 | 2026-09-12 | One pure-JVM Gradle module per concern under `src/core/` (browser-shell, tracking-protection), each registered in the shared multi-module core validation script | Independent testability and review per concern; CI stays toolchain-pinned and Android-SDK-free (ADR-009) |
 | ADR-013 | 2026-09-12 | Filter engine v1 implements a documented EasyList-family subset with per-rule lazy regex; unknown options count as unsupported and are excluded from matching; combined-matcher optimization deferred | Honest, testable subset now (§57); correctness first, performance pass in Phase 4/5 |
+| ADR-014 | 2026-09-12 | Filter-list management: transport port with a real HttpURLConnection implementation (conditional revalidation, size cap), atomic file cache, and pure refresh-due policy — background timers stay in the host layer | Real, testable download/cache behavior now (§44); no hidden scheduling or device downloads before engine/app wiring (§57) |
 
 ## Build status
 
@@ -166,18 +185,21 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 - **Python: 30/30 passing** — patch-series tooling, registry validation, baseline
   parsing, string-resource validation (`python3 -m unittest discover -s tests -t .`).
-- **Kotlin: 107/107 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
+- **Kotlin: 140/140 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
   kotlinc 2.4.20 + JUnit 4.13.2, multi-module):
   - `src/core/browser-shell` — 70 tests: tab navigation stack, controller,
     session round-trip/corruption + manager, omnibox parsing (incl. Bengali
     queries and scheme edge cases), search engines, download state machine +
     catalog, history store with private exclusion, settings.
-  - `src/core/tracking-protection` — 37 tests: filter parsing (anchors,
+  - `src/core/tracking-protection` — 70 tests: filter parsing (anchors,
     options, exceptions, cosmetic/unsupported/invalid counting), pattern
     matching (domain anchor, separators, wildcards, left/right anchors,
     type/party/domain constraints), engine decisions (block/allow/pass,
     per-site allowlist, statistics), domain classification (multi-part
-    suffixes, third-party).
+    suffixes, third-party); list management (HTTP fetch via real JDK
+    HttpServer, conditional revalidation + 304, size cap, atomic file
+    cache, version parsing, update policy, manager lifecycle with cached
+    fallback).
 - **Live checks:** registry lint OK; string parity OK; baseline drift CURRENT.
 - CI runs the Python suite, string validation, and the Kotlin core suite on every
   push/PR touching `scripts/`, `tests/`, `iNWEB_PATCHES/`, `src/`.
@@ -195,8 +217,10 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Phase 3 / Step 6 — filter-list management layer:** download, cache, versioning
-and update scheduling for EasyList-family lists (pure JVM, tested), feeding the
-tracking-protection engine; defines the fetch/cache contract that the engine
-patches (B-001) will consume. Alternative next step if directed: history UI
-surface backed by the real `HistoryStore`.
+**Phase 3 / Step 7 — history UI surface:** in-app history screen (list,
+search, delete) backed by the real `HistoryStore` data layer from Step 4 and
+wired through the Android layer (ViewModel + Compose), with bn/en strings.
+The pure-JVM part of Phase 3 (decision engine + list management) is now
+complete; enforcement and privacy UI remain gated on the engine patches
+(B-001). Alternative next step if directed: downloads surface polish or
+onboarding screens.
