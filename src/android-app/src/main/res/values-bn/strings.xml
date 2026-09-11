@@ -34,6 +34,9 @@
     <string name="home_shortcuts">শর্টকাট</string>
     <string name="home_recent_pages">সাম্প্রতিক পেজ</string>
 
+    <!-- Tabs -->
+    <string name="tabs_empty">কোনো ট্যাব খোলা নেই</string>
+
     <!-- Bookmarks -->
     <string name="bookmarks_empty">এখনো কোনো বুকমার্ক নেই</string>
     <string name="bookmark_add_current">এই পেজটি বুকমার্ক করুন</string>

@@ -26,7 +26,7 @@ import com.inweb.browser.shell.ThemeMode
 import com.inweb.browser.shell.TabsController
 
 /** Overlay screens of the shell. */
-enum class Screen { BROWSER, SETTINGS, DOWNLOADS, HISTORY, BOOKMARKS }
+enum class Screen { BROWSER, SETTINGS, DOWNLOADS, HISTORY, BOOKMARKS, TABS }
 
 /**
  * Browser-shell view model: binds the pure-JVM core (TabsController,
@@ -64,6 +64,9 @@ class BrowserViewModel(
         private set
 
     var bookmarks by mutableStateOf<List<BookmarkEntry>>(emptyList())
+        private set
+
+    var tabs by mutableStateOf<List<TabState>>(emptyList())
         private set
 
     val tabIds: List<String> get() = controller.tabIds
@@ -207,6 +210,12 @@ class BrowserViewModel(
         screen = Screen.BOOKMARKS
     }
 
+    // --- Tab switcher (backed by the real TabsController) ----------------------
+
+    fun openTabs() {
+        screen = Screen.TABS
+    }
+
     /**
      * Bookmarks the currently open page. Bookmarks are never automatic:
      * this runs only on explicit user action. Returns true when a new
@@ -246,6 +255,7 @@ class BrowserViewModel(
 
     private fun refresh() {
         selectedTab = controller.selectedTab
+        tabs = controller.allTabs()
         downloads = downloadsStore.all()
     }
 

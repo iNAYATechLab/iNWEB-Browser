@@ -37,6 +37,9 @@
     <string name="home_shortcuts">Shortcuts</string>
     <string name="home_recent_pages">Recent pages</string>
 
+    <!-- Tabs -->
+    <string name="tabs_empty">No open tabs</string>
+
     <!-- Bookmarks -->
     <string name="bookmarks_empty">No bookmarks yet</string>
     <string name="bookmark_add_current">Bookmark this page</string>

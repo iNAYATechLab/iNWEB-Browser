@@ -68,7 +68,7 @@ fun BrowserBottomBar(viewModel: BrowserViewModel) {
                 )
             }
             IconButton(
-                onClick = { viewModel.openTab() },
+                onClick = { viewModel.openTabs() },
                 modifier = Modifier.weight(1f),
             ) {
                 BadgedBox(
