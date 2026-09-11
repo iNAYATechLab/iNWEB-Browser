@@ -43,7 +43,7 @@ private fun BrowserScaffold(viewModel: BrowserViewModel) {
     ) { padding ->
         val currentUrl = tab?.currentUrl
         if (currentUrl == null || currentUrl == AppSettings.DEFAULT_HOMEPAGE) {
-            HomePage(modifier = Modifier.padding(padding))
+            HomePage(viewModel, modifier = Modifier.padding(padding))
         } else {
             // The Chromium content surface binds here via the engine adapter
             // (ui/ patch area — docs/PHASE2-INTEGRATION-PLAN.md). Until the

@@ -23,6 +23,7 @@ import com.inweb.browser.shell.SessionPersistence
 import com.inweb.browser.shell.SettingsStore
 import com.inweb.browser.shell.TabState
 import com.inweb.browser.shell.ThemeMode
+import com.inweb.browser.shell.TopSite
 import com.inweb.browser.shell.TabsController
 
 /** Overlay screens of the shell. */
@@ -67,6 +68,14 @@ class BrowserViewModel(
         private set
 
     var tabs by mutableStateOf<List<TabState>>(emptyList())
+        private set
+
+    // Home / new-tab sections (§38) — real data only, never fabricated.
+    var homeShortcuts by mutableStateOf<List<TopSite>>(emptyList())
+        private set
+    var homeRecent by mutableStateOf<List<HistoryEntry>>(emptyList())
+        private set
+    var homeBookmarks by mutableStateOf<List<BookmarkEntry>>(emptyList())
         private set
 
     val tabIds: List<String> get() = controller.tabIds
@@ -197,10 +206,16 @@ class BrowserViewModel(
 
     private fun refreshHistory() {
         history = if (historyQuery.isBlank()) {
-            historyStore.recent(HISTORY_LIMIT)
+            history.recent(HISTORY_LIMIT)
         } else {
-            historyStore.search(historyQuery, HISTORY_LIMIT)
+            history.search(historyQuery, HISTORY_LIMIT)
         }
+    }
+
+    private fun refreshHome() {
+        homeShortcuts = TopSites.compute(history.allVisits(), HOME_SHORTCUT_LIMIT)
+        homeRecent = history.recent(HOME_RECENT_LIMIT)
+        homeBookmarks = bookmarkStore.all().take(HOME_BOOKMARK_LIMIT)
     }
 
     // --- Bookmarks surface (explicit user action only, §28/§31) --------------
@@ -240,6 +255,7 @@ class BrowserViewModel(
 
     private fun refreshBookmarks() {
         bookmarks = bookmarkStore.all()
+        refreshHome()
     }
 
     fun closeOverlay() {
@@ -257,11 +273,15 @@ class BrowserViewModel(
         selectedTab = controller.selectedTab
         tabs = controller.allTabs()
         downloads = downloadsStore.all()
+        refreshHome()
     }
 
     private companion object {
         /** Safety cap for the history surface; full data stays on disk. */
         const val HISTORY_LIMIT = 200
+        const val HOME_SHORTCUT_LIMIT = 5
+        const val HOME_RECENT_LIMIT = 5
+        const val HOME_BOOKMARK_LIMIT = 5
     }
 }
 
