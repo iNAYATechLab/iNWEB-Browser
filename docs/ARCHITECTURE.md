@@ -51,6 +51,14 @@ iNWEB BROWSER (development → beta → stable channels)
 
 ## 4. iNWEB application modules (§6) — honest scoping
 
+### 4a. Implemented today (pre-engine, pure JVM + authored UI)
+
+| Module | State |
+|---|---|
+| `src/core/browser-shell` | Implemented & unit-tested (115 tests): tabs, omnibox, session, settings, history + bookmarks (persistent file stores), downloads catalog, top sites |
+| `src/core/tracking-protection` | Implemented & unit-tested (70 tests): EasyList-family parser, URL matching, request-decision engine, per-site allowlist, filter-list download/cache/update management |
+| `src/android-app` | Authored (compiles in the Chromium build, B-001): browser shell, tab switcher, home with real data, onboarding, settings, downloads, history, bookmarks surfaces; bn/en strings |
+
 | Module | Mechanism | Phase |
 |---|---|---|
 | Privacy Engine | Chromium patch-level controls + iNWEB policy layer; no setting without behavior (§10) | 3 |
