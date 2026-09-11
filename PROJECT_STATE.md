@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 9 (Phase 3 in progress)
+> Last updated: **2026-09-12** — Step 10 (Phase 3 in progress)
 
 ```yaml
 project: iNWEB Browser
@@ -12,19 +12,19 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 3
 phase_title: Privacy & Tracking Protection
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 9
+step: 10
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 30 Python + 174 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 30 Python + 183 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs; upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 3 / Step 10 — home / new-tab surface (§38): real bookmarks and
-  recent history on the start page, wired from the tested stores through
-  the Android layer (alternative if directed: onboarding screens §35 or
-  downloads surface polish).
+  Phase 3 / Step 11 — onboarding / first-run screens (§35): privacy
+  education + default search-engine choice wired to the real
+  SettingsStore (alternative if directed: downloads surface polish or a
+  quality/documentation pass).
 ```
 
 ## Completed
@@ -158,10 +158,27 @@ next_action: >-
     that just opened a new tab)
   - 1 new string (en + bn): tabs empty state
   - Kotlin total 174 (browser-shell 104 + tracking-protection 70)
+- [x] **Step 10 — Phase 3: Home / new-tab surface with real data (§38)** (2026-09-12)
+  - Core: `HistoryStore.allVisits()` — raw stored visits, oldest first,
+    including repeated URLs (private visits never present) — 2 new store
+    tests (in-memory incl. duplicates + private exclusion, file
+    persistence across instances)
+  - Core: `TopSites.compute()` — the §38 "shortcuts" section computed
+    from real browsing history: visit-count ranking, recency tie-break,
+    latest-title selection, limit — 7 tests
+  - Android layer: `BrowserViewModel` exposes `homeShortcuts` /
+    `homeRecent` / `homeBookmarks`, refreshed on every navigation and
+    bookmark mutation; history reads now go through the single
+    privacy-decorated reference
+  - `HomePage` rebuilt: brand + private-search prompt + three REAL data
+    sections (shortcuts from top sites, recent pages, bookmarks); empty
+    sections are hidden — nothing fabricated (§57); rows open via the
+    real omnibox navigation path
+  - Kotlin total 183 (browser-shell 113 + tracking-protection 70)
 
 ## In progress
 
-- (none — awaiting continuation command for Step 10)
+- (none — awaiting continuation command for Step 11)
 
 ## Not started
 
@@ -227,6 +244,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-014 | 2026-09-12 | Filter-list management: transport port with a real HttpURLConnection implementation (conditional revalidation, size cap), atomic file cache, and pure refresh-due policy — background timers stay in the host layer | Real, testable download/cache behavior now (§44); no hidden scheduling or device downloads before engine/app wiring (§57) |
 | ADR-015 | 2026-09-12 | Persistent history uses a write-through atomic TSV file store; header corruption restarts fresh, malformed lines are skipped and counted; the single `PrivacyFilterHistory` decorator remains the only privacy enforcement point | Crash-safe persistence with honest degradation (§14/§51); privacy contract stays in one place (ADR-011 pattern) |
 | ADR-016 | 2026-09-12 | Bookmarks: URLs are unique (duplicate add is idempotent), folders are plain names with `null` = unfiled, and bookmarking happens only on explicit user action; `FileBookmarkStore` mirrors the ADR-015 persistence strategy | No accidental duplicates; simple folders-lite v1 (folders UI deferred); honest, crash-safe storage identical to history |
+| ADR-017 | 2026-09-12 | Home "shortcuts" are top sites computed from real raw history visits (`allVisits()` + `TopSites.compute()`), never pinned or fabricated; home sections with no data are hidden entirely | §38 shortcuts grounded in real usage data (§57); pinned/custom shortcuts deferred to Phase 11 customization |
 
 ## Build status
 
@@ -239,10 +257,10 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 - **Python: 30/30 passing** — patch-series tooling, registry validation, baseline
   parsing, string-resource validation (`python3 -m unittest discover -s tests -t .`).
-- **Kotlin: 174/174 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
+- **Kotlin: 183/183 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
   kotlinc 2.4.20 + JUnit 4.13.2, multi-module):
-  - `src/core/browser-shell` — 104 tests: tab navigation stack, controller
-    (incl. `allTabs` switcher view),
+  - `src/core/browser-shell` — 113 tests: tab navigation stack, controller
+    (incl. `allTabs` switcher view), top-sites computation,
     session round-trip/corruption + manager, omnibox parsing (incl. Bengali
     queries and scheme edge cases), search engines, download state machine +
     catalog, history store with private exclusion, file-backed persistent
@@ -275,8 +293,8 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Phase 3 / Step 10 — home / new-tab surface (§38):** the start page
-becomes real — bookmark shortcuts and recent (non-private) history rows
-served from the tested stores, wired through the Android layer with
-bn/en strings. Alternative next step if directed: onboarding screens
-(§35) or downloads surface polish.
+**Phase 3 / Step 11 — onboarding / first-run screens (§35):** the
+first-run flow (privacy education + default search-engine choice)
+authored in Compose and wired to the real `SettingsStore` — the choice
+persists for real. Alternative next step if directed: downloads surface
+polish or a quality/documentation pass.
