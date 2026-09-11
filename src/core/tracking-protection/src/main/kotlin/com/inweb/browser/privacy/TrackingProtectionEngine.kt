@@ -35,6 +35,9 @@ class TrackingProtectionEngine(
 ) {
     private val rules: List<NetworkFilterRule> = parsedLists.flatMap { it.networkRules }
 
+    /** Token-index candidate selection (ADR-022; equivalence-tested vs v1). */
+    private val combinedMatcher = CombinedMatcher(rules)
+
     val statistics = EngineStatistics()
 
     fun decide(request: RequestContext): FilterDecision {
@@ -46,8 +49,7 @@ class TrackingProtectionEngine(
         }
 
         var blockMatch: NetworkFilterRule? = null
-        for (rule in rules) {
-            if (!RuleMatcher.matches(rule, request)) continue
+        for (rule in matchingRules(request)) {
             if (rule.isException) {
                 statistics.recordAllow()
                 return FilterDecision(FilterAction.ALLOW, matchedRule = rule)
@@ -65,6 +67,28 @@ class TrackingProtectionEngine(
             }
         }
     }
+
+    /**
+     * All rules matching the request (pattern AND options), in list order —
+     * the combined-matcher path used by [decide].
+     */
+    internal fun matchingRules(request: RequestContext): List<NetworkFilterRule> {
+        val candidateOrdinals = combinedMatcher.candidates(request.requestUrl)
+        val matched = ArrayList<NetworkFilterRule>(candidateOrdinals.size)
+        for (ordinal in candidateOrdinals) {
+            val rule = rules[ordinal]
+            if (RuleMatcher.matches(rule, request)) matched += rule
+        }
+        return matched
+    }
+
+    /**
+     * v1 full-scan reference (every rule evaluated) — kept as the
+     * equivalence oracle for [CombinedMatcherTest] per the ADR-022
+     * correctness contract; not used by [decide].
+     */
+    internal fun matchingRulesNaive(request: RequestContext): List<NetworkFilterRule> =
+        rules.filter { RuleMatcher.matches(it, request) }
 }
 
 /** Real decision counters, backing Security Center statistics (§24). */

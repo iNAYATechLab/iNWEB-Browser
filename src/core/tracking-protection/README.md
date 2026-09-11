@@ -13,6 +13,7 @@ per-site allowlisting, and real decision statistics.
 | `PatternCompiler` | Pattern → regex translation (`||`, `|`, `*`, `^`) |
 | `RuleMatcher` | Option-aware matching of a rule against a request |
 | `TrackingProtectionEngine` | Decision order: disable → site allowlist → exception → block → pass |
+| `CombinedMatcher` | Token-index candidate selection (ADR-022): rules indexed by their longest literal run; wildcard-only/short patterns in an always-check bucket; substring lookup (no whole-token trap); candidates are an order-preserving superset — decision-equivalence-tested against the v1 full scan (`matchingRulesNaive`) |
 | `EngineStatistics` | Real block/allow/pass counters + per-domain blocks (feeds the Security Center, §24) |
 | `DomainClassifier` | Simplified registrable-domain classification (built-in multi-part suffix table; replaced by Chromium's full PSL at engine integration) |
 | `TrackingProtectionSettings` / `CookiePolicy` | Policy model consumed by the engine patches (not yet user-facing UI — §57) |

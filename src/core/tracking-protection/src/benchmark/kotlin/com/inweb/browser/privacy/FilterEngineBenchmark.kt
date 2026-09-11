@@ -34,22 +34,21 @@ object FilterEngineBenchmark {
             request("https://clean$i.cleanweb.org/page$i.html")
         }
 
-        // --- warmup (also lazily compiles every rule regex) ------------------
+        // --- cold pass (full workloads once; compiles every lazy regex the
+        // --- timed passes will touch) ----------------------------------------
         val warmupStart = System.nanoTime()
-        (0 until 12).forEach { i ->
-            engine.decide(blockWorkload[i % blockWorkload.size])
-            engine.decide(passWorkload[i % passWorkload.size])
-        }
-        val warmupMillis = msSince(warmupStart)
+        blockWorkload.forEach { engine.decide(it) }
+        passWorkload.forEach { engine.decide(it) }
+        val coldPassMillis = msSince(warmupStart)
         val heapMb = approxUsedHeapMb()
 
-        // --- block-heavy workload -------------------------------------------
+        // --- block-heavy workload (steady state) ------------------------------
         val blockStart = System.nanoTime()
         var blocked = 0
         blockWorkload.forEach { if (engine.decide(it).action == FilterAction.BLOCK) blocked++ }
         val blockMillis = msSince(blockStart)
 
-        // --- pass-heavy workload (worst case: every rule is scanned) ---------
+        // --- pass-heavy workload (worst case: no rule matches) ----------------
         val passStart = System.nanoTime()
         var passed = 0
         passWorkload.forEach { if (engine.decide(it).action == FilterAction.PASS) passed++ }
@@ -62,7 +61,7 @@ object FilterEngineBenchmark {
             "unsupported_rules" to parsed.unsupportedRuleCount.toString(),
             "parse_ms" to parseMillis.toString(),
             "parse_rules_per_sec" to rate(corpus.size, parseMillis),
-            "warmup_ms" to warmupMillis.toString(),
+            "cold_pass_ms" to coldPassMillis.toString(),
             "approx_heap_after_warmup_mb" to heapMb.toString(),
             "block_decisions" to decisionsPerWorkload.toString(),
             "block_confirmed_blocks" to blocked.toString(),
