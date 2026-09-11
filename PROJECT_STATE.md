@@ -4,15 +4,15 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 16 (Phase 4 in progress)
+> Last updated: **2026-09-12** — Step 17 (Phase 5 in progress)
 
 ```yaml
 project: iNWEB Browser
 repository: iNAYATechLab/iNWEB-Browser
-phase: 4
-phase_title: Ad / Popup Protection
+phase: 5
+phase_title: Performance
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 16
+step: 17
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
@@ -21,9 +21,9 @@ ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action m
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 5 / Step 17 — performance design & measurement plan (§9/§21/
-  §52): startup, memory, network, battery budgets incl. the combined
-  matcher + decision cache for the filter engine (ADR-013 follow-up)
+  Phase 5 / Step 18 — combined matcher (token-index candidate
+  selection) for the filter engine, with a decision-equivalence test
+  against v1 and re-measured benchmark per ADR-022 / the Phase 5 plan
   (alternative if directed: downloads surface polish).
 ```
 
@@ -279,9 +279,27 @@ next_action: >-
   - Phase 4 design trio complete (network / popup / cosmetic)
   - Kotlin total 207 (browser-shell 115 + tracking-protection 92)
 
+- [x] **Step 17 — Phase 5: performance design & measured baseline (§9/§21/§52)** (2026-09-12)
+  - New benchmark artifact: `scripts/benchmark_filter_engine.sh` +
+    `src/core/tracking-protection/src/benchmark/.../FilterEngineBenchmark.kt`
+    (synthetic EasyList-scale corpus, 25k rules, warmup, block/pass
+    workloads; NOT in CI — noise, §9 protocol documented)
+  - **Measured v1 baseline** (sandbox, 2 vCPU, OpenJDK 11): parse
+    ~187k rules/sec; decisions **~16.5 ms (block) / ~18.1 ms (pass)**;
+    heap ~111 MB — honest conclusion: v1 is correct but NOT production-
+    viable; a 50–100-request page would cost ~0.8–1.8 s CPU
+  - New `docs/PHASE5-PERFORMANCE-DESIGN.md`: budgets as verification
+    targets (per-request p95 < 1 ms, engine memory < 60 MB, startup
+    off-critical-path, cold start within 10% of vanilla same-tag build);
+    combined-matcher design (Step 18) with an explicit decision-
+    equivalence correctness contract; decision cache (measure-first);
+    device measurement plan (perfetto/`am start -W`/meminfo/
+    batterystats A/B vs vanilla); benchmark log
+  - ADR-022 recorded
+
 ## In progress
 
-- (none — awaiting continuation command for Step 17)
+- (none — awaiting continuation command for Step 18)
 
 ## Not started
 
@@ -352,6 +370,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-019 | 2026-09-12 | Ad blocking intercepts via `URLLoaderThrottle` with deferred background-thread `decide()` calls; allowlist/toggle logic lives only inside the engine (one decision path); main-frame navigations are not filtered in v1; engine snapshots swap atomically after refresh | Chosen integration point of shipped Chromium-derived browsers; no C++-side policy divergence; defers never block the UI thread; §57-honest deferred scopes (websocket, cosmetic, popup) |
 | ADR-020 | 2026-09-12 | Popup policy: user-activation-based blocking at the window-creation consent point with `$popup` engine consultation; one shared per-site allowlist across all protections; quiet-only notification prompts; no remote reputation claims (no bundled service); user-driven same-tab redirects never blocked | One shields list per site (no settings sprawl); §12 "where supported" satisfied honestly; web compatibility preserved |
 | ADR-021 | 2026-09-12 | Cosmetic filtering v1 = stylesheet hiding only (`##` with `#@#` exceptions), selectors passed through verbatim (browser CSS parser validates); procedural `#?#` and scriptlet rules counted, never matched; injection is per-frame at document commit; no new §24 counters | Honest, testable subset now (§11/§57); network blocking stays the primary defense — cosmetic never claims to block requests |
+| ADR-022 | 2026-09-12 | Performance work is measure-first: the benchmark is a tracked artifact; budgets are verification targets, never claims; the combined matcher (token-index candidates with a decision-equivalence contract vs v1) is mandatory before any enforcement ships, justified by the measured 16–18 ms/request baseline | §9 discipline ("measure, don't claim"); correctness guaranteed by equivalence, performance by re-measurement |
 
 ## Build status
 
@@ -403,9 +422,10 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Phase 5 / Step 17 — performance design & measurement plan (§9/§21/§52):**
-budgets for startup, memory, network, and battery, plus the filter
-engine's performance deliverables from ADR-013 — the combined matcher
-and decision cache with measured baselines. Authored as a design +
-measurement plan (execution needs the built product, B-001).
-Alternative next step if directed: downloads surface polish.
+**Phase 5 / Step 18 — combined matcher:** implement the token-index
+candidate selection designed in `docs/PHASE5-PERFORMANCE-DESIGN.md`
+§3 — required-token extraction at index time, candidate union per
+request, always-check bucket — with a decision-EQUIVALENCE test suite
+against the v1 matcher over the synthetic corpus and edge cases, then
+re-run the benchmark and append the v2 row to the log. Alternative
+next step if directed: downloads surface polish.
