@@ -57,7 +57,7 @@ exists; regressions beyond budget block promotion. Baseline is measured, never a
 
 - Chromium revision: pinned tag + `DEPS` via `gclient sync --revision src@<tag> -D`.
 - Build container: image digest pinned; `Dockerfile` committed in `ci/` (Phase 1).
-- GN args: committed per channel under `build/config/inweb/`.
+- GN args: committed per channel under `config/chromium/`.
 - Build metadata stamp: upstream tag + iNWEB patch-set hash + container digest.
 - CI invariant: working tree ≡ `pristine@tag + ordered patch series`, verified by
   hashing before every build.
