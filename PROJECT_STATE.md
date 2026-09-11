@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 8 (Phase 3 in progress)
+> Last updated: **2026-09-12** — Step 9 (Phase 3 in progress)
 
 ```yaml
 project: iNWEB Browser
@@ -12,19 +12,19 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 3
 phase_title: Privacy & Tracking Protection
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 8
+step: 9
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 30 Python + 171 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 30 Python + 174 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs; upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 3 / Step 9 — tab-switcher surface backed by the real
-  TabsController: grid/list of open tabs, private-tab badge, select and
-  close actions (alternative if directed: downloads surface polish or
-  onboarding screens).
+  Phase 3 / Step 10 — home / new-tab surface (§38): real bookmarks and
+  recent history on the start page, wired from the tested stores through
+  the Android layer (alternative if directed: onboarding screens §35 or
+  downloads surface polish).
 ```
 
 ## Completed
@@ -143,10 +143,25 @@ next_action: >-
   - 3 new strings (en + bn): empty state, add-current, remove
   - Bookmarks are an explicit user action only — never automatic (§57)
   - Kotlin total 171 (browser-shell 101 + tracking-protection 70)
+- [x] **Step 9 — Phase 3: Tab-switcher surface (real TabsController)** (2026-09-12)
+  - Core: `TabsController.allTabs()` — all open tabs in insertion order
+    (tab-switcher view; also the contract the engine adapter will
+    observe) — 3 new tests (insertion order incl. private, navigation
+    updates, closures)
+  - Android layer: `BrowserViewModel` exposes live `tabs` state;
+    `openTabs()` routes to the new `Screen.TABS`
+  - New `TabsScreen` (Compose M3): two-column grid of tab cards with
+    selected-tab highlight, per-card close, private-tab badge (§13),
+    new-tab / new-private-tab actions, honest empty state; selecting a
+    tab returns to the browser
+  - Bottom-bar tabs button now opens the switcher (was a placeholder
+    that just opened a new tab)
+  - 1 new string (en + bn): tabs empty state
+  - Kotlin total 174 (browser-shell 104 + tracking-protection 70)
 
 ## In progress
 
-- (none — awaiting continuation command for Step 9)
+- (none — awaiting continuation command for Step 10)
 
 ## Not started
 
@@ -224,9 +239,10 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 - **Python: 30/30 passing** — patch-series tooling, registry validation, baseline
   parsing, string-resource validation (`python3 -m unittest discover -s tests -t .`).
-- **Kotlin: 171/171 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
+- **Kotlin: 174/174 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
   kotlinc 2.4.20 + JUnit 4.13.2, multi-module):
-  - `src/core/browser-shell` — 101 tests: tab navigation stack, controller,
+  - `src/core/browser-shell` — 104 tests: tab navigation stack, controller
+    (incl. `allTabs` switcher view),
     session round-trip/corruption + manager, omnibox parsing (incl. Bengali
     queries and scheme edge cases), search engines, download state machine +
     catalog, history store with private exclusion, file-backed persistent
@@ -259,8 +275,8 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Phase 3 / Step 9 — tab-switcher surface:** grid of open tabs backed by
-the real `TabsController` (private-tab badge, select, close, new tab),
-wired through the Android layer with bn/en strings — the last core shell
-surface without a dedicated UI. Alternative next step if directed:
-downloads surface polish or onboarding screens (§35).
+**Phase 3 / Step 10 — home / new-tab surface (§38):** the start page
+becomes real — bookmark shortcuts and recent (non-private) history rows
+served from the tested stores, wired through the Android layer with
+bn/en strings. Alternative next step if directed: onboarding screens
+(§35) or downloads surface polish.
