@@ -21,12 +21,14 @@ written in Kotlin.
 
 | Item | State |
 |---|---|
-| Development phase | **Phase 1 — Chromium Foundation: in progress** (authoring foundation complete) |
-| Current step | 2 |
+| Development phase | **Phase 2 — Browser Shell: in progress** (core shell logic complete & tested; UI authored) |
+| Current step | 3 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
-| Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — **implemented & unit-tested (21/21)** |
-| CI | **Live** on GitHub-hosted runners: unit tests + registry validation; weekly upstream baseline drift watch |
+| Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 52 Kotlin tests** (tabs, omnibox, session, downloads, settings) |
+| Android shell UI (`src/android-app`) | Authored — Compose + Material 3, bn/en strings; compiles in the Chromium build (B-001) |
+| Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — tested |
+| CI | **Live**: Python (30 tests) + registry + string parity; Kotlin core (52 tests); weekly upstream watch |
 | Build | **Not yet executed** — requires external build infrastructure (blocker B-001) |
 | Open defects | None recorded |
 
@@ -57,9 +59,19 @@ inweb-browser/
 │   ├── apply_patches.py             # Series convergence: apply / verify / hash (tested)
 │   ├── lint_manifest.py             # Registry validation (tested)
 │   ├── check_baseline.py            # Upstream Android-stable drift check (live)
+│   ├── validate_strings.py          # bn/en string parity + placeholder validation (tested)
+│   ├── validate_kotlin_core.sh      # Compile + run core module tests (kotlinc + JUnit)
 │   ├── fetch_chromium.sh            # BUILD HOST: pinned tag checkout (authored)
 │   ├── build_android.sh             # BUILD HOST: GN + ninja build (authored)
 │   └── bootstrap_env.sh             # Authoring-sandbox session bootstrap
+├── src/
+│   ├── core/browser-shell/          # Pure-JVM core (Gradle project; validated by script + CI)
+│   │   ├── build.gradle.kts
+│   │   └── src/{main,test}/kotlin/com/inweb/browser/shell/
+│   └── android-app/src/main/        # Android shell UI (compiled by the Chromium build, ADR-009)
+│       ├── AndroidManifest.xml
+│       ├── kotlin/com/inweb/browser/
+│       └── res/{values,values-bn}/strings.xml
 ├── config/chromium/
 │   ├── BASELINE                     # Pinned Chromium tag
 │   ├── args-development.gn          # Draft GN args (validated at first build)
@@ -88,6 +100,7 @@ git-ignored here by design (ADR-004): the tree is always reproducible as
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System architecture and module map |
 | [`docs/LICENSING.md`](docs/LICENSING.md) | License landscape and obligations |
 | [`docs/BUILD-INFRASTRUCTURE.md`](docs/BUILD-INFRASTRUCTURE.md) | CI/CD design, build host specification, reproducibility |
+| [`docs/PHASE2-INTEGRATION-PLAN.md`](docs/PHASE2-INTEGRATION-PLAN.md) | Patch-by-patch plan binding `src/` into the Chromium Android build |
 | [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md) | Security threat model (living document) |
 
 ## Development model
