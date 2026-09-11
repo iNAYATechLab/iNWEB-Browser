@@ -21,14 +21,14 @@ written in Kotlin.
 
 | Item | State |
 |---|---|
-| Development phase | **Phase 2 — Browser Shell: in progress** (core shell logic complete & tested; UI authored) |
-| Current step | 3 |
+| Development phase | **Phase 2 — Browser Shell: in progress** (shell surfaces + persistence complete; engine integration awaits B-001) |
+| Current step | 4 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
-| Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 52 Kotlin tests** (tabs, omnibox, session, downloads, settings) |
+| Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 70 Kotlin tests** (tabs, omnibox, session, history, downloads, settings) |
 | Android shell UI (`src/android-app`) | Authored — Compose + Material 3, bn/en strings; compiles in the Chromium build (B-001) |
 | Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — tested |
-| CI | **Live**: Python (30 tests) + registry + string parity; Kotlin core (52 tests); weekly upstream watch |
+| CI | **Live**: Python (30 tests) + registry + string parity; Kotlin core (70 tests); weekly upstream watch |
 | Build | **Not yet executed** — requires external build infrastructure (blocker B-001) |
 | Open defects | None recorded |
 
@@ -70,7 +70,7 @@ inweb-browser/
 │   │   └── src/{main,test}/kotlin/com/inweb/browser/shell/
 │   └── android-app/src/main/        # Android shell UI (compiled by the Chromium build, ADR-009)
 │       ├── AndroidManifest.xml
-│       ├── kotlin/com/inweb/browser/
+│       ├── kotlin/com/inweb/browser/   (shell, ui, session, settings)
 │       └── res/{values,values-bn}/strings.xml
 ├── config/chromium/
 │   ├── BASELINE                     # Pinned Chromium tag

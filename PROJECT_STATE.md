@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 3 (Phase 2 in progress)
+> Last updated: **2026-09-12** — Step 4 (Phase 2 in progress)
 
 ```yaml
 project: iNWEB Browser
@@ -12,18 +12,18 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 2
 phase_title: Browser Shell
 phase_status: in_progress   # core shell logic implemented & tested; UI authored; engine integration awaits B-001
-step: 3
+step: 4
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 30 Python + 52 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 30 Python + 70 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs; upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 2 / Step 4 — shell surfaces: settings UI with real SettingsStore
-  behavior, downloads + history data layer (core interfaces + app source),
-  and session persistence binding in the app layer.
+  Phase 3 / Step 5 — tracking-protection core: filter-list model, parser
+  and matching engine (pure JVM, tested), per-site allowlist, and the
+  privacy policy model that engine patches will enforce.
 ```
 
 ## Completed
@@ -53,15 +53,29 @@ next_action: >-
   - `docs/PHASE2-INTEGRATION-PLAN.md`: patch-by-patch Chromium integration plan
     (inweb_public_apk target, engine adapter, sync + validation checklist)
   - CI extended: Kotlin core test job + string parity validation
+- [x] **Step 4 — Phase 2: Browser Shell (surfaces + persistence)** (2026-09-12)
+  - History data layer: `HistoryStore` port + `PrivacyFilterHistory`
+    (private-mode exclusion enforced in one decorator) + in-memory impl —
+    recent/search/delete/deleteRange/clearAll, 8 tests
+  - Downloads catalog: `DownloadsStore` port + in-memory impl, 5 tests
+  - Session manager: `SessionManager` + `SessionPersistence` port —
+    crash-safe snapshot/restore with corrupted-snapshot fallback to a fresh
+    session, 5 tests
+  - Settings surface (search engine + theme) with real persisted behavior;
+    downloads surface backed strictly by real DownloadRecord state
+  - App adapters: `FileSessionPersistence` (atomic temp+rename writes),
+    `SharedPreferencesSettingsStore`
+  - Lifecycle binding: session restore on start, snapshot on onStop (§51)
+  - 3 new localized strings (downloads empty/queued/running) — 39 total
 
 ## In progress
 
-- (none — awaiting continuation command for Step 4)
+- (none — awaiting continuation command for Step 5)
 
 ## Not started
 
-- Phase 2 remainder: settings/downloads/history surfaces, session binding (Step 4+)
-- Phase 3 — Privacy
+- Phase 3 remainder: privacy UI surfaces, storage controls (engine patches)
+- Phase 4 — Ad / Popup Protection
 - Phase 4 — Ad / Popup Protection
 - Phase 5 — Performance
 - Phase 6 — Extensions
@@ -96,7 +110,9 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Known defects
 
-- None open. (Step 3 defect found and fixed via the Rule 64 loop: the omnibox
+- None open. (Step 4 test defect found and fixed via the Rule 64 loop: an
+  incorrect newest-first expectation in a history range-deletion test.
+  Step 3 defect found and fixed via the Rule 64 loop: the omnibox
   scheme detection initially treated `host:port` inputs as URLs with an unknown
   scheme; replaced with an explicit `scheme://` authority check plus a
   known-scheme whitelist, with regression tests.)
@@ -115,6 +131,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-008 | 2026-09-12 | iNWEB Android UI layer: Jetpack Compose + Material 3, single-activity | Modern M3 (§37); full ownership of the iNWEB design system |
 | ADR-009 | 2026-09-12 | Engine-independent shell logic lives in a pure-JVM module (`src/core/browser-shell`); the product APK is produced only by the Chromium/GN build (no parallel AGP product build) | Core logic continuously testable in CI without Android SDK; single source of truth for the product build |
 | ADR-010 | 2026-09-12 | DuckDuckGo is the default search engine | Privacy-preserving defaults (§10); user-changeable in settings |
+| ADR-011 | 2026-09-12 | History privacy contract enforced in a single decorator (`PrivacyFilterHistory`); session persistence writes atomically and falls back to a fresh session on corruption | One enforcement point regardless of backing store (§13/§14); crash-safe restore (§50/§51) |
 
 ## Build status
 
@@ -127,11 +144,12 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 - **Python: 30/30 passing** — patch-series tooling, registry validation, baseline
   parsing, string-resource validation (`python3 -m unittest discover -s tests -t .`).
-- **Kotlin: 52/52 passing** — `src/core/browser-shell` compiled with pinned
+- **Kotlin: 70/70 passing** — `src/core/browser-shell` compiled with pinned
   kotlinc 2.4.20 + JUnit 4.13.2 (`bash scripts/validate_kotlin_core.sh`):
-  tab navigation stack, controller, session round-trip/corruption, omnibox
-  parsing (incl. Bengali queries and scheme edge cases), search engines,
-  download state machine, settings.
+  tab navigation stack, controller, session round-trip/corruption + manager,
+  omnibox parsing (incl. Bengali queries and scheme edge cases), search
+  engines, download state machine + catalog, history store with private
+  exclusion, settings.
 - **Live checks:** registry lint OK; string parity OK; baseline drift CURRENT.
 - CI runs the Python suite, string validation, and the Kotlin core suite on every
   push/PR touching `scripts/`, `tests/`, `iNWEB_PATCHES/`, `src/`.
@@ -149,7 +167,8 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Phase 2 / Step 4 — shell surfaces:** settings surface (search engine + theme with
-real `SettingsStore` behavior), downloads list UI backed by `DownloadRecord`, history
-data layer (core interfaces + app-layer source, private-mode exclusion), and session
-persistence binding (save/restore on app lifecycle events).
+**Phase 3 / Step 5 — tracking-protection core:** filter-list data model and parser
+(EasyList-family syntax subset), URL-matching engine with exception (@@) rules and
+per-site allowlist, request-decision API for the network-stack patches, and the
+privacy policy model — all pure JVM with unit tests; engine enforcement wiring
+documented for the adblock/tracking patch areas.
