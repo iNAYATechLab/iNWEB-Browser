@@ -2,9 +2,12 @@
 # =============================================================================
 # iNWEB Browser — compile and run the pure-JVM core module tests.
 #
-# Uses pinned kotlinc + JUnit directly (no Gradle) so the exact same
-# validation runs in the authoring sandbox, on CI runners, and on developer
-# machines. Keeps in sync with src/core/browser-shell/build.gradle.kts.
+# Validates every module under src/core/ using pinned kotlinc + JUnit
+# directly (no Gradle), so the exact same validation runs in the authoring
+# sandbox, on CI runners, and on developer machines.
+#
+# Adding a core module: create src/core/<name>/ with src/{main,test}/kotlin,
+# then register it (and its test classes) in the run_module calls below.
 #
 # Toolchain cache: $HOME/.cache/inweb/kotlin (override with INWEB_KOTLIN_CACHE).
 # =============================================================================
@@ -12,7 +15,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-MODULE="$ROOT/src/core/browser-shell"
 
 KOTLIN_VERSION="2.4.20"
 JUNIT_VERSION="4.13.2"
@@ -48,32 +50,48 @@ HAMCREST_JAR="$LIBS/hamcrest-core-$HAMCREST_VERSION.jar"
 
 STDLIB="$KOTLINC_HOME/lib/kotlin-stdlib.jar"
 
-# --- compile module + tests ---------------------------------------------------
-echo "[kotlin-core] compiling src/core/browser-shell (main + tests) ..."
-rm -rf "$BUILD_DIR/classes"
-mkdir -p "$BUILD_DIR/classes"
-"$KOTLINC" \
-  "$MODULE/src/main/kotlin" \
-  "$MODULE/src/test/kotlin" \
-  -cp "$JUNIT_JAR:$HAMCREST_JAR" \
-  -d "$BUILD_DIR/classes"
+# --- per-module compile + test ------------------------------------------------
+run_module() {
+  local module_dir="$1"
+  shift
+  local name
+  name="$(basename "$module_dir")"
+  local out="$BUILD_DIR/$name"
 
-# --- run tests ----------------------------------------------------------------
-TEST_CLASSES=(
-  com.inweb.browser.shell.TabStateTest
-  com.inweb.browser.shell.TabsControllerTest
-  com.inweb.browser.shell.SessionStoreTest
-  com.inweb.browser.shell.SessionManagerTest
-  com.inweb.browser.shell.OmniboxParserTest
-  com.inweb.browser.shell.SearchEngineTest
-  com.inweb.browser.shell.DownloadRecordTest
-  com.inweb.browser.shell.DownloadsStoreTest
-  com.inweb.browser.shell.HistoryStoreTest
+  echo ""
+  echo "[kotlin-core:$name] compiling main + tests ..."
+  rm -rf "$out"
+  mkdir -p "$out"
+  "$KOTLINC" \
+    "$ROOT/$module_dir/src/main/kotlin" \
+    "$ROOT/$module_dir/src/test/kotlin" \
+    -cp "$JUNIT_JAR:$HAMCREST_JAR" \
+    -d "$out"
+
+  echo "[kotlin-core:$name] running $# test classes ..."
+  java -cp "$out:$STDLIB:$JUNIT_JAR:$HAMCREST_JAR" \
+    org.junit.runner.JUnitCore "$@"
+
+  echo "[kotlin-core:$name] PASSED"
+}
+
+run_module "src/core/browser-shell" \
+  com.inweb.browser.shell.TabStateTest \
+  com.inweb.browser.shell.TabsControllerTest \
+  com.inweb.browser.shell.SessionStoreTest \
+  com.inweb.browser.shell.SessionManagerTest \
+  com.inweb.browser.shell.OmniboxParserTest \
+  com.inweb.browser.shell.SearchEngineTest \
+  com.inweb.browser.shell.DownloadRecordTest \
+  com.inweb.browser.shell.DownloadsStoreTest \
+  com.inweb.browser.shell.HistoryStoreTest \
   com.inweb.browser.shell.SettingsTest
-)
 
-echo "[kotlin-core] running ${#TEST_CLASSES[@]} test classes ..."
-java -cp "$BUILD_DIR/classes:$STDLIB:$JUNIT_JAR:$HAMCREST_JAR" \
-  org.junit.runner.JUnitCore "${TEST_CLASSES[@]}"
+run_module "src/core/tracking-protection" \
+  com.inweb.browser.privacy.FilterListParserTest \
+  com.inweb.browser.privacy.RuleMatcherTest \
+  com.inweb.browser.privacy.TrackingProtectionEngineTest \
+  com.inweb.browser.privacy.DomainClassifierTest
 
-echo "[kotlin-core] ALL TESTS PASSED"
+echo ""
+echo "[kotlin-core] ALL MODULES PASSED"
