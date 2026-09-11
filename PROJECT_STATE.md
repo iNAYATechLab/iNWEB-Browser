@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 19 (Phase 6 in progress; Phase 5 closed)
+> Last updated: **2026-09-12** — Step 20 (Phase 6 in progress; Phase 5 closed)
 
 ```yaml
 project: iNWEB Browser
@@ -12,20 +12,20 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 6
 phase_title: Extensions
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 19
+step: 20
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 30 Python + 217 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 30 Python + 234 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action majors); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 6 / Step 20 — extension management core in Kotlin (pure JVM,
-  CI-tested): install/enable/disable/remove state machine, version
-  comparison for re-sideload updates, permission-warning records —
-  the §16 model the patches will bind to (alternative if directed:
-  downloads/history surface polish).
+  Phase 7 / Step 21 — offline reading & data-saving patch-series
+  design (§17/§18/§19): reader-mode extraction strategy, offline page
+  snapshot model, cache/data-saver architecture — incl. the pure-JVM
+  core scoping for the parts testable without a device (alternative
+  if directed: downloads/history surface polish).
 ```
 
 ## Completed
@@ -334,9 +334,27 @@ next_action: >-
     work items
   - ADR-023 recorded
 
+- [x] **Step 20 — Phase 6: extension management core (§16 model)** (2026-09-12)
+  - NEW MODULE `src/core/extensions` (pure JVM, 17 tests): the §16
+    management model the `extension/` patches will bind to —
+    `ExtensionRegistry` state machine (install → PENDING_REVIEW;
+    review → DISABLED; enable ⇄ DISABLED/ENABLED; update with new
+    unreviewed permissions → DISABLED_UPDATE — Chrome-style upgrade
+    consent), `ExtensionVersion` (1–4 integer components, numeric
+    comparison, trailing-zero normalization so equality/ordering/
+    hashing agree), `ManifestVersion` MV2/MV3 (ADR-023 grace policy),
+    `ExtensionStore` persistence seam + `InMemoryExtensionStore`,
+    `RegistryResult`/`RegistryError` (expected failures are results,
+    never fake success), real-state `RegistryCounts`
+  - Rules enforced: no silent installs, no implicit permission
+    grants, no enable without review — ever
+  - Kotlin total 234 across THREE modules (browser-shell 115 +
+    extensions 17 + tracking-protection 102); validate script runs
+    the new module in CI
+
 ## In progress
 
-- (none — awaiting continuation command for Step 20)
+- (none — awaiting continuation command for Step 21)
 
 ## Not started
 
@@ -421,8 +439,8 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 - **Python: 30/30 passing** — patch-series tooling, registry validation, baseline
   parsing, string-resource validation (`python3 -m unittest discover -s tests -t .`).
-- **Kotlin: 217/217 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
-  kotlinc 2.4.20 + JUnit 4.13.2, multi-module):
+- **Kotlin: 234/234 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
+  kotlinc 2.4.20 + JUnit 4.13.2, 3 modules):
   - `src/core/browser-shell` — 115 tests: tab navigation stack, controller
     (incl. `allTabs` switcher view), top-sites computation,
     session round-trip/corruption + manager, omnibox parsing (incl. Bengali
@@ -431,7 +449,12 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
     history (round-trips, corruption fallback, sanitization, unique ids),
     bookmark store semantics (dedupe, folders, rename/move) + file-backed
     persistent bookmarks, settings.
-  - `src/core/tracking-protection` — 92 tests: filter parsing (anchors,
+  - `src/core/extensions` — 17 tests: registry state machine
+    (install/review/enable/disable/update/remove, upgrade consent,
+    never-reviewed stays pending), version model (numeric compare,
+    zero-padding, normalization, invalid rejection), insertion order,
+    real counts, store round-trip.
+  - `src/core/tracking-protection` — 102 tests: filter parsing (anchors,
     options, exceptions, cosmetic/unsupported/invalid counting), pattern
     matching (domain anchor, separators, wildcards, left/right anchors,
     type/party/domain constraints), engine decisions (block/allow/pass,
