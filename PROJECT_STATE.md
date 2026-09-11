@@ -4,15 +4,15 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 13 (Phase 3 in progress)
+> Last updated: **2026-09-12** — Step 14 (Phase 4 in progress)
 
 ```yaml
 project: iNWEB Browser
 repository: iNAYATechLab/iNWEB-Browser
-phase: 3
-phase_title: Privacy & Tracking Protection
+phase: 4
+phase_title: Ad / Popup Protection
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 13
+step: 14
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
@@ -21,11 +21,11 @@ ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action m
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 4 / Step 14 — adblock patch-series design document: the
-  concrete plan for wiring TrackingProtectionEngine.decide() into the
-  Chromium network stack (patch area adblock/), incl. request-context
-  mapping, call sites, and verification strategy (alternative if
-  directed: downloads surface polish).
+  Phase 4 / Step 15 — popup-protection patch-series design (§12):
+  popup blocking, unwanted redirects, abusive notifications/downloads —
+  the popup_protection/ area design document completing the Phase 4
+  design pair (alternative if directed: downloads surface polish or
+  cosmetic-filtering design).
 ```
 
 ## Completed
@@ -227,9 +227,25 @@ next_action: >-
     counted as a decision (engine contract)
   - Kotlin total 194 (browser-shell 115 + tracking-protection 79)
 
+- [x] **Step 14 — Phase 4: adblock patch-series design document** (2026-09-12)
+  - New `docs/PHASE4-ADBLOCK-DESIGN.md`: the `adblock/` patch-area
+    design — `URLLoaderThrottle` interception with deferred
+    background-thread decisions (rationale table vs. alternatives),
+    resource-type mapping table (`RequestDestination` → engine
+    `ResourceType`), main-frame not filtered in v1 (documented policy),
+    component design (`inweb_adblock_service` / `_throttle` /
+    `_request_context` / `_jni`), atomic engine-snapshot swap on
+    refresh, provisioning via `FilterListManager` (ADR-014 policy
+    model), planned registry entries 0005–0007 (added only when
+    generated against the real tree), 4-layer verification strategy,
+    and explicit honest boundaries (websocket/cosmetic deferred,
+    unknown options excluded)
+  - ADR-019 recorded; Phase 3 closed out as complete (all pure-JVM
+    deliverables landed; enforcement remains B-001-gated)
+
 ## In progress
 
-- (none — awaiting continuation command for Step 14)
+- (none — awaiting continuation command for Step 15)
 
 ## Not started
 
@@ -297,6 +313,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-016 | 2026-09-12 | Bookmarks: URLs are unique (duplicate add is idempotent), folders are plain names with `null` = unfiled, and bookmarking happens only on explicit user action; `FileBookmarkStore` mirrors the ADR-015 persistence strategy | No accidental duplicates; simple folders-lite v1 (folders UI deferred); honest, crash-safe storage identical to history |
 | ADR-017 | 2026-09-12 | Home "shortcuts" are top sites computed from real raw history visits (`allVisits()` + `TopSites.compute()`), never pinned or fabricated; home sections with no data are hidden entirely | §38 shortcuts grounded in real usage data (§57); pinned/custom shortcuts deferred to Phase 11 customization |
 | ADR-018 | 2026-09-12 | Onboarding completion is a persisted `AppSettings` flag; the first-run engine choice writes the same real setting the settings screen uses; skip completes with the privacy default | Runs exactly once, no separate preference source; single source of truth for the engine setting (§10/§35) |
+| ADR-019 | 2026-09-12 | Ad blocking intercepts via `URLLoaderThrottle` with deferred background-thread `decide()` calls; allowlist/toggle logic lives only inside the engine (one decision path); main-frame navigations are not filtered in v1; engine snapshots swap atomically after refresh | Chosen integration point of shipped Chromium-derived browsers; no C++-side policy divergence; defers never block the UI thread; §57-honest deferred scopes (websocket, cosmetic, popup) |
 
 ## Build status
 
@@ -346,11 +363,9 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Phase 4 / Step 14 — adblock patch-series design document:** the
-concrete design for the `adblock/` patch area — where and how
-`TrackingProtectionEngine.decide()` is called from the Chromium network
-stack (request-context mapping incl. resource types), how filter lists
-are provisioned at startup, cosmetic-filter hooks, and the build-time
-verification strategy. Authored as design (the patches themselves are
-applied and verified on build infrastructure, B-001). Alternative next
-step if directed: downloads surface polish.
+**Phase 4 / Step 15 — popup-protection patch-series design (§12):**
+popup blocking, unwanted-redirect protection, and abusive
+notification/download warnings — the `popup_protection/` area design
+document, completing the Phase 4 design pair before any build
+infrastructure is provisioned. Alternative next step if directed:
+downloads surface polish or cosmetic-filtering design.
