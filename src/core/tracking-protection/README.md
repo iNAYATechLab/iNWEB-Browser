@@ -17,6 +17,17 @@ per-site allowlisting, and real decision statistics.
 | `DomainClassifier` | Simplified registrable-domain classification (built-in multi-part suffix table; replaced by Chromium's full PSL at engine integration) |
 | `TrackingProtectionSettings` / `CookiePolicy` | Policy model consumed by the engine patches (not yet user-facing UI — §57) |
 
+### Filter-list management layer (`lists` subpackage, Step 6)
+
+| Component | Purpose |
+|---|---|
+| `FilterListSource` | Subscribable list metadata (EasyList + EasyPrivacy defaults); ids restricted to `[a-z0-9-]` |
+| `FilterListFetcher` / `HttpFilterListFetcher` | Download port + real `HttpURLConnection` implementation: timeouts, conditional revalidation (`If-None-Match` / `If-Modified-Since` → 304), hard response-size cap |
+| `FileFilterListCache` / `FilterListCache` | Atomic (temp + rename) file cache — `<id>.txt` body + `<id>.meta` metadata; corrupt metadata degrades to "missing", never crashes |
+| `FilterListVersion` | `! Version:` / `! Last modified:` header extraction (first occurrence, never invented) |
+| `UpdatePolicy` | Refresh-due decision (interval, startup fetch, enabled); no timers of its own |
+| `FilterListManager` | Lifecycle orchestration: startup (cache first), conditional refresh, graceful cached fallback on failure; per-source `ListUpdateStatus` report |
+
 ## Supported syntax subset
 
 | Syntax | Meaning |
@@ -43,6 +54,12 @@ This module makes **decisions**; no request is actually blocked until the
 Chromium `adblock/` / `privacy/` patches wire `decide()` into the network
 stack on build infrastructure (B-001). Statistics count real decisions made
 by this engine only.
+
+The management layer is transport-real (HTTP round-trips, conditional
+requests, atomic disk cache) but runs no background scheduler: `UpdatePolicy`
+decides *when a refresh is due*; the host layer (Android app or engine patch)
+owns the timer and invokes `startup()` / `refresh()`. No list is downloaded
+on a device until that wiring exists.
 
 ## Performance note
 
