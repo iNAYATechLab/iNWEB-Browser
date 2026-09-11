@@ -22,14 +22,14 @@ written in Kotlin.
 | Item | State |
 |---|---|
 | Development phase | **Phase 3 — Privacy & Tracking Protection: in progress** (decision engine complete; enforcement wiring awaits B-001) |
-| Current step | 10 |
+| Current step | 11 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
-| Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 113 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings) |
+| Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 115 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag) |
 | Privacy core (`src/core/tracking-protection`) | **Implemented & unit-tested — 70 Kotlin tests** (EasyList-family parser, URL matching, request decisions, per-site allowlist, statistics; filter-list download/cache/update management) |
-| Android shell UI (`src/android-app`) | Authored — Compose + Material 3 (browser, tab switcher, home page with real data, settings, downloads, history, bookmarks), bn/en strings; compiles in the Chromium build (B-001) |
+| Android shell UI (`src/android-app`) | Authored — Compose + Material 3 (browser, tab switcher, home page with real data, onboarding, settings, downloads, history, bookmarks), bn/en strings; compiles in the Chromium build (B-001) |
 | Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — tested |
-| CI | **Live**: Python (30 tests) + registry + string parity; Kotlin core (183 tests, 2 modules); weekly upstream watch |
+| CI | **Live**: Python (30 tests) + registry + string parity; Kotlin core (185 tests, 2 modules); weekly upstream watch |
 | Build | **Not yet executed** — requires external build infrastructure (blocker B-001) |
 | Open defects | None recorded |
 

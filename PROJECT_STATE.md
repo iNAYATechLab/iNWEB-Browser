@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 10 (Phase 3 in progress)
+> Last updated: **2026-09-12** — Step 11 (Phase 3 in progress)
 
 ```yaml
 project: iNWEB Browser
@@ -12,19 +12,19 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 3
 phase_title: Privacy & Tracking Protection
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 10
+step: 11
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 30 Python + 183 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 30 Python + 185 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs; upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 3 / Step 11 — onboarding / first-run screens (§35): privacy
-  education + default search-engine choice wired to the real
-  SettingsStore (alternative if directed: downloads surface polish or a
-  quality/documentation pass).
+  Phase 3 / Step 12 — close-out & quality pass: documentation accuracy
+  sweep (PHASE2-INTEGRATION-PLAN updated for every new surface the
+  engine adapter must bind), CI workflow version bumps, README refresh
+  (alternative if directed: downloads surface polish).
 ```
 
 ## Completed
@@ -175,10 +175,27 @@ next_action: >-
     sections are hidden — nothing fabricated (§57); rows open via the
     real omnibox navigation path
   - Kotlin total 183 (browser-shell 113 + tracking-protection 70)
+- [x] **Step 11 — Phase 3: Onboarding / first-run screens (§35)** (2026-09-12)
+  - Core: `AppSettings.onboardingCompleted` (default false — fresh
+    installs run onboarding exactly once) — 2 new tests (default
+    incomplete, completion round-trips with the engine choice)
+  - `SharedPreferencesSettingsStore` persists the flag alongside the
+    engine and theme keys
+  - `BrowserViewModel.needsOnboarding` + `completeOnboarding(
+    searchEngineId)` — the chosen engine is written through the SAME
+    real setting the settings screen uses (one source of truth,
+    persisted immediately; skip completes with the privacy default)
+  - New `OnboardingScreen` (Compose M3): step 1 privacy education
+    (three concise points, §35 "do not overwhelm"), step 2 default
+    search-engine choice from `SearchEngine.DEFAULTS`, step indicator,
+    back/skip/next/get-started; `MainActivity` routes first-run to
+    onboarding instead of the browser
+  - 11 new strings (en + bn)
+  - Kotlin total 185 (browser-shell 115 + tracking-protection 70)
 
 ## In progress
 
-- (none — awaiting continuation command for Step 11)
+- (none — awaiting continuation command for Step 12)
 
 ## Not started
 
@@ -245,6 +262,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-015 | 2026-09-12 | Persistent history uses a write-through atomic TSV file store; header corruption restarts fresh, malformed lines are skipped and counted; the single `PrivacyFilterHistory` decorator remains the only privacy enforcement point | Crash-safe persistence with honest degradation (§14/§51); privacy contract stays in one place (ADR-011 pattern) |
 | ADR-016 | 2026-09-12 | Bookmarks: URLs are unique (duplicate add is idempotent), folders are plain names with `null` = unfiled, and bookmarking happens only on explicit user action; `FileBookmarkStore` mirrors the ADR-015 persistence strategy | No accidental duplicates; simple folders-lite v1 (folders UI deferred); honest, crash-safe storage identical to history |
 | ADR-017 | 2026-09-12 | Home "shortcuts" are top sites computed from real raw history visits (`allVisits()` + `TopSites.compute()`), never pinned or fabricated; home sections with no data are hidden entirely | §38 shortcuts grounded in real usage data (§57); pinned/custom shortcuts deferred to Phase 11 customization |
+| ADR-018 | 2026-09-12 | Onboarding completion is a persisted `AppSettings` flag; the first-run engine choice writes the same real setting the settings screen uses; skip completes with the privacy default | Runs exactly once, no separate preference source; single source of truth for the engine setting (§10/§35) |
 
 ## Build status
 
@@ -257,9 +275,9 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 - **Python: 30/30 passing** — patch-series tooling, registry validation, baseline
   parsing, string-resource validation (`python3 -m unittest discover -s tests -t .`).
-- **Kotlin: 183/183 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
+- **Kotlin: 185/185 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
   kotlinc 2.4.20 + JUnit 4.13.2, multi-module):
-  - `src/core/browser-shell` — 113 tests: tab navigation stack, controller
+  - `src/core/browser-shell` — 115 tests: tab navigation stack, controller
     (incl. `allTabs` switcher view), top-sites computation,
     session round-trip/corruption + manager, omnibox parsing (incl. Bengali
     queries and scheme edge cases), search engines, download state machine +
@@ -293,8 +311,9 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Phase 3 / Step 11 — onboarding / first-run screens (§35):** the
-first-run flow (privacy education + default search-engine choice)
-authored in Compose and wired to the real `SettingsStore` — the choice
-persists for real. Alternative next step if directed: downloads surface
-polish or a quality/documentation pass.
+**Phase 3 / Step 12 — close-out & quality pass:** the authored shell is
+now feature-complete for the pre-engine phase; before Phase 4 planning,
+refresh the integration plan so the engine adapter contract covers every
+new surface (history/bookmarks/tabs/home/onboarding bindings), bump the
+CI action versions, and sweep the documentation for accuracy.
+Alternative next step if directed: downloads surface polish.
