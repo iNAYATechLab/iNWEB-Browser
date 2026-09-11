@@ -12,6 +12,7 @@ import com.inweb.browser.shell.FileHistoryStore
 import com.inweb.browser.shell.ThemeMode
 import java.io.File
 import com.inweb.browser.ui.BrowserScreen
+import com.inweb.browser.ui.OnboardingScreen
 import com.inweb.browser.ui.theme.iNWEBTheme
 
 /**
@@ -43,7 +44,11 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.DARK -> true
             }
             iNWEBTheme(darkTheme = darkTheme) {
-                BrowserScreen(viewModel)
+                if (viewModel.needsOnboarding) {
+                    OnboardingScreen(viewModel)
+                } else {
+                    BrowserScreen(viewModel)
+                }
             }
         }
     }

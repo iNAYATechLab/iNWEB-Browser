@@ -32,6 +32,19 @@
     <string name="action_desktop_site">Desktop site</string>
     <string name="action_settings">Settings</string>
 
+    <!-- Onboarding / first run (§35) -->
+    <string name="onboarding_welcome_title">Welcome to iNWEB Browser</string>
+    <string name="onboarding_welcome_text">A fast, privacy-first browser built for you. Here is what matters to us:</string>
+    <string name="onboarding_point_privacy">Privacy by design — your data stays on your device</string>
+    <string name="onboarding_point_private_tabs">Private tabs never save your history</string>
+    <string name="onboarding_point_protection">Ads and trackers are blocked by default</string>
+    <string name="onboarding_search_title">Choose your search engine</string>
+    <string name="onboarding_search_text">You can change this anytime in Settings.</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_get_started">Get started</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_step">%1$d / %2$d</string>
+
     <!-- Home / new tab -->
     <string name="home_search_prompt">Search the web privately</string>
     <string name="home_shortcuts">Shortcuts</string>

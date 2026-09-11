@@ -80,6 +80,9 @@ class BrowserViewModel(
 
     val tabIds: List<String> get() = controller.tabIds
 
+    /** First-run onboarding (§35) is pending until completed once. */
+    val needsOnboarding: Boolean get() = !settings.onboardingCompleted
+
     private val controller = TabsController()
     private val sessionManager = SessionManager(sessionPersistence)
     private val downloadsStore = InMemoryDownloadsStore()
@@ -163,6 +166,16 @@ class BrowserViewModel(
 
     fun updateSearchEngine(id: String) {
         settings = settings.copy(searchEngineId = id)
+        settingsStore.save(settings)
+    }
+
+    /**
+     * Completes first-run onboarding (§35). The chosen engine is written
+     * through the same real setting the settings screen uses — one source
+     * of truth, persisted immediately.
+     */
+    fun completeOnboarding(searchEngineId: String) {
+        settings = settings.copy(searchEngineId = searchEngineId, onboardingCompleted = true)
         settingsStore.save(settings)
     }
 
