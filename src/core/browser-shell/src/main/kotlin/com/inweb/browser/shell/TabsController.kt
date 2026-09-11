@@ -31,6 +31,9 @@ class TabsController {
 
     fun tab(id: String): TabState? = tabs[id]
 
+    /** All open tabs in insertion order (oldest first) — tab-switcher view. */
+    fun allTabs(): List<TabState> = tabs.values.toList()
+
     fun selectTab(id: String): TabState {
         val tab = tabs[id] ?: throw IllegalArgumentException("unknown tab: $id")
         selectedIdInternal = id

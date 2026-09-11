@@ -94,4 +94,36 @@ class TabsControllerTest {
     fun closeUnknownTabRejected() {
         TabsController().closeTab("ghost")
     }
+
+    @Test
+    fun allTabsReturnsInsertionOrderIncludingPrivateTabs() {
+        val controller = TabsController()
+        controller.openTab()
+        controller.openTab(isPrivate = true)
+        controller.openTab()
+
+        val all = controller.allTabs()
+        assertEquals(3, all.size)
+        assertEquals(controller.tabIds, all.map { it.id })
+        assertTrue(all[1].isPrivate)
+    }
+
+    @Test
+    fun allTabsReflectsNavigationUpdates() {
+        val controller = TabsController()
+        val tab = controller.openTab()
+        controller.updateTab(tab.navigate("https://a.example.com/"))
+
+        assertEquals("https://a.example.com/", controller.allTabs().single().currentUrl)
+    }
+
+    @Test
+    fun allTabsExcludesClosedTabs() {
+        val controller = TabsController()
+        val first = controller.openTab()
+        controller.openTab()
+        controller.closeTab(first.id)
+
+        assertEquals(listOf("tab-1"), controller.allTabs().map { it.id })
+    }
 }
