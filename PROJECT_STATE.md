@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 21 (Phase 7 in progress; Phases 0–5, 6 core done)
+> Last updated: **2026-09-12** — Step 22 (Phase 7 in progress; Phases 0–6 core done)
 
 ```yaml
 project: iNWEB Browser
@@ -12,20 +12,20 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 7
 phase_title: Offline / Data Saving
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 21
+step: 22
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 30 Python + 234 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 30 Python + 248 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action majors); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 7 / Step 22 — offline library core in Kotlin (pure JVM,
-  CI-tested): OfflinePageRecord + store with insertion-order listing,
-  real byte-quota accounting, LRU eviction (least-recently-accessed
-  first), access-time updates, explicit delete, persistence seam
-  (alternative if directed: downloads/history surface polish).
+  Phase 8 / Step 23 — VPN / security patch-series design (§15/§25/§26/
+  §27/§28): VPN architecture honesty scoping (local/none without
+  infrastructure), secure storage, biometric lock, authentication and
+  2FA where applicable (alternative if directed: downloads/history
+  surface polish).
 ```
 
 ## Completed
@@ -368,9 +368,26 @@ next_action: >-
     extension work is patch-side (B-001)
   - ADR-024 recorded
 
+- [x] **Step 22 — Phase 7: offline library core (§17 model)** (2026-09-12)
+  - NEW MODULE `src/core/offline` (pure JVM, 14 tests): `OfflinePageRecord`
+    (online URL key, snapshot file, REAL byte size, timestamps) +
+    `OfflineLibrary` — insertion-order listing, same-URL saves REPLACE
+    (old record returned, bytes stop counting), quota enforcement by LRU
+    eviction (least-recently-accessed first; tie → older creation first;
+    pinned pages never evicted; the saved record never evicts itself;
+    quota failure is ATOMIC — no partial eviction), monotonic access
+    times, explicit delete, real byte accounting
+    (total/remaining), `OfflineStore` persistence seam +
+    InMemoryOfflineStore; expected failures are results, not exceptions
+  - ADR-024 invariants enforced in code: snapshots are user data
+    (cache-clearing cannot touch them by construction); sizes are real
+    values; eviction returns records — file deletion is the caller's job
+  - Kotlin total 248 across FOUR modules (browser-shell 115 +
+    extensions 17 + offline 14 + tracking-protection 102)
+
 ## In progress
 
-- (none — awaiting continuation command for Step 22)
+- (none — awaiting continuation command for Step 23)
 
 ## Not started
 
@@ -456,8 +473,8 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 - **Python: 30/30 passing** — patch-series tooling, registry validation, baseline
   parsing, string-resource validation (`python3 -m unittest discover -s tests -t .`).
-- **Kotlin: 234/234 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
-  kotlinc 2.4.20 + JUnit 4.13.2, 3 modules):
+- **Kotlin: 248/248 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
+  kotlinc 2.4.20 + JUnit 4.13.2, 4 modules):
   - `src/core/browser-shell` — 115 tests: tab navigation stack, controller
     (incl. `allTabs` switcher view), top-sites computation,
     session round-trip/corruption + manager, omnibox parsing (incl. Bengali
@@ -466,6 +483,10 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
     history (round-trips, corruption fallback, sanitization, unique ids),
     bookmark store semantics (dedupe, folders, rename/move) + file-backed
     persistent bookmarks, settings.
+  - `src/core/offline` — 14 tests: library registry (insertion order,
+    same-URL replace, validation), access monotonicity, delete, quota
+    eviction order (LRU first, tie by creation, pinned skipped, atomic
+    failure), real byte accounting, store round-trip.
   - `src/core/extensions` — 17 tests: registry state machine
     (install/review/enable/disable/update/remove, upgrade consent,
     never-reviewed stays pending), version model (numeric compare,
