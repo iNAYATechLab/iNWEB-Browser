@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 25 (Phase 9 in progress; Phases 0–8 core done)
+> Last updated: **2026-09-12** — Step 26 (Phase 9 in progress; Phases 0–8 core done)
 
 ```yaml
 project: iNWEB Browser
@@ -12,20 +12,21 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 9
 phase_title: Profiles / Sync / Backup
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 25
+step: 26
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 30 Python + 265 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 30 Python + 277 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action majors); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 9 / Step 26 — profiles core in Kotlin (pure JVM, CI-tested):
-  ProfileRecord, active-profile selection, per-profile store routing
-  (namespace isolation enforced at construction), rename/delete with
-  namespace retirement, persistence seam (alternative if directed:
-  downloads/history surface polish).
+  Phase 9 / Step 27 — backup bundle core in Kotlin (pure JVM,
+  CI-tested): versioned iNWEB-BACKUP v=1 assembly + manifest, per-
+  entry checksums, version gating (forward-only migration, refuse
+  newer formats), restore preview model, per-entry corruption
+  tolerance — encryption stays at the Android layer (alternative if
+  directed: downloads/history surface polish).
 ```
 
 ## Completed
@@ -449,9 +450,27 @@ next_action: >-
     patches B-001-gated)
   - ADR-026 recorded
 
+- [x] **Step 26 — Phase 9: profiles core (§28 model)** (2026-09-12)
+  - NEW MODULE `src/core/profiles` (pure JVM, 12 tests): `ProfileRecord`
+    (monotonic `p-N` ids, NEVER reused — a deleted namespace can never
+    resurrect stale data), `ProfileRegistry` — empty store seeds a
+    default active profile (a real browser always starts with one);
+    create (inactive) / rename (trim + blank rejection) / setActive /
+    delete (active deletion falls back to the oldest remaining; the
+    last profile cannot be deleted; deleted profile + new active
+    reported for teardown); `namespaceOf(id)` = the store-routing
+    contract (namespace = profile id; the app layer maps it to
+    `<dataDir>/profiles/<id>/`); `ProfileStore` persistence seam +
+    InMemoryProfileStore; expected failures are results, not exceptions
+  - §28 isolation made structural (ADR-026): stores are constructed
+    against exactly ONE namespace — shared storage cannot occur
+  - Kotlin total 277 across SIX modules (browser-shell 115 +
+    extensions 17 + offline 14 + vpn 17 + profiles 12 +
+    tracking-protection 102)
+
 ## In progress
 
-- (none — awaiting continuation command for Step 26)
+- (none — awaiting continuation command for Step 27)
 
 ## Not started
 
@@ -539,8 +558,8 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 - **Python: 30/30 passing** — patch-series tooling, registry validation, baseline
   parsing, string-resource validation (`python3 -m unittest discover -s tests -t .`).
-- **Kotlin: 265/265 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
-  kotlinc 2.4.20 + JUnit 4.13.2, 5 modules):
+- **Kotlin: 277/277 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
+  kotlinc 2.4.20 + JUnit 4.13.2, 6 modules):
   - `src/core/browser-shell` — 115 tests: tab navigation stack, controller
     (incl. `allTabs` switcher view), top-sites computation,
     session round-trip/corruption + manager, omnibox parsing (incl. Bengali
@@ -549,6 +568,10 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
     history (round-trips, corruption fallback, sanitization, unique ids),
     bookmark store semantics (dedupe, folders, rename/move) + file-backed
     persistent bookmarks, settings.
+  - `src/core/profiles` — 12 tests: seeding (default profile, no
+    reseed of loaded stores), create/rename/activate semantics, blank
+    rejection, namespace routing, delete semantics (fallback active,
+    last-profile guard, no id reuse), store round-trip.
   - `src/core/vpn` — 17 tests: config parsing (valid client configs,
     multi-line list fields, optional-but-validated preshared key),
     structural errors (missing/duplicate sections, unknown fields,

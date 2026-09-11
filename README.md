@@ -21,8 +21,8 @@ written in Kotlin.
 
 | Item | State |
 |---|---|
-| Development phase | **Phase 9 — Profiles / Sync / Backup: in progress** (design complete; profiles core next; execution awaits B-001) — Phases 4–8 core work complete |
-| Current step | 25 |
+| Development phase | **Phase 9 — Profiles / Sync / Backup: in progress** (design + profiles core complete; backup core next; execution awaits B-001) — Phases 4–8 core work complete |
+| Current step | 26 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 115 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag) |
@@ -30,9 +30,10 @@ written in Kotlin.
 | Extension core (`src/core/extensions`) | **Implemented & unit-tested — 17 Kotlin tests** (§16 management model: install/review/enable/disable/update/remove state machine with upgrade consent, version comparison, permission-review records) |
 | Offline core (`src/core/offline`) | **Implemented & unit-tested — 14 Kotlin tests** (§17 library: real byte quota, LRU eviction with pinning, same-URL replace, atomic quota failure, persistence seam) |
 | VPN core (`src/core/vpn`) | **Implemented & unit-tested — 17 Kotlin tests** (§15 config validation: WireGuard-style parsing, strict fields/CIDR/endpoints/keys, secrets opaque by construction) |
+| Profiles core (`src/core/profiles`) | **Implemented & unit-tested — 12 Kotlin tests** (§28: seeded default profile, monotonic never-reused ids, namespace routing contract, delete fallback + last-profile guard) |
 | Android shell UI (`src/android-app`) | Authored — Compose + Material 3 (browser, tab switcher, home page with real data, onboarding, settings, downloads, history, bookmarks), bn/en strings; compiles in the Chromium build (B-001) |
 | Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — tested |
-| CI | **Live**: Python (30 tests) + registry + string parity; Kotlin core (265 tests, 5 modules); weekly upstream watch; benchmark on demand (not in CI) |
+| CI | **Live**: Python (30 tests) + registry + string parity; Kotlin core (277 tests, 6 modules); weekly upstream watch; benchmark on demand (not in CI) |
 | Build | **Not yet executed** — requires external build infrastructure (blocker B-001) |
 | Open defects | None recorded |
 
@@ -77,6 +78,7 @@ inweb-browser/
 │   ├── core/extensions/               # Pure-JVM extension management core (§16 state machine)
 │   ├── core/offline/                   # Pure-JVM offline library core (§17 quota + LRU eviction)
 │   ├── core/vpn/                        # Pure-JVM VPN config validation core (§15)
+│   ├── core/profiles/                    # Pure-JVM profiles core (§28 isolation contract)
 │   │   ├── build.gradle.kts
 │   │   └── src/{main,test}/kotlin/com/inweb/browser/privacy/
 │   └── android-app/src/main/        # Android shell UI (compiled by the Chromium build, ADR-009)
