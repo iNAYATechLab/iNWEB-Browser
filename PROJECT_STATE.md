@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 15 (Phase 4 in progress)
+> Last updated: **2026-09-12** — Step 16 (Phase 4 in progress)
 
 ```yaml
 project: iNWEB Browser
@@ -12,20 +12,19 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 4
 phase_title: Ad / Popup Protection
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 15
+step: 16
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 30 Python + 194 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 30 Python + 207 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action majors); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 4 / Step 16 — cosmetic-filtering patch-series design (§11):
-  isolated-world script injection + stylesheet hiding for ##-rules —
-  the third and final Phase 4 design, unlocking the cosmetic rule
-  half the parser already counts (alternative if directed: downloads
-  surface polish or Phase 5 performance design).
+  Phase 5 / Step 17 — performance design & measurement plan (§9/§21/
+  §52): startup, memory, network, battery budgets incl. the combined
+  matcher + decision cache for the filter engine (ADR-013 follow-up)
+  (alternative if directed: downloads surface polish).
 ```
 
 ## Completed
@@ -262,9 +261,27 @@ next_action: >-
     against the real tree); 4-layer verification strategy
   - ADR-020 recorded; Phase 4 design pair complete
 
+- [x] **Step 16 — Phase 4: cosmetic filtering — engine + patch design (§11)** (2026-09-12)
+  - Core (implemented, tested): `CosmeticFilterParser` — `##` hide rules
+    with domain includes/excludes, `#@#` exceptions, `#?#` procedural
+    rules counted-not-matched, `#$#`/`#%#` counted unsupported, invalid
+    counting; `CosmeticFilterEngine.hideCssFor(host)` — grouped hiding
+    CSS with exception cancellation; `FilterListManager` parses cosmetic
+    beside network lists and exposes `buildCosmeticEngine()` — 13 new
+    tests
+  - New `docs/PHASE4-COSMETIC-DESIGN.md`: per-frame stylesheet
+    injection at document-commit via the content-layer CSS API (worker-
+    thread query, host from the committed origin), one-path policy
+    (same settings/allowlist), planned registry entry
+    `0012-cosmetic-injection` (adblock/ area), 4-layer verification,
+    honest boundaries (flash-of-content documented; procedural/
+    scriptlet deferred; cosmetic hides, never claims to block)
+  - Phase 4 design trio complete (network / popup / cosmetic)
+  - Kotlin total 207 (browser-shell 115 + tracking-protection 92)
+
 ## In progress
 
-- (none — awaiting continuation command for Step 16)
+- (none — awaiting continuation command for Step 17)
 
 ## Not started
 
@@ -334,6 +351,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-018 | 2026-09-12 | Onboarding completion is a persisted `AppSettings` flag; the first-run engine choice writes the same real setting the settings screen uses; skip completes with the privacy default | Runs exactly once, no separate preference source; single source of truth for the engine setting (§10/§35) |
 | ADR-019 | 2026-09-12 | Ad blocking intercepts via `URLLoaderThrottle` with deferred background-thread `decide()` calls; allowlist/toggle logic lives only inside the engine (one decision path); main-frame navigations are not filtered in v1; engine snapshots swap atomically after refresh | Chosen integration point of shipped Chromium-derived browsers; no C++-side policy divergence; defers never block the UI thread; §57-honest deferred scopes (websocket, cosmetic, popup) |
 | ADR-020 | 2026-09-12 | Popup policy: user-activation-based blocking at the window-creation consent point with `$popup` engine consultation; one shared per-site allowlist across all protections; quiet-only notification prompts; no remote reputation claims (no bundled service); user-driven same-tab redirects never blocked | One shields list per site (no settings sprawl); §12 "where supported" satisfied honestly; web compatibility preserved |
+| ADR-021 | 2026-09-12 | Cosmetic filtering v1 = stylesheet hiding only (`##` with `#@#` exceptions), selectors passed through verbatim (browser CSS parser validates); procedural `#?#` and scriptlet rules counted, never matched; injection is per-frame at document commit; no new §24 counters | Honest, testable subset now (§11/§57); network blocking stays the primary defense — cosmetic never claims to block requests |
 
 ## Build status
 
@@ -346,7 +364,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 - **Python: 30/30 passing** — patch-series tooling, registry validation, baseline
   parsing, string-resource validation (`python3 -m unittest discover -s tests -t .`).
-- **Kotlin: 194/194 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
+- **Kotlin: 207/207 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
   kotlinc 2.4.20 + JUnit 4.13.2, multi-module):
   - `src/core/browser-shell` — 115 tests: tab navigation stack, controller
     (incl. `allTabs` switcher view), top-sites computation,
@@ -356,7 +374,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
     history (round-trips, corruption fallback, sanitization, unique ids),
     bookmark store semantics (dedupe, folders, rename/move) + file-backed
     persistent bookmarks, settings.
-  - `src/core/tracking-protection` — 79 tests: filter parsing (anchors,
+  - `src/core/tracking-protection` — 92 tests: filter parsing (anchors,
     options, exceptions, cosmetic/unsupported/invalid counting), pattern
     matching (domain anchor, separators, wildcards, left/right anchors,
     type/party/domain constraints), engine decisions (block/allow/pass,
@@ -365,7 +383,9 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
     HttpServer, conditional revalidation + 304, size cap, atomic file
     cache, version parsing, update policy, manager lifecycle with cached
     fallback); Security Center model (§24 — real-state aggregation,
-    honest empty/bypass semantics, top-domain ranking).
+    honest empty/bypass semantics, top-domain ranking); cosmetic
+    filtering (selector parsing, domain semantics, exception
+    cancellation, grouped CSS, manager integration).
 - **Live checks:** registry lint OK; string parity OK; baseline drift CURRENT.
 - CI runs the Python suite, string validation, and the Kotlin core suite on every
   push/PR touching `scripts/`, `tests/`, `iNWEB_PATCHES/`, `src/`.
@@ -383,10 +403,9 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Phase 4 / Step 16 — cosmetic-filtering patch-series design (§11):**
-isolated-world script injection and stylesheet hiding for `##`-rules —
-the final Phase 4 design, giving the cosmetic half of the parser (already
-counted, never matched) its real integration: per-domain selector
-matching in Kotlin (tested in CI first), injection hooks, and the
-hide-vs-collapse behavior. Alternative next step if directed: downloads
-surface polish or Phase 5 performance design.
+**Phase 5 / Step 17 — performance design & measurement plan (§9/§21/§52):**
+budgets for startup, memory, network, and battery, plus the filter
+engine's performance deliverables from ADR-013 — the combined matcher
+and decision cache with measured baselines. Authored as a design +
+measurement plan (execution needs the built product, B-001).
+Alternative next step if directed: downloads surface polish.
