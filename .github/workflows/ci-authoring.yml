@@ -1,7 +1,8 @@
 name: CI — Authoring
 
 # Live authoring pipeline (GitHub-hosted runner — not blocked by B-001).
-# Validates the patch registry and runs the unit tests for iNWEB tooling.
+# Validates the patch registry, localized string resources, and the pure-JVM
+# core module; runs Python and Kotlin unit tests.
 
 on:
   push:
@@ -10,17 +11,19 @@ on:
       - "scripts/**"
       - "tests/**"
       - "iNWEB_PATCHES/**"
+      - "src/**"
       - ".github/workflows/ci-authoring.yml"
   pull_request:
     paths:
       - "scripts/**"
       - "tests/**"
       - "iNWEB_PATCHES/**"
+      - "src/**"
       - ".github/workflows/ci-authoring.yml"
 
 jobs:
-  validate:
-    name: Unit tests and registry validation
+  python-validation:
+    name: Python tests, registry and string validation
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -37,5 +40,30 @@ jobs:
       - name: Validate patch registry
         run: python3 scripts/lint_manifest.py
 
-      - name: Run unit tests
+      - name: Validate localized string resources
+        run: python3 scripts/validate_strings.py
+
+      - name: Run Python unit tests
         run: python3 -m unittest discover -s tests -t . -v
+
+  kotlin-core-tests:
+    name: Kotlin core (browser-shell) tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Cache Kotlin toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/inweb
+          key: inweb-kotlin-${{ runner.os }}-v2.4.20
+
+      - name: Compile and run core module tests
+        run: bash scripts/validate_kotlin_core.sh
