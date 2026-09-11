@@ -1,0 +1,33 @@
+# =============================================================================
+# iNWEB Browser — Patch Registry (MANIFEST.yaml)
+# =============================================================================
+# This file is the SINGLE AUTHORITY for every iNWEB modification applied to
+# upstream Chromium. The working tree on build infrastructure must always be
+# reproducible as:
+#
+#     pristine upstream Chromium @ pinned tag  +  this ordered patch series
+#
+# Rules (enforced by scripts/lint_manifest.py and CI):
+#   * entries are applied strictly in listed order
+#   * id and file name use the form NNNN-slug (NNNN = 4-digit order prefix)
+#   * file must live under its area directory (e.g. privacy/0001-....patch)
+#   * ids must be unique; numeric prefixes strictly increasing
+#   * every registered file must exist on disk
+#
+# Entry fields:
+#   id            unique identifier "NNNN-slug"
+#   file          path relative to iNWEB_PATCHES/
+#   area          one of: privacy, security, adblock, popup_protection,
+#                 extension, performance, ui, offline, settings
+#   description   one-line purpose (professional English)
+#   upstream_files  list of upstream files touched (traceability)
+#   risk          low | medium | high (high requires a security review note)
+#   validation    how the patch is validated (test id / procedure)
+#   rebase_notes  free-form notes for future rebases
+# =============================================================================
+
+schema_version: 1
+
+# The series is intentionally EMPTY at Phase 1: no patch ships until it has been
+# generated against the real pinned source and validated (MASTER-SPEC §57).
+patches: []
