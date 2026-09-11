@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 12 (Phase 3 in progress)
+> Last updated: **2026-09-12** — Step 13 (Phase 3 in progress)
 
 ```yaml
 project: iNWEB Browser
@@ -12,19 +12,20 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 3
 phase_title: Privacy & Tracking Protection
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 12
+step: 13
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 30 Python + 185 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 30 Python + 194 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action majors); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 3 / Step 13 — Security Center data model (§24): pure-JVM
-  aggregation of real decision statistics + policy state into a
-  dashboard model, tested (alternative if directed: Phase 4 adblock
-  patch-series design document).
+  Phase 4 / Step 14 — adblock patch-series design document: the
+  concrete plan for wiring TrackingProtectionEngine.decide() into the
+  Chromium network stack (patch area adblock/), incl. request-context
+  mapping, call sites, and verification strategy (alternative if
+  directed: downloads surface polish).
 ```
 
 ## Completed
@@ -209,9 +210,26 @@ next_action: >-
   - Full validation sweep re-run: Kotlin 185/185, Python 30/30,
     strings OK; CI green on the bumped actions
 
+- [x] **Step 13 — Phase 3: Security Center data model (§24)** (2026-09-12)
+  - `SecurityCenter` / `SecurityCenterModel` /
+    `FilterListStatus` / `BlockedDomainCount` in
+    `src/core/tracking-protection`: the §24 dashboard contract built
+    strictly from real state — real `EngineStatistics` counts, real
+    registrable-domain top-blocked list (sorted, limited), real policy
+    inputs (enabled, cookie policy, allowlist count), real per-list
+    version/rule counts; `enforcementActive` is an explicit false until
+    the engine patches wire `decide()` (B-001)
+  - v1 covers tracker-blocking state; §24 items without real backing
+    yet (connection security, permissions, certificates) are absent by
+    design — they join when their patches land
+  - 9 new tests — including the §24 honesty cases: loaded rules never
+    fabricate decisions, and a whole-page allowlist bypass is not
+    counted as a decision (engine contract)
+  - Kotlin total 194 (browser-shell 115 + tracking-protection 79)
+
 ## In progress
 
-- (none — awaiting continuation command for Step 13)
+- (none — awaiting continuation command for Step 14)
 
 ## Not started
 
@@ -291,7 +309,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 - **Python: 30/30 passing** — patch-series tooling, registry validation, baseline
   parsing, string-resource validation (`python3 -m unittest discover -s tests -t .`).
-- **Kotlin: 185/185 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
+- **Kotlin: 194/194 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
   kotlinc 2.4.20 + JUnit 4.13.2, multi-module):
   - `src/core/browser-shell` — 115 tests: tab navigation stack, controller
     (incl. `allTabs` switcher view), top-sites computation,
@@ -301,7 +319,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
     history (round-trips, corruption fallback, sanitization, unique ids),
     bookmark store semantics (dedupe, folders, rename/move) + file-backed
     persistent bookmarks, settings.
-  - `src/core/tracking-protection` — 70 tests: filter parsing (anchors,
+  - `src/core/tracking-protection` — 79 tests: filter parsing (anchors,
     options, exceptions, cosmetic/unsupported/invalid counting), pattern
     matching (domain anchor, separators, wildcards, left/right anchors,
     type/party/domain constraints), engine decisions (block/allow/pass,
@@ -309,7 +327,8 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
     suffixes, third-party); list management (HTTP fetch via real JDK
     HttpServer, conditional revalidation + 304, size cap, atomic file
     cache, version parsing, update policy, manager lifecycle with cached
-    fallback).
+    fallback); Security Center model (§24 — real-state aggregation,
+    honest empty/bypass semantics, top-domain ranking).
 - **Live checks:** registry lint OK; string parity OK; baseline drift CURRENT.
 - CI runs the Python suite, string validation, and the Kotlin core suite on every
   push/PR touching `scripts/`, `tests/`, `iNWEB_PATCHES/`, `src/`.
@@ -327,9 +346,11 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Phase 3 / Step 13 — Security Center data model (§24):** a pure-JVM
-model aggregating real `EngineStatistics`, `TrackingProtectionSettings`
-and filter-list state into the dashboard contract the Security Center UI
-will render — tested with unit tests, honest about being empty until the
-engine patches feed real decisions. Alternative next step if directed:
-Phase 4 adblock patch-series design document.
+**Phase 4 / Step 14 — adblock patch-series design document:** the
+concrete design for the `adblock/` patch area — where and how
+`TrackingProtectionEngine.decide()` is called from the Chromium network
+stack (request-context mapping incl. resource types), how filter lists
+are provisioned at startup, cosmetic-filter hooks, and the build-time
+verification strategy. Authored as design (the patches themselves are
+applied and verified on build infrastructure, B-001). Alternative next
+step if directed: downloads surface polish.
