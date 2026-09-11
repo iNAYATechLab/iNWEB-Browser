@@ -21,8 +21,8 @@ written in Kotlin.
 
 | Item | State |
 |---|---|
-| Development phase | **Phase 5 — Performance: in progress** (measured baseline + design complete; combined matcher next; device budgets await B-001) |
-| Current step | 18 |
+| Development phase | **Phase 6 — Extensions: in progress** (design complete; management core next; execution awaits B-001) — Phase 5 core work complete |
+| Current step | 19 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 115 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag) |
@@ -110,6 +110,7 @@ git-ignored here by design (ADR-004): the tree is always reproducible as
 | [`docs/PHASE4-POPUP-PROTECTION-DESIGN.md`](docs/PHASE4-POPUP-PROTECTION-DESIGN.md) | `popup_protection/` patch-series design — popups, redirects, notifications, downloads |
 | [`docs/PHASE4-COSMETIC-DESIGN.md`](docs/PHASE4-COSMETIC-DESIGN.md) | Cosmetic filtering — tested Kotlin engine + injection patch design |
 | [`docs/PHASE5-PERFORMANCE-DESIGN.md`](docs/PHASE5-PERFORMANCE-DESIGN.md) | Performance budgets, measured v1 baseline, combined-matcher & cache design, device plan |
+| [`docs/PHASE6-EXTENSION-DESIGN.md`](docs/PHASE6-EXTENSION-DESIGN.md) | Extension system design — API table, models, patch plan, build-time audit |
 | [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md) | Security threat model (living document) |
 
 ## Development model
