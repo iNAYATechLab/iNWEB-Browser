@@ -62,11 +62,11 @@ references or depends on it.
 | Navigation controls | back/forward/reload in the bottom bar (live in authored UI) |
 | Icons / theme | Material 3 tokens; light/dark/system theme (authored UI) |
 | Font / text size | system font scale + in-app text-size setting; §49 contracts apply |
-| Page zoom | Chromium's Android page-zoom setting, bound via a `settings/` patch (real upstream mechanism, not a custom renderer hack) |
+| Page zoom | **core implemented — `ZoomPreferences`/`ZoomSettings` (Step 34, ADR-032)**; bound to Chromium's Android page-zoom setting via a `settings/` patch (real upstream mechanism, not a custom renderer hack) |
 | Homepage / new-tab layout | the Phase 2 home surface — top sites + shortcuts (ADR-017) |
 | Search engine | real — `SearchEngine` model (Phase 2 core), user-selectable |
 | Privacy defaults | real — tracking-protection settings, per-site allowlist (Phase 3 core) |
-| Download preferences | ask-before-download / default folder via `settings/` patch |
+| Download preferences | **core implemented — `DownloadPreferences`/`DownloadSettings` (Step 34, ADR-032)**; ask-before-download / default folder via `settings/` patch |
 
 Everything above is an existing Chromium/iNWEB mechanism or a designed
 core — no lever is listed that has no mechanism behind it.

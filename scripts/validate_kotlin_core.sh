@@ -89,7 +89,9 @@ run_module "src/core/browser-shell" \
   com.inweb.browser.shell.BookmarkStoreTest \
   com.inweb.browser.shell.FileBookmarkStoreTest \
   com.inweb.browser.shell.TopSitesTest \
-  com.inweb.browser.shell.SettingsTest
+  com.inweb.browser.shell.SettingsTest \
+  com.inweb.browser.shell.ZoomPreferencesTest \
+  com.inweb.browser.shell.DownloadPreferencesTest
 
 run_module "src/core/extensions" \
   com.inweb.browser.extensions.ExtensionRegistryTest
