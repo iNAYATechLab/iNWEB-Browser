@@ -4,29 +4,30 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 30 (Phase 11 in progress; Phases 0–10 core done)
+> Last updated: **2026-09-12** — Step 31 (Phase 11 in progress; Phases 0–10 core done)
 
 ```yaml
 project: iNWEB Browser
 repository: iNAYATechLab/iNWEB-Browser
 phase: 11
 phase_title: Advanced Features
-phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 30
+phase_status: in_progress   # design + customization core done; remaining cores & wiring next
+step: 31
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 38 Python + 302 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 38 Python + 327 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action majors); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 11 / Step 31 — customization core in Kotlin (pure JVM,
-  CI-tested, §23): toolbar configuration model — user-reorderable/
-  hideable bottom-bar item set with validation (no duplicates, no
-  unknown items, all-mandatory-present) + persistence seam
-  (alternative if directed: notification policy core or downloads/
-  history surface polish).
+  Phase 11 / Step 32 — notification policy core in Kotlin (pure JVM,
+  CI-tested, §33 per docs/PHASE11-NOTIFICATIONS-FEATURES-DESIGN.md
+  §1): channel registry matching the §1 table exactly (no extra
+  channels, auditable), per-channel enabled state (every channel
+  toggleable), real-event-only policy decisions, lazy POST_NOTIFICATIONS
+  permission state machine (alternative if directed: downloads/history
+  surface polish, or page-zoom/download-preferences settings cores).
 ```
 
 ## Completed
@@ -544,9 +545,36 @@ next_action: >-
   - ADR-028 recorded; Phase 10 closed (gate + design live; device
     accessibility verification B-001-gated)
 
+- [x] **Step 31 — Phase 11: customization core (§23 toolbar configuration)** (2026-09-12)
+  - New pure-JVM module `src/core/customization` (package
+    `com.inweb.browser.customization`), registered as the 9th core
+    module in `scripts/validate_kotlin_core.sh`; 25 Kotlin tests,
+    all passing (Kotlin total 327)
+  - `ToolbarItem`: the item universe mirrors the AUTHORED bottom bar
+    exactly (back, forward, home, tabs, menu — no invented items);
+    stable string ids; mandatory = back/tabs/menu (navigation
+    escape, session surface, settings/menu surface — the bar's
+    structural controls); forward/home are genuine preferences
+  - `ToolbarConfig.parse`: strict validation of untrusted stored
+    data in a fixed check order — duplicates → unknown → missing →
+    unknown-hidden → mandatory-hidden — every offender reported
+    (nothing silently dropped or invented to "fix" a corrupt file)
+  - `ToolbarConfigurator`: move (remove-then-insert, full-list
+    index), setVisible (mandatory hide rejected; hidden keeps its
+    slot so show restores position), reset; every mutation
+    re-validated + persisted through the `ToolbarStore` seam
+    (`InMemoryToolbarStore`; preference-backed store ships with the
+    ui/ patch binding)
+  - Corrupt stored config → authored-default fallback that is
+    PERSISTED and reported via `lastRecovery()` (never a crash,
+    never a silent ignore)
+  - Planned registry entry ui/0024 (toolbar-configuration surface
+    bound to this core) — B-001-gated like every patch
+  - ADR-029 recorded
+
 ## In progress
 
-- (none — awaiting continuation command for Step 31)
+- (none — awaiting continuation command for Step 32)
 
 ## Not started
 
@@ -624,6 +652,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-026 | 2026-09-12 | Profiles isolate at the storage-namespace level (per-profile store dirs + Chromium user-data dirs; cookies never shared); cloud sync is a documented absence (§29) — the §30 queue/conflict model is transport-agnostic future infrastructure, not a feature; backups are versioned, checksummed, preview-gated, forward-migrating bundles encrypted at the Android layer; app data in SQLite, Chromium storage never duplicated | §28 isolation made structural; §29/§30/§31/§32 honesty rules enforced in the data model |
 | ADR-027 | 2026-09-12 | Localization is enforced by CI gates, not convention: bidirectional key/placeholder parity (existing) + source-level externalization of the authored UI (new) with documented exemptions and a reviewed escape hatch; bn-BD is authored, never machine-translated; §49 accessibility is a binding authoring contract + mandatory patch-review gate, device-verified at B-001 | §36/§49 rules become merge-blocking checks; structure proven by CI, prose quality and on-device accessibility honestly labeled as human/device deliverables |
 | ADR-028 | 2026-09-12 | Notifications report real user-relevant events only — minimal by default, lazily-requested permission, every channel toggleable, zero promotional content; absent channels (sync, self-update) are stated, never stubbed; the entertainment module is a non-goal for v1 (base APK stays lean); every §23 customization lever must map to a real mechanism | §33/§34/§41/§7 honesty rules; no engagement bait, no claims without infrastructure |
+| ADR-029 | 2026-09-12 | Toolbar configuration core: the item universe mirrors the authored bar exactly (no invented items, stable wire ids); validation is strict (duplicate/unknown/missing/unknown-hidden/mandatory-hidden are hard errors, all offenders reported); a corrupt stored configuration falls back to the authored default, persisted and surfaced — never a crash, never a silent ignore; mandatory items (back/tabs/menu) can never be hidden; a hidden item keeps its slot | §23 lever backed by a real tested mechanism; user customization can never produce a broken or empty-control bar |
 
 ## Build status
 
