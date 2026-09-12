@@ -4,30 +4,32 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 31 (Phase 11 in progress; Phases 0–10 core done)
+> Last updated: **2026-09-12** — Step 32 (Phase 11 in progress; Phases 0–10 core done)
 
 ```yaml
 project: iNWEB Browser
 repository: iNAYATechLab/iNWEB-Browser
 phase: 11
 phase_title: Advanced Features
-phase_status: in_progress   # design + customization core done; remaining cores & wiring next
-step: 31
+phase_status: in_progress   # design + customization & notification-policy cores done; wiring next
+step: 32
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 38 Python + 327 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 38 Python + 350 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action majors); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 11 / Step 32 — notification policy core in Kotlin (pure JVM,
-  CI-tested, §33 per docs/PHASE11-NOTIFICATIONS-FEATURES-DESIGN.md
-  §1): channel registry matching the §1 table exactly (no extra
-  channels, auditable), per-channel enabled state (every channel
-  toggleable), real-event-only policy decisions, lazy POST_NOTIFICATIONS
-  permission state machine (alternative if directed: downloads/history
-  surface polish, or page-zoom/download-preferences settings cores).
+  Phase 11 / Step 33 — bind the new cores into the authored app
+  source (src/android-app, not compiled until B-001, §36 same-commit
+  en+bn strings): BrowserViewModel wired to ToolbarConfigurator and
+  NotificationPolicy, a Customize-toolbar surface (reorder/hide,
+  mandatory items locked) and a Notifications settings surface
+  (per-channel toggles for available channels only), verified by the
+  externalization + string-parity gates (alternative if directed:
+  downloads/history surface polish, or page-zoom/download-preferences
+  settings cores).
 ```
 
 ## Completed
@@ -572,9 +574,42 @@ next_action: >-
     bound to this core) — B-001-gated like every patch
   - ADR-029 recorded
 
+- [x] **Step 32 — Phase 11: notification policy core (§33)** (2026-09-12)
+  - New pure-JVM module `src/core/notifications` (package
+    `com.inweb.browser.notifications`), registered as the 10th core
+    module in `scripts/validate_kotlin_core.sh`; 23 Kotlin tests,
+    all passing (Kotlin total 350)
+  - Registry = the design §1 table EXACTLY: 4 channels (downloads,
+    security, vpn, background), 8 events each mapped to its channel;
+    the unit test is the scriptable audit (registration matches §1,
+    no extra channels). Deliberate absences are STRUCTURAL — no enum
+    value exists for sync (no backend, §29), self-update (no
+    infrastructure), promotional (§41 policy), or filter-list update
+    failure (silent by design; Security Center surfaces it)
+  - `NotificationPolicy.decide` is the ONLY notify path: a typed real
+    event → Show / RequestPermission / Suppress(reason); no generic
+    notify(channel, text) API exists, so promotional content has no
+    way in. Fixed check order: availability → user toggle →
+    permission (the lazy ask fires ONLY for a show-worthy event)
+  - Availability is EXPLICIT (required constructor set, no default):
+    the build states which event sources are real; an unavailable
+    channel is never registered and its events are always suppressed
+    (VPN channel absent until patch 0021 — no stub)
+  - Lazy POST_NOTIFICATIONS state machine: NOT_REQUESTED → REQUESTED
+    (first show-worthy event) → GRANTED/DENIED; never asked at
+    startup, never twice, never re-asked after denial; an observed
+    system-setting change (onSystemPermissionChanged) is authoritative
+    from any phase (covers <Android 13 auto-grant and settings-app
+    changes)
+  - Per-channel toggles persist through the `NotificationStore` seam;
+    corrupt stored preferences recover to defaults with the repair
+    persisted + reported (lastRecovery) — never a crash, never a
+    silent ignore
+  - ADR-030 recorded
+
 ## In progress
 
-- (none — awaiting continuation command for Step 32)
+- (none — awaiting continuation command for Step 33)
 
 ## Not started
 
@@ -653,6 +688,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-027 | 2026-09-12 | Localization is enforced by CI gates, not convention: bidirectional key/placeholder parity (existing) + source-level externalization of the authored UI (new) with documented exemptions and a reviewed escape hatch; bn-BD is authored, never machine-translated; §49 accessibility is a binding authoring contract + mandatory patch-review gate, device-verified at B-001 | §36/§49 rules become merge-blocking checks; structure proven by CI, prose quality and on-device accessibility honestly labeled as human/device deliverables |
 | ADR-028 | 2026-09-12 | Notifications report real user-relevant events only — minimal by default, lazily-requested permission, every channel toggleable, zero promotional content; absent channels (sync, self-update) are stated, never stubbed; the entertainment module is a non-goal for v1 (base APK stays lean); every §23 customization lever must map to a real mechanism | §33/§34/§41/§7 honesty rules; no engagement bait, no claims without infrastructure |
 | ADR-029 | 2026-09-12 | Toolbar configuration core: the item universe mirrors the authored bar exactly (no invented items, stable wire ids); validation is strict (duplicate/unknown/missing/unknown-hidden/mandatory-hidden are hard errors, all offenders reported); a corrupt stored configuration falls back to the authored default, persisted and surfaced — never a crash, never a silent ignore; mandatory items (back/tabs/menu) can never be hidden; a hidden item keeps its slot | §23 lever backed by a real tested mechanism; user customization can never produce a broken or empty-control bar |
+| ADR-030 | 2026-09-12 | Notification policy core: the channel/event registry is the design §1 table exactly and the unit test is its audit; absent events (sync, self-update, promotional, filter-list failure) are structurally absent — no enum value, no code path — never merely undocumented; the only notify entry is a typed real event (no generic notify API); channel availability is an explicit build fact (no default) so unavailable channels are never registered (no stubs); permission is asked lazily at the first show-worthy event, never re-asked after denial; per-channel toggles + corrupt-preference recovery follow the ADR-029 pattern | §33/§41 rules become structural: real events only, user-respecting, zero promotional paths |
 
 ## Build status
 

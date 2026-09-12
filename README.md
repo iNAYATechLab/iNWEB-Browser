@@ -21,8 +21,8 @@ written in Kotlin.
 
 | Item | State |
 |---|---|
-| Development phase | **Phase 11 — Advanced Features: in progress** (notifications/customization design + toolbar-configuration core complete; execution awaits B-001) — Phases 0–10 core work complete |
-| Current step | 31 |
+| Development phase | **Phase 11 — Advanced Features: in progress** (notifications/customization design + toolbar-configuration and notification-policy cores complete; execution awaits B-001) — Phases 0–10 core work complete |
+| Current step | 32 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 115 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag) |
@@ -34,9 +34,10 @@ written in Kotlin.
 | Backup core (`src/core/backup`) | **Implemented & unit-tested — 13 Kotlin tests** (§32: versioned bundle, per-entry SHA-256, corruption tolerance, restore preview, known-stores-only secret guard) |
 | Sync core (`src/core/sync`) | **Implemented & unit-tested — 12 Kotlin tests** (§30 model: monotonic change log, backoff/retry with explicit failure reporting, LWW conflicts with tombstones — future infrastructure, §29) |
 | Customization core (`src/core/customization`) | **Implemented & unit-tested — 25 Kotlin tests** (§23 toolbar configuration: item universe mirrors the authored bar, strict validation with all offenders reported, corrupt→default recovery, persistence seam) |
+| Notification-policy core (`src/core/notifications`) | **Implemented & unit-tested — 23 Kotlin tests** (§33: registry = design §1 table exactly (audited), real-event-only decisions with no generic notify path, lazy POST_NOTIFICATIONS state machine, per-channel toggles, corrupt→default recovery) |
 | Android shell UI (`src/android-app`) | Authored — Compose + Material 3 (browser, tab switcher, home page with real data, onboarding, settings, downloads, history, bookmarks), bn/en strings; compiles in the Chromium build (B-001) |
 | Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — tested |
-| CI | **Live**: Python (38 tests) + registry + string parity + UI externalization gate; Kotlin core (327 tests, 9 modules); weekly upstream watch; benchmark on demand (not in CI) |
+| CI | **Live**: Python (38 tests) + registry + string parity + UI externalization gate; Kotlin core (350 tests, 10 modules); weekly upstream watch; benchmark on demand (not in CI) |
 | Build | **Not yet executed** — requires external build infrastructure (blocker B-001) |
 | Open defects | None recorded |
 
