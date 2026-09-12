@@ -1,6 +1,7 @@
 # iNWEB Browser — Threat Model
 
-**Version:** 0.1 (Phase 0)
+**Version:** 0.2 (Phase 12 re-validation — see `THREAT-MODEL-REVIEW.md` for the
+evidence walk and gap register)
 **Policy:** living document; re-validated at every phase gate and whenever architecture
 changes (§42).
 
@@ -40,17 +41,22 @@ lists).
 | Backup leakage | Exported file | Encrypted backup format, integrity validation, no plaintext secrets (§32) | 9 |
 | Profile leakage | Local data | Strict per-profile isolation (§28) | 9 |
 | Supply chain (upstream/deps) | Rebase, dependencies | Patch-series review at every rebase; CI reproducibility hash; no untracked edits; SBOM at release | all |
-| Data loss from crashes/corruption | Local state | Crash-safe state handling, session recovery, database recovery, migration rollback (§50–§51) | 2+ |
+| Data loss from crashes/corruption | Local state | Crash-safe state handling, session recovery, database recovery, migration rollback (§50–§51); every persisted surface carries a CI-audited corruption contract (`STORAGE-INVENTORY.yaml`, ADR-033) | 2+ |
+| Notification abuse (impersonation, promotional pressure) | Notification surface | Real-events-only policy with no generic notify path; promotional/sync/update events have no code path; per-channel toggles; lazily-requested permission (ADR-028/030) | 11 |
 
-## 4. Residual risks (current, Phase 0)
+## 4. Residual risks (current, Phase 12 re-validation)
 
 - **B-001:** no built binary exists yet; therefore zero runtime security claims are made.
   First reproducible build on real infrastructure is the earliest point any binary-level
   security statement can be validated.
-- **Extensions on Android:** attack surface undecided until the Phase 6 supported-scope
-  investigation concludes.
+- **Extensions on Android:** scope DECIDED in the Phase 6 design (upstream
+  WebExtensions enabled on Android, sideload-first, ADR-023); enforcement surface
+  ships with patches 0013–0016.
 - **VPN / Sync:** no protection exists until real infrastructure exists; UI will not
   claim otherwise (§57, §65).
+- **Source-level contracts:** all corruption/recovery contracts are CI-audited at the
+  source level; on-device verification of each is a B-001 checklist item
+  (gap G-09 in the review).
 
 ## 5. Review cadence
 
