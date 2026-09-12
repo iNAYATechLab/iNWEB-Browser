@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 43 (Phase 12 authoring complete; Phases 0–11 complete)
+> Last updated: **2026-09-12** — Step 44 (Phase 12 authoring complete; Phases 0–11 complete)
 
 ```yaml
 project: iNWEB Browser
@@ -12,25 +12,26 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 12
 phase_title: Production Hardening
 phase_status: authoring_complete   # all 5 design-order items done; every remaining Phase 12 deliverable is B-001-gated (device matrix)
-step: 43
+step: 44
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 50 Python + 404 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 50 Python + 414 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs + 5 gates (registry, strings, externalization, structure, storage inventory); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Proposed Step 44 — G-07 filter-list content checksum pinning
-  (tracking-protection core hardening, closes a threat-register gap):
-  SHA-256 content verification in the filter-list update path — the
-  list body's checksum is computed on download, stored in the cache
-  metadata, and re-verified on load/refresh (detects corruption and
-  tampering beyond the current freshness metadata); pure-JVM core +
-  tests, no device dependency (alternative if directed: B-001
-  build-host provisioning assistance — walking the exact
-  BUILD-INFRASTRUCTURE.md setup so the first real compile can begin,
-  or a §59 full-repository documentation accuracy pass).
+  Authoring-side hardening is complete (Phase 12 items 1-5, §49
+  audit, G-07 closed). Proposed Step 45 — B-001 build-host
+  provisioning assistance: walk the exact BUILD-INFRASTRUCTURE.md
+  setup with the user so the first real Chromium compile can begin —
+  hardware/VM specification check, disk + depot_tools + pinned
+  baseline fetch (fetch_chromium.sh), the Docker build container, GN
+  args, and the first Stage-0 matrix pass (B-1..B-4) against the
+  empty patch series (alternative if directed: a §59 full-repository
+  documentation accuracy pass, or the authored-app About surface —
+  §39 About section showing app version + Chromium baseline from the
+  VERSIONING.md registry fields).
 ```
 
 ## Completed
@@ -934,9 +935,33 @@ next_action: >-
     registry, Python 50/50, Kotlin 404 (11 modules) — src/ changed,
     so CI runs on push
 
+- [x] **Step 44 — G-07 filter-list content checksum pinning (tracking-protection core hardening, threat-register gap closed)** (2026-09-12)
+  - New `FilterListChecksum` (SHA-256 via MessageDigest, lowercase
+    hex; platform crypto only, ADR-025): every downloaded list body is
+    PINNED with its SHA-256 in the cache metadata and re-verified on
+    every cache load (startup + refresh) — a mismatching copy is
+    NEVER served; the manager re-downloads when allowed or reports an
+    honest Failed(servedFromCache=false) with nothing loaded
+  - `FilterListMetadata.contentSha256` (nullable; wire format gains
+    an optional line — no v=1 file exists in the wild since no
+    artifact has ever shipped, B-001); legacy copies without a
+    checksum are served as-is (documented tolerance)
+  - +10 tests: FilterListChecksumTest (3: FIPS vectors,
+    determinism/format, any-change-changes-digest) + cache wire
+    round-trip + legacy-deserialize (2) + manager (5: pin-on-download,
+    tampered-body re-download, never-serve-when-offline, legacy cache
+    tolerance, corrupted-cache refresh); module 106 -> 116, Kotlin
+    total 414; script registration (before the success banner)
+  - Docs aligned: THREAT-MODEL-REVIEW G-07 CLOSED (row 12 now G-08
+    only), DEVICE-VERIFICATION-MATRIX D12-1 + closure map updated,
+    STORAGE-INVENTORY FilterListCache corruption contract extended
+  - Honest boundary: integrity pinning, NOT a publisher signature —
+    no upstream list signs content and no such claim is made (§57);
+    on-device fault injection stays on D12-1
+
 ## In progress
 
-- (none — awaiting continuation command for Step 44)
+- (none — awaiting continuation command for Step 45)
 
 ## Not started
 
@@ -1027,6 +1052,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-033 | 2026-09-12 | Every persisted-data surface is inventoried in docs/STORAGE-INVENTORY.yaml and the inventory is CI-enforced bidirectionally (discovered surfaces must have entries; entries must exist in code); each entry's corruption column is that store's §50/§51 recovery contract and its clear column is the clear-data contract; in-memory-only seams must name the patch that will persist them; `discoverable: false` is the reviewed manual-extra hatch, surfaced in gate output | "never silently lose user data" becomes an auditable, merge-blocking property of the codebase; the data-safety story for store readiness is generated from the same inventory |
 | ADR-034 | 2026-09-12 | The clear-browsing-data item universe is the storage inventory's clear column and NOTHING else (bookmarks/preference stores/downloads catalog are deliberately excluded with reasons); every binding delegates to a real store API — no invented clearing paths; a selection naming an unbound item is rejected, never silently skipped; previews are real counts from the stores (null = not countable) and never mutate; selection is transient dialog state; cross-module cores are validated via the script's --deps classpath with build-order enforcement | clearing user data is orchestrated, auditable, and honest; the dialog can never pretend to clear something it cannot |
 | ADR-035 | 2026-09-12 | Versioning policy (docs/VERSIONING.md): SemVer with the alpha→beta→rc→stable ladder from 1.0.0-alpha.1; versionName = exact semver; versionCode strictly monotonic via a documented derivation + overflow rule, recorded per-tag in an authoritative release registry; annotated v<semver> tags only, channel identified by the pre-release identifier, each annotation carrying the full §45 release record; development channel = untagged main builds, no canary line in v1 (a later canary needs a new ADR); the iNWEB version is independent of the pinned Chromium baseline (baseline = build metadata; a refresh is at minimum a PATCH bump); the policy was written BEFORE the first build tag exists, registry empty | §47/§45 rules become a written, auditable contract before any release artifact exists; version assignments can never drift because every code is recorded at tag time and nothing predates the policy |
+| ADR-036 | 2026-09-12 | Filter-list content integrity (G-07): every downloaded body is pinned with its SHA-256 (platform MessageDigest, ADR-025) in the cache metadata and re-verified on every cache load; a mismatch is corruption/tampering and the copy is NEVER served — re-download when allowed, otherwise an honest Failed(servedFromCache=false); metadata wire format gains an optional contentSha256 line (safe: no v=1 file exists in the wild, B-001); legacy checksum-less copies are served as-is (documented tolerance, not silent fixing) | closes the threat-register supply-chain gap: cached list content can no longer be silently corrupted or tampered with; integrity pinning is claimed, a publisher signature is NOT (no upstream source signs, §57) |
 
 ## Build status
 

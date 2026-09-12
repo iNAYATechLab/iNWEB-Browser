@@ -22,11 +22,11 @@ written in Kotlin.
 | Item | State |
 |---|---|
 | Development phase | **Phase 12 — Production Hardening: authoring complete** (all five design-order items: storage inventory gate, threat-model review, clear-data core + surface, §47 versioning policy, device-verification matrix, performance budgets, data-safety draft; plus §23 settings binding — every remaining Phase 12 deliverable is B-001-gated; Phases 0–11 core work complete) |
-| Current step | 43 |
+| Current step | 44 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 150 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag, page-zoom §23 with per-site overrides + Chromium preset table, download preferences §23) |
-| Privacy core (`src/core/tracking-protection`) | **Implemented & unit-tested — 106 Kotlin tests** (EasyList-family parser, URL matching, request decisions, per-site allowlist, statistics; filter-list download/cache/update management incl. in-memory cache; Security Center model §24; cosmetic filtering engine; combined matcher ~165–259× faster, equivalence-verified) |
+| Privacy core (`src/core/tracking-protection`) | **Implemented & unit-tested — 116 Kotlin tests** (EasyList-family parser, URL matching, request decisions, per-site allowlist, statistics; filter-list download/cache/update management incl. in-memory cache + SHA-256 content pinning G-07; Security Center model §24; cosmetic filtering engine; combined matcher ~165–259× faster, equivalence-verified) |
 | Extension core (`src/core/extensions`) | **Implemented & unit-tested — 17 Kotlin tests** (§16 management model: install/review/enable/disable/update/remove state machine with upgrade consent, version comparison, permission-review records) |
 | Offline core (`src/core/offline`) | **Implemented & unit-tested — 15 Kotlin tests** (§17 library: real byte quota, LRU eviction with pinning, same-URL replace, atomic quota failure, persistence seam, clear-all) |
 | VPN core (`src/core/vpn`) | **Implemented & unit-tested — 17 Kotlin tests** (§15 config validation: WireGuard-style parsing, strict fields/CIDR/endpoints/keys, secrets opaque by construction) |
@@ -38,7 +38,7 @@ written in Kotlin.
 | Clear-data core (`src/core/clear-data`) | **Implemented & unit-tested — 14 Kotlin tests** (Phase 12: item universe = the storage inventory's clear column, dry-run previews with real counts, execution through real store APIs, unbound items never silently skipped; first cross-module core via the script's `--deps` mechanism) |
 | Android shell UI (`src/android-app`) | Authored — Compose + Material 3 (browser with configuration-driven bottom bar §23, tab switcher, home page with real data, onboarding, settings incl. toolbar customization §23 + page-zoom surface with core-validated presets + download preferences §23 with system SAF folder picker + notification toggles §33 + clear-browsing-data §39 with real preview counts, downloads, history, bookmarks), bn/en strings; §49 accessibility audit passed (whole-row toggle semantics, heading semantics, 48dp touch targets, AA-contrast palette); compiles in the Chromium build (B-001); structural gate in CI |
 | Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — tested |
-| CI | **Live**: Python (50 tests) + registry + storage-inventory gate + string parity + UI externalization gate; Kotlin core (404 tests, 11 modules, cross-module `--deps` support) + authored-source structural gate; weekly upstream watch; benchmark on demand (not in CI) |
+| CI | **Live**: Python (50 tests) + registry + storage-inventory gate + string parity + UI externalization gate; Kotlin core (414 tests, 11 modules, cross-module `--deps` support) + authored-source structural gate; weekly upstream watch; benchmark on demand (not in CI) |
 | Build | **Not yet executed** — requires external build infrastructure (blocker B-001) |
 | Open defects | None recorded |
 
