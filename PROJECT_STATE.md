@@ -4,31 +4,32 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 37 (Phase 12 in progress; Phases 0–11 complete)
+> Last updated: **2026-09-12** — Step 38 (Phase 12 in progress; Phases 0–11 complete)
 
 ```yaml
 project: iNWEB Browser
 repository: iNAYATechLab/iNWEB-Browser
 phase: 12
 phase_title: Production Hardening
-phase_status: in_progress   # design + storage gate + threat review + clear-data core done; surfaces/versioning next
-step: 37
+phase_status: in_progress   # clear-data core + authored surface done; remaining: settings binding, versioning, verification matrix
+step: 38
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 50 Python + 398 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 50 Python + 402 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs + 5 gates (registry, strings, externalization, structure, storage inventory); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 12 / Step 38 — authored clear-browsing-data surface
-  (src/android-app, not compiled until B-001, §36 same-commit en+bn
-  strings): Settings entry + dialog with per-item checkboxes bound to
-  ClearDataManager via the ViewModel, real dry-run preview counts,
-  explicit confirmation, and honest wording (caches re-download);
-  verified by the externalization + string-parity + structural gates
-  (alternative if directed: the §23 settings-surface binding for
-  zoom/download preferences, or the §47 versioning-policy document).
+  Phase 12 / Step 39 — §23 settings-surface binding for the remaining
+  preference cores (src/android-app, B-001-gated compile, §36
+  same-commit en+bn strings): zoom settings surface (default factor +
+  per-site override management, bounds-validated through the core) and
+  download-preferences surface (ask-before-download toggle, default
+  folder via the platform picker when it exists), incl. the
+  SharedPreferencesDownloadPreferencesStore adapter + inventory entry
+  (alternative if directed: the §47 versioning-policy document, or the
+  B-001 device-verification matrix).
 ```
 
 ## Completed
@@ -765,9 +766,39 @@ next_action: >-
   - Kotlin total 398 (11 modules); all gates green locally
   - ADR-034 recorded
 
+- [x] **Step 38 — Phase 12: authored clear-browsing-data surface (§39, bound to the clear-data core)** (2026-09-12)
+  - New `ui/ClearDataScreen`: every row IS a core item with its REAL
+    dry-run count; the filter-list cache row says it re-downloads
+    (not countable by design); rows use toggleable + Role.Checkbox
+    semantics (§49); confirm disabled for an empty selection (the
+    surface prevents the core's EmptySelection error); Settings nav
+    row + screen routing
+  - BrowserViewModel bound to ClearDataManager with the five REAL
+    bindings (history via the PrivacyFilterHistory decorator, session
+    persistence, filter-list cache, offline library, zoom settings);
+    previews refreshed on open; selection is transient dialog state
+    (ADR-034)
+  - New `SharedPreferencesZoomPreferencesStore` adapter (app
+    preferences `inweb_zoom`; wire form = factor string +
+    comma-joined host=factor pairs; value-level validation/recovery
+    stay in the core per ADR-031 layering — the wire-format boundary
+    is documented in the inventory entry)
+  - New `InMemoryFilterListCache` in the tracking-protection core
+    (tests/previews; +4 tests, module 102 → 106) — the ViewModel
+    default; MainActivity binds the real FileFilterListCache
+    (`filesDir/filter-lists`)
+  - STORAGE-INVENTORY.yaml: 22 surfaces (zoom adapter + seam location
+    updated) — the gate caught the new prefs surface exactly as
+    designed
+  - 13 new strings in en + bn-BD same commit (§36); parity +
+    externalization + structural gates green (20 authored files);
+    Kotlin total 402 (11 modules)
+  - Honest boundary: nothing clears on a device until the build
+    exists (B-001); the surface is authored source verified by gates
+
 ## In progress
 
-- (none — awaiting continuation command for Step 38)
+- (none — awaiting continuation command for Step 39)
 
 ## Not started
 
