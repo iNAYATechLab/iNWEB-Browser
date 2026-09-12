@@ -22,7 +22,7 @@ written in Kotlin.
 | Item | State |
 |---|---|
 | Development phase | **Phase 12 — Production Hardening: authoring complete** (all five design-order items: storage inventory gate, threat-model review, clear-data core + surface, §47 versioning policy, device-verification matrix, performance budgets, data-safety draft; plus §23 settings binding — every remaining Phase 12 deliverable is B-001-gated; Phases 0–11 core work complete) |
-| Current step | 47 |
+| Current step | 48 (authoring paused — awaiting B-001 build host) |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 150 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag, page-zoom §23 with per-site overrides + Chromium preset table, download preferences §23) |

@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 47 (Phase 12 authoring complete; Phases 0–11 complete)
+> Last updated: **2026-09-12** — Step 48 (Phase 12 authoring complete; Phases 0–11 complete; **AUTHORING PAUSED — awaiting B-001 build host**)
 
 ```yaml
 project: iNWEB Browser
@@ -12,7 +12,7 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 12
 phase_title: Production Hardening
 phase_status: authoring_complete   # all 5 design-order items done; every remaining Phase 12 deliverable is B-001-gated (device matrix)
-step: 47
+step: 48
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
@@ -21,15 +21,16 @@ ci_status: authoring-pipeline-live # Python + Kotlin core jobs + 5 gates (regist
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Proposed Step 48 — live upstream baseline drift check: run
-  scripts/check_baseline.py against the Chrome Version History API;
-  if Android stable has moved past 154.0.8037.21, produce the
-  PHASE0-CHROMIUM-BASELINE refresh plan (new tag, mirror-resource
-  update enforced by the strings gate, patch-series rebase check,
-  changelog entry) WITHOUT rebasing yet — the rebase itself stays
-  B-001-gated; if the baseline is still current, authoring PAUSES
-  with a clean, fully-accurate tree until the build host is
-  provisioned and Stage-0 results return (B-001).
+  AUTHORING PAUSED (clean tree, all gates green). The ball is with
+  the user: provision the build host per docs/BUILD-HOST-RUNBOOK.md
+  §1, run scripts/check_build_host.py (§2) until every mandatory row
+  is green, then scripts/fetch_chromium.sh (§3) and
+  scripts/build_android.sh development (§4) — the first real Chromium
+  artifact closes matrix rows B-1..B-4 and opens the verification log
+  (§5). Results/logs come back to this repository; any defect found
+  is fixed as ordinary commits. Authoring resumes ONLY for build-host
+  defects, an upstream baseline move (weekly watch / re-check), or
+  explicit user direction.
 ```
 
 ## Completed
@@ -1038,9 +1039,24 @@ next_action: >-
   - Docs-only change — CI skips by paths-filter design; gates
     re-run locally below
 
+- [x] **Step 48 — live upstream baseline drift check: CURRENT; authoring pauses for B-001** (2026-09-12)
+  - `python3 scripts/check_baseline.py` against the live Chrome
+    Version History API: pinned 154.0.8037.21 == latest Android
+    stable 154.0.8037.21 → **CURRENT** (exit 0); no refresh plan
+    needed — cross-referenced with the weekly Upstream Watch workflow
+    (last run 34641290453, green, 2026-09-11)
+  - Pause certification — FULL local gate suite re-run at this
+    commit: Kotlin 414/414 (11 modules, ALL MODULES PASSED),
+    structural 23 authored files, Python 77/77, strings + baseline
+    mirror in sync, registry, storage inventory 23, externalization 0
+  - Authoring side is complete and accurate as of this step; the
+    next repository event is B-001 Stage-0 results (or an upstream
+    baseline move)
+
 ## In progress
 
-- (none — awaiting continuation command for Step 48)
+- **AUTHORING PAUSED** — awaiting B-001 build-host provisioning and
+  Stage-0 results (all design work done; see next_action)
 
 ## Not started
 
