@@ -3,6 +3,15 @@ package com.inweb.browser
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.inweb.browser.cleardata.ClearDataItem
+import com.inweb.browser.cleardata.ClearDataManager
+import com.inweb.browser.cleardata.ClearDataPreview
+import com.inweb.browser.cleardata.ClearDataResult
+import com.inweb.browser.cleardata.FilterListCacheClearBinding
+import com.inweb.browser.cleardata.HistoryClearBinding
+import com.inweb.browser.cleardata.OfflinePagesClearBinding
+import com.inweb.browser.cleardata.SessionClearBinding
+import com.inweb.browser.cleardata.SiteZoomOverridesClearBinding
 import com.inweb.browser.customization.InMemoryToolbarStore
 import com.inweb.browser.customization.ToolbarConfig
 import com.inweb.browser.customization.ToolbarConfigurator
@@ -10,6 +19,13 @@ import com.inweb.browser.customization.ToolbarItem
 import com.inweb.browser.customization.ToolbarStore
 import com.inweb.browser.notifications.InMemoryNotificationStore
 import com.inweb.browser.notifications.NotificationChannel
+import com.inweb.browser.offline.InMemoryOfflineStore
+import com.inweb.browser.offline.OfflineLibrary
+import com.inweb.browser.privacy.lists.FilterListCache
+import com.inweb.browser.privacy.lists.InMemoryFilterListCache
+import com.inweb.browser.shell.InMemoryZoomPreferencesStore
+import com.inweb.browser.shell.ZoomPreferencesStore
+import com.inweb.browser.shell.ZoomSettings
 import com.inweb.browser.notifications.NotificationDecision
 import com.inweb.browser.notifications.NotificationEvent
 import com.inweb.browser.notifications.NotificationPolicy
@@ -38,7 +54,7 @@ import com.inweb.browser.shell.TopSite
 import com.inweb.browser.shell.TabsController
 
 /** Overlay screens of the shell. */
-enum class Screen { BROWSER, SETTINGS, DOWNLOADS, HISTORY, BOOKMARKS, TABS, CUSTOMIZE_TOOLBAR }
+enum class Screen { BROWSER, SETTINGS, DOWNLOADS, HISTORY, BOOKMARKS, TABS, CUSTOMIZE_TOOLBAR, CLEAR_DATA }
 
 /**
  * Browser-shell view model: binds the pure-JVM core (TabsController,
@@ -57,6 +73,8 @@ class BrowserViewModel(
     private val bookmarkStore: BookmarkStore = InMemoryBookmarkStore(),
     private val toolbarStore: ToolbarStore = InMemoryToolbarStore(),
     private val notificationStore: NotificationStore = InMemoryNotificationStore(),
+    private val zoomStore: ZoomPreferencesStore = InMemoryZoomPreferencesStore(),
+    private val filterListCache: FilterListCache = InMemoryFilterListCache(),
 ) {
 
     var settings by mutableStateOf(AppSettings())
@@ -88,6 +106,17 @@ class BrowserViewModel(
     var notificationChannels by mutableStateOf<List<Pair<NotificationChannel, Boolean>>>(emptyList())
         private set
 
+    /**
+     * Clear-browsing-data previews (real counts from the stores, §39 /
+     * Phase 12) — refreshed on open; never mutated by previewing.
+     */
+    var clearDataPreviews by mutableStateOf<Map<ClearDataItem, ClearDataPreview>>(emptyMap())
+        private set
+
+    /** Transient dialog selection (deliberately NOT persisted, ADR-034). */
+    var clearDataSelection by mutableStateOf<Set<ClearDataItem>>(emptySet())
+        private set
+
     var tabs by mutableStateOf<List<TabState>>(emptyList())
         private set
 
@@ -109,6 +138,17 @@ class BrowserViewModel(
     private val downloadsStore = InMemoryDownloadsStore()
     private val historySource = PrivacyFilterHistory(historyStore)
     private val toolbarConfigurator = ToolbarConfigurator(toolbarStore)
+    private val zoomSettings = ZoomSettings(zoomStore)
+    private val offlineLibrary = OfflineLibrary(InMemoryOfflineStore())
+    private val clearDataManager = ClearDataManager(
+        listOf(
+            HistoryClearBinding(historySource),
+            SessionClearBinding(sessionPersistence),
+            FilterListCacheClearBinding(filterListCache),
+            OfflinePagesClearBinding(offlineLibrary),
+            SiteZoomOverridesClearBinding(zoomSettings),
+        )
+    )
 
     /**
      * The §33 channel-availability set for THIS authored build: only the
@@ -280,6 +320,48 @@ class BrowserViewModel(
     private fun refreshNotificationChannels() {
         notificationChannels = notificationPolicy.registeredChannels()
             .map { it to notificationPolicy.isChannelEnabled(it) }
+    }
+
+    // --- Clear browsing data (§39, bound to the clear-data core) ---------------
+
+    /** The bound clear-data items in canonical order (ADR-034). */
+    val clearDataItems: List<ClearDataItem> get() = clearDataManager.availableItems()
+
+    fun openClearData() {
+        refreshClearPreviews()
+        screen = Screen.CLEAR_DATA
+    }
+
+    fun toggleClearDataItem(item: ClearDataItem) {
+        clearDataSelection =
+            if (item in clearDataSelection) clearDataSelection - item else clearDataSelection + item
+    }
+
+    /**
+     * Executes the selection through the real store APIs and closes the
+     * dialog. The surface guarantees a non-empty, fully bound selection
+     * (the confirm button is disabled otherwise), so the Err branch is
+     * structurally unreachable — kept defensive, never silently ignored.
+     */
+    fun confirmClearData() {
+        when (val result = clearDataManager.clear(clearDataSelection)) {
+            is ClearDataResult.Ok -> {
+                clearDataSelection = emptySet()
+                refreshClearPreviews()
+                screen = Screen.BROWSER
+            }
+            is ClearDataResult.Err -> {
+                // Unreachable from this surface; state stays for the user.
+            }
+        }
+    }
+
+    private fun refreshClearPreviews() {
+        val items = clearDataManager.availableItems().toSet()
+        when (val previews = clearDataManager.preview(items)) {
+            is ClearDataResult.Ok -> clearDataPreviews = previews.value
+            is ClearDataResult.Err -> clearDataPreviews = emptyMap()
+        }
     }
 
     // --- Overlay screens -----------------------------------------------------

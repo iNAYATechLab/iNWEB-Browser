@@ -32,6 +32,7 @@ fun BrowserScreen(viewModel: BrowserViewModel = remember { BrowserViewModel() })
         Screen.BOOKMARKS -> BookmarkScreen(viewModel)
         Screen.TABS -> TabsScreen(viewModel)
         Screen.CUSTOMIZE_TOOLBAR -> CustomizeToolbarScreen(viewModel)
+        Screen.CLEAR_DATA -> ClearDataScreen(viewModel)
     }
 }
 

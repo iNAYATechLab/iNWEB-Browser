@@ -132,9 +132,9 @@ surfaces:
     kind: seam
     module: browser-shell
     stores: "Page-zoom default factor + per-site overrides (normalized hosts)"
-    location: "In-memory core; the preference-backed adapter ships with the authored-UI binding step"
+    location: "app preferences `inweb_zoom` (via SharedPreferencesZoomPreferencesStore)"
     corruption: "Fixed-order validation with every offender reported; corrupt data recovers to defaults, persisted + reported (ADR-032)"
-    clear: "App reset; per-site overrides are cleared with site data on the future clear-data surface"
+    clear: "App reset; per-site overrides are a clear-browsing-data item (SITE_ZOOM_OVERRIDES, cleared through ZoomSettings.clearSiteZooms)"
 
   - surface: DownloadPreferencesStore
     kind: seam
@@ -211,3 +211,13 @@ surfaces:
     location: "app preferences `inweb_notifications`"
     corruption: "Thin wire-form round-trip; validation + recovery live in the core (ADR-030)"
     clear: "Same as its seam (NotificationStore)"
+
+  - surface: SharedPreferencesZoomPreferencesStore
+    kind: adapter
+    module: android-app
+    implements: ZoomPreferencesStore
+    prefs_name: inweb_zoom
+    stores: "ZoomPreferencesStore implementation (factor string + comma-joined host=factor pairs)"
+    location: "app preferences `inweb_zoom`"
+    corruption: "Thin wire-form round-trip; value-level validation + recovery live in the core (ADR-032); structurally invalid entries cannot be represented in the typed wire form and are skipped (wire-format boundary)"
+    clear: "Same as its seam (ZoomPreferencesStore)"

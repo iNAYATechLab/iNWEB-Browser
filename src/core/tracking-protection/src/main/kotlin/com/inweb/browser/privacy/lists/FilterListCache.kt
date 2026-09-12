@@ -108,3 +108,29 @@ class FileFilterListCache(private val directory: File) : FilterListCache {
         }
     }
 }
+
+/** In-memory cache for tests and engine-less UI previews (no file system). */
+class InMemoryFilterListCache : FilterListCache {
+    private val bodies = HashMap<String, String>()
+    private val metadata = HashMap<String, FilterListMetadata>()
+
+    override fun store(source: FilterListSource, body: String, metadata: FilterListMetadata) {
+        bodies[source.id] = body
+        this.metadata[source.id] = metadata
+    }
+
+    override fun loadBody(source: FilterListSource): String? = bodies[source.id]
+
+    override fun loadMetadata(source: FilterListSource): FilterListMetadata? = metadata[source.id]
+
+    override fun remove(source: FilterListSource) {
+        bodies.remove(source.id)
+        metadata.remove(source.id)
+    }
+
+    override fun clear() {
+        bodies.clear()
+        metadata.clear()
+    }
+}
+

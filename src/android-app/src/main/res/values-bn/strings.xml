@@ -99,6 +99,21 @@
     <string name="notif_channel_background">ব্যাকগ্রাউন্ড কার্যক্রম</string>
     <string name="notif_policy_caption">নোটিফিকেশন পাঠানো হয় শুধুমাত্র প্রকৃত ঘটনার জনিত, এবং প্রতিটি চ্যানেল বন্ধ করা যায়। iNWEB কখনোই প্রচারমূলক নোটিফিকেশন পাঠায় না।</string>
 
+    <!-- Clear browsing data (§39 / Phase 12) -->
+    <string name="settings_clear_data">ব্রাউজিং ডেটা মুছুন</string>
+    <string name="clear_data_caption">মুছে ফেলা ডেটা পুনরুদ্ধার করা যাবে না। ডাউনলোড করা ফিল্টার তালিকা স্বয়ংক্রিয়ভাবে আবার ডাউনলোড হবে।</string>
+    <string name="clear_data_action">ডেটা মুছুন</string>
+    <string name="clear_item_history">ব্রাউজিং হিস্ট্রি</string>
+    <string name="clear_item_session">খোলা ট্যাব ও সেশন</string>
+    <string name="clear_item_filter_cache">ডাউনলোড করা ফিল্টার তালিকা</string>
+    <string name="clear_item_offline">অফলাইন পেজ</string>
+    <string name="clear_item_zoom">সাইট-ভিত্তিক জুম</string>
+    <string name="clear_preview_visits">%1$dটি ভিজিট</string>
+    <string name="clear_preview_tabs">%1$dটি ট্যাব</string>
+    <string name="clear_preview_cache">স্বয়ংক্রিয়ভাবে আবার ডাউনলোড হবে</string>
+    <string name="clear_preview_pages">%1$dটি পেজ</string>
+    <string name="clear_preview_sites">%1$dটি সাইট</string>
+
     <!-- Engine integration (explicit, honest binding-point label) -->
     <string name="engine_binding_point">এই বিল্ড কনফিগারেশনে Chromium কনটেন্ট সারফেস যুক্ত নেই। ইঞ্জিন অ্যাডাপ্টার Chromium বিল্ডের সাথে আসবে (ইন্টিগ্রেশন প্ল্যান দেখুন)।</string>
 </resources>

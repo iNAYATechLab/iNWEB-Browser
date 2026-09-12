@@ -88,6 +88,13 @@ fun SettingsScreen(viewModel: BrowserViewModel) {
                 modifier = Modifier.padding(top = 24.dp),
             )
 
+            // --- Clear browsing data (§39, Phase 12 core) ---------------------
+            SettingsNavRow(
+                label = stringResource(R.string.settings_clear_data),
+                onClick = { viewModel.openClearData() },
+                modifier = Modifier.padding(top = 24.dp),
+            )
+
             // --- Notifications (§33) -----------------------------------------
             Text(
                 text = stringResource(R.string.settings_notifications),

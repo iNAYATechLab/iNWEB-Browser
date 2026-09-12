@@ -102,6 +102,21 @@
     <string name="notif_channel_background">Background operations</string>
     <string name="notif_policy_caption">Notifications are sent only for real events, and every channel can be turned off. iNWEB never sends promotional notifications.</string>
 
+    <!-- Clear browsing data (§39 / Phase 12) -->
+    <string name="settings_clear_data">Clear browsing data</string>
+    <string name="clear_data_caption">Cleared data cannot be recovered. Downloaded filter lists re-download automatically.</string>
+    <string name="clear_data_action">Clear data</string>
+    <string name="clear_item_history">Browsing history</string>
+    <string name="clear_item_session">Open tabs and session</string>
+    <string name="clear_item_filter_cache">Downloaded filter lists</string>
+    <string name="clear_item_offline">Offline pages</string>
+    <string name="clear_item_zoom">Per-site zoom</string>
+    <string name="clear_preview_visits">%1$d visits</string>
+    <string name="clear_preview_tabs">%1$d tabs</string>
+    <string name="clear_preview_cache">Re-downloads automatically</string>
+    <string name="clear_preview_pages">%1$d pages</string>
+    <string name="clear_preview_sites">%1$d sites</string>
+
     <!-- Engine integration (explicit, honest binding-point label) -->
     <string name="engine_binding_point">Chromium content surface is not bound in this build configuration. The engine adapter ships with the Chromium build (see the integration plan).</string>
 </resources>
