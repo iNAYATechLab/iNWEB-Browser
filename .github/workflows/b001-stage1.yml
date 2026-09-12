@@ -178,12 +178,12 @@ jobs:
             REMOTE=$(git -C "$WS/src" ls-remote origin "refs/tags/$EXPECTED" "refs/tags/$EXPECTED^{}" || true)
             echo "--- remote tag refs ---"
             echo "$REMOTE"
-            REMOTE_SHA=$(echo "$REMOTE" | grep "refs/tags/$EXPECTED^{}" | cut -f1)
+            REMOTE_SHA=$(echo "$REMOTE" | grep "refs/tags/$EXPECTED^{}" | cut -f1 || true)
             if [ -z "$REMOTE_SHA" ]; then
-              REMOTE_SHA=$(echo "$REMOTE" | grep "refs/tags/$EXPECTED" | grep -v '\^{}' | cut -f1)
+              REMOTE_SHA=$(echo "$REMOTE" | grep "refs/tags/$EXPECTED" | grep -v '\^{}' | cut -f1 || true)
             fi
             echo "remote_tag_commit=$REMOTE_SHA"
-            VERSION=$(sed -n 's/^MAJOR=//p;s/^MINOR=//p;s/^BUILD=//p;s/^PATCH=//p' "$WS/src/chrome/VERSION" 2>/dev/null | paste -sd.)
+            VERSION=$(sed -n 's/^MAJOR=//p;s/^MINOR=//p;s/^BUILD=//p;s/^PATCH=//p' "$WS/src/chrome/VERSION" 2>/dev/null | paste -sd. || true)
             echo "chrome_version=$VERSION"
             echo "--- tree status (should be clean) ---"
             git -C "$WS/src" status --porcelain | head -5

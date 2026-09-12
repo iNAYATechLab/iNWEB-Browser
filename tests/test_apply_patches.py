@@ -158,6 +158,30 @@ class PatchSeriesTestCase(unittest.TestCase):
         write_file(os.path.join(b, "x.txt"), "changed\n")
         self.assertNotEqual(h_a, apply_patches.hash_tree(b))
 
+    def test_hash_tree_survives_dangling_symlinks(self):
+        """The Android NDK ships dangling links (libc++.so) — hash must not fail."""
+        import os as _os
+
+        tree = _os.path.join(self.tmp, "tree-links")
+        write_file(_os.path.join(tree, "real.txt"), "data\n")
+        _os.symlink("real.txt", _os.path.join(tree, "alias.txt"))
+        _os.symlink("does/not/exist.so", _os.path.join(tree, "dangling.so"))
+        before = apply_patches.hash_tree(tree)  # must not raise
+        self.assertEqual(before, apply_patches.hash_tree(tree))  # deterministic
+
+    def test_hash_tree_repointed_symlink_changes_hash(self):
+        import os as _os
+
+        tree = _os.path.join(self.tmp, "tree-repoint")
+        write_file(_os.path.join(tree, "one.txt"), "1\n")
+        write_file(_os.path.join(tree, "two.txt"), "2\n")
+        link = _os.path.join(tree, "sel.txt")
+        _os.symlink("one.txt", link)
+        h_one = apply_patches.hash_tree(tree)
+        _os.remove(link)
+        _os.symlink("two.txt", link)
+        self.assertNotEqual(h_one, apply_patches.hash_tree(tree))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -116,18 +116,28 @@ def verify_series(tree: str, manifest_path: str) -> bool:
 
 
 def hash_tree(tree: str) -> str:
-    """Deterministic content digest over all files, excluding .git metadata."""
+    """Deterministic content digest over all files, excluding .git metadata.
+
+    Symlinks contribute their LINK TARGET TEXT ("link:<target>"), never the
+    referenced content: the digest does not follow links and therefore cannot
+    fail on the dangling ones the Android NDK ships (libc++.so et al.), and
+    a re-pointed link changes the hash exactly like an edit would.
+    """
     digest = hashlib.sha256()
     for root, dirs, files in os.walk(tree):
         dirs[:] = sorted(d for d in dirs if d != ".git")
         for name in sorted(files):
             path = os.path.join(root, name)
             rel = os.path.relpath(path, tree).replace(os.sep, "/")
-            with open(path, "rb") as fh:
-                digest.update(rel.encode("utf-8"))
-                digest.update(b"\0")
-                digest.update(hashlib.sha256(fh.read()).hexdigest().encode("ascii"))
-                digest.update(b"\0")
+            if os.path.islink(path):
+                content = ("link:" + os.readlink(path)).encode("utf-8")
+            else:
+                with open(path, "rb") as fh:
+                    content = fh.read()
+            digest.update(rel.encode("utf-8"))
+            digest.update(b"\0")
+            digest.update(hashlib.sha256(content).hexdigest().encode("ascii"))
+            digest.update(b"\0")
     return digest.hexdigest()
 
 
