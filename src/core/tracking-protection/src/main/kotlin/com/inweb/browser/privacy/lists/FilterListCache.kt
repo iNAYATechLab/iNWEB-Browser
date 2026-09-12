@@ -14,6 +14,12 @@ data class FilterListMetadata(
     val version: String? = null,
     /** Network rules parsed from the stored body at store time. */
     val ruleCount: Int = 0,
+    /**
+     * SHA-256 of the stored body, pinned at download time (G-07). A
+     * cached copy whose body no longer matches is never served. Null =
+     * stored before pinning existed (legacy copy) — verified as-is.
+     */
+    val contentSha256: String? = null,
 )
 
 /** Port: raw filter-list cache keyed by source id. */
@@ -81,6 +87,7 @@ class FileFilterListCache(private val directory: File) : FilterListCache {
             if (metadata.lastModified != null) append("lastModified\t").append(metadata.lastModified).append('\n')
             if (metadata.version != null) append("version\t").append(metadata.version).append('\n')
             append("ruleCount\t").append(metadata.ruleCount).append('\n')
+            if (metadata.contentSha256 != null) append("contentSha256\t").append(metadata.contentSha256).append('\n')
         }
 
         /** Returns null for anything not matching the exact format (corruption). */
@@ -104,6 +111,7 @@ class FileFilterListCache(private val directory: File) : FilterListCache {
                 lastModified = fields["lastModified"],
                 version = fields["version"],
                 ruleCount = fields["ruleCount"]?.toIntOrNull() ?: 0,
+                contentSha256 = fields["contentSha256"],
             )
         }
     }

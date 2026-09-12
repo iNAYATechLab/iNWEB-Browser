@@ -157,7 +157,7 @@ phase's planned patch ids (registered plan, registry empty).
 
 | ID | Verify | Gate | Source |
 |---|---|---|---|
-| D12-1 | On-device verification of EVERY STORAGE-INVENTORY corruption contract: corrupted `history.tsv`/`bookmarks.tsv` → fresh start + skipped-line counts; corrupt preferences (toolbar/notifications/zoom/downloads) → defaults restored, persisted, reported; corrupted session snapshot → fresh session; corrupt filter-list metadata → body usable, next refresh re-downloads | fault injection on device | PHASE12 §4; ADR-033 |
+| D12-1 | On-device verification of EVERY STORAGE-INVENTORY corruption contract: corrupted `history.tsv`/`bookmarks.tsv` → fresh start + skipped-line counts; corrupt preferences (toolbar/notifications/zoom/downloads) → defaults restored, persisted, reported; corrupted session snapshot → fresh session; corrupt filter-list metadata → body usable, next refresh re-downloads; a filter-list body whose pinned SHA-256 mismatches → copy never served, re-download attempted (G-07, ADR-036) | fault injection on device | PHASE12 §4; ADR-033 |
 | D12-2 | Kill/fuzz: force-kill during writes never corrupts (atomic temp+rename); no ANR/crash loops | kill testing | PHASE12 §1 (§51) |
 | D12-3 | Full security audit of the built APK: declared permissions, network egress, storage surfaces | audit vs THREAT-MODEL | PHASE12 §1 |
 | D12-4 | Clear-browsing-data on device: preview counts match the real stores; each item clears its store; the filter-list cache re-downloads | manual (ADR-034) | PHASE12 §3.2 |
@@ -181,7 +181,7 @@ phase's planned patch ids (registered plan, registry empty).
 | G-04 backup encryption | D9-2 | Android-layer encryption |
 | G-05 per-profile directories | D9-1 | patch 0022 |
 | G-06 sync E2E encryption | — (future infrastructure) | §29 documented absence; no backend exists |
-| G-07 filter-list content pinning | — (future hardening candidate) | recorded, not committed |
+| G-07 filter-list content pinning | D12-1 (checksum-mismatch path) | closed in the core at Step 44 (ADR-036): pin on download, verify on cache load, never serve a mismatch |
 | G-08 SBOM | B-8 | release engineering |
 | G-09 device verification of corruption contracts | D12-1 + D12-2 | ADR-033 contracts |
 | G-10 extension enforcement surface | D6-4 | patches 0013–0016 |

@@ -3,6 +3,7 @@ package com.inweb.browser.privacy.lists
 import com.inweb.browser.privacy.FilterAction
 import com.inweb.browser.privacy.ResourceType
 import com.inweb.browser.privacy.TrackingProtectionSettings
+import java.io.File
 import java.nio.file.Files
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -27,6 +28,13 @@ class FilterListManagerTest {
 
     private fun newCache(): FileFilterListCache =
         FileFilterListCache(Files.createTempDirectory("inweb-manager").toFile())
+
+    /** The cache's backing directory (used to tamper with stored files). */
+    private fun cacheDirOf(cache: FileFilterListCache): File =
+        cache.javaClass.getDeclaredField("directory").let { field ->
+            field.isAccessible = true
+            field.get(cache) as File
+        }
 
     private fun request(url: String) = com.inweb.browser.privacy.RequestContext(
         requestUrl = url,
@@ -166,6 +174,104 @@ class FilterListManagerTest {
 
         assertEquals(ListUpdateStatus.Skipped("not due"), status["unit-list"])
         assertEquals(1, fetcher.requests.size) // only the startup download
+    }
+
+    // --- content-integrity pinning (G-07, Step 44) ---------------------------
+
+    @Test
+    fun downloadedListsPinTheirContentChecksum() {
+        val cache = newCache()
+        val fetcher = ScriptedFetcher(FetchResult.Success(bodyV1, "\"v1\"", null))
+        val manager = FilterListManager(listOf(source), fetcher, cache)
+        manager.startup(1_000)
+
+        val expected = FilterListChecksum.sha256(bodyV1)
+        assertEquals(expected, manager.metadataOf("unit-list")!!.contentSha256)
+        assertEquals(expected, cache.loadMetadata(source)!!.contentSha256)
+    }
+
+    @Test
+    fun startupReDownloadsWhenTheCachedBodyFailsChecksumVerification() {
+        val cache = newCache()
+        ScriptedFetcher(FetchResult.Success(bodyV1, "\"v1\"", null)).let {
+            FilterListManager(listOf(source), it, cache).startup(1_000)
+        }
+        // Tamper with the cached body after the fact (bit-flip class).
+        val bodyFile = File(cacheDirOf(cache), "${source.id}.txt")
+        bodyFile.writeText(bodyV1.replace("ads.example.com", "ads.example.evil"))
+
+        val fetcher = ScriptedFetcher(FetchResult.Success(bodyV1, "\"v1\"", null))
+        val manager = FilterListManager(listOf(source), fetcher, cache)
+        val status = manager.startup(nowMillis = 2_000)
+
+        assertEquals(ListUpdateStatus.Updated("v1", 2), status["unit-list"])
+        assertEquals(2, manager.totalNetworkRules())
+        assertEquals(bodyV1, cache.loadBody(source))
+    }
+
+    @Test
+    fun checksumMismatchIsNeverServedEvenWhenTheReDownloadFails() {
+        val cache = newCache()
+        ScriptedFetcher(FetchResult.Success(bodyV1, "\"v1\"", null)).let {
+            FilterListManager(listOf(source), it, cache).startup(1_000)
+        }
+        File(cacheDirOf(cache), "${source.id}.txt").writeText("tampered body")
+
+        val offline = ScriptedFetcher() // network unavailable
+        val manager = FilterListManager(listOf(source), offline, cache)
+        val status = manager.startup(nowMillis = 2_000)
+
+        val failed = status["unit-list"] as ListUpdateStatus.Failed
+        assertTrue(failed.reason.contains("content"))
+        assertEquals(false, failed.servedFromCache)
+        assertEquals(0, manager.totalNetworkRules())
+    }
+
+    @Test
+    fun startupServesALegacyCacheCopyWithoutAPinnedChecksum() {
+        val cache = newCache()
+        cache.store(
+            source,
+            bodyV1,
+            FilterListMetadata(
+                sourceId = source.id,
+                downloadedAtMillis = 1_000,
+                etag = "\"v1\"",
+                version = "v1",
+                ruleCount = 2,
+                contentSha256 = null, // stored before pinning existed
+            ),
+        )
+
+        val offline = ScriptedFetcher()
+        val manager = FilterListManager(listOf(source), offline, cache)
+        val status = manager.startup(nowMillis = 2_000)
+
+        assertEquals(ListUpdateStatus.LoadedFromCache, status["unit-list"])
+        assertEquals(2, manager.totalNetworkRules())
+    }
+
+    @Test
+    fun refreshReDownloadsAChecksumCorruptedCache() {
+        val cache = newCache()
+        ScriptedFetcher(FetchResult.Success(bodyV1, "\"v1\"", null)).let {
+            FilterListManager(listOf(source), it, cache, UpdatePolicy(refreshIntervalMs = 0))
+                .startup(nowMillis = 0)
+        }
+        File(cacheDirOf(cache), "${source.id}.txt").writeText("tampered body")
+
+        // A fresh manager has no in-memory copy: refresh must hit the
+        // (corrupted) cache and reject it before downloading.
+        val fetcher = ScriptedFetcher(FetchResult.Success(bodyV2, "\"v2\"", null))
+        val manager = FilterListManager(
+            listOf(source), fetcher, cache,
+            UpdatePolicy(refreshIntervalMs = 0),
+        )
+        val status = manager.refresh(nowMillis = 1_000)
+
+        assertEquals(ListUpdateStatus.Updated("v2", 3), status["unit-list"])
+        assertEquals(3, manager.totalNetworkRules())
+        assertEquals(bodyV2, cache.loadBody(source))
     }
 
     @Test

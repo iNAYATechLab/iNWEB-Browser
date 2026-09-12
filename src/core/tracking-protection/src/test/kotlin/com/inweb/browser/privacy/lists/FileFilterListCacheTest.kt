@@ -116,4 +116,23 @@ class FileFilterListCacheTest {
             .replace("1757683200000", "not-a-number")
         assertNull(FileFilterListCache.deserialize(text))
     }
+
+    // --- content-integrity pinning (G-07, Step 44) -------------------------
+
+    @Test
+    fun contentChecksumRoundTripsThroughTheWireFormat() {
+        val pinned = sampleMetadata().copy(
+            contentSha256 = FilterListChecksum.sha256("body"),
+        )
+        val deserialized = FileFilterListCache.deserialize(FileFilterListCache.serialize(pinned))
+        assertEquals(pinned, deserialized)
+        assertEquals(FilterListChecksum.sha256("body"), deserialized!!.contentSha256)
+    }
+
+    @Test
+    fun legacyMetadataWithoutChecksumDeserializesWithNull() {
+        val text = FileFilterListCache.serialize(sampleMetadata())
+        assertTrue("wire form must not carry the field when unset", "contentSha256" !in text)
+        assertNull(FileFilterListCache.deserialize(text)!!.contentSha256)
+    }
 }

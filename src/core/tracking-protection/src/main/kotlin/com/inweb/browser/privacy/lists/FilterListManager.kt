@@ -33,6 +33,11 @@ sealed interface ListUpdateStatus {
  *
  * Pure JVM and fully unit-tested; it performs no background scheduling
  * itself ([UpdatePolicy] is the decision, the host layer runs the timer).
+ *
+ * Content integrity (G-07): every downloaded body is pinned with its
+ * SHA-256 in the cache metadata and re-verified on every cache load; a
+ * mismatching copy is NEVER served — the manager re-downloads (when
+ * allowed) or reports an honest failure with nothing loaded.
  */
 class FilterListManager(
     private val sources: List<FilterListSource> = FilterListSource.DEFAULTS,
@@ -66,8 +71,22 @@ class FilterListManager(
             if (cachedBody != null) {
                 val metadata = cache.loadMetadata(source)
                     ?: FilterListMetadata(sourceId = source.id, downloadedAtMillis = 0L)
-                put(source, cachedBody, metadata)
-                record(source.id, ListUpdateStatus.LoadedFromCache)
+                if (verifiedCachedCopy(cachedBody, metadata)) {
+                    put(source, cachedBody, metadata)
+                    record(source.id, ListUpdateStatus.LoadedFromCache)
+                } else if (policy.fetchOnStartup) {
+                    // G-07: the cached copy failed integrity verification —
+                    // it is never served; download a fresh one instead.
+                    when (val result = fetcher.fetch(source.downloadUrl)) {
+                        is FetchResult.Success -> storeAndRecord(source, result, nowMillis)
+                        is FetchResult.NotModified ->
+                            record(source.id, ListUpdateStatus.Failed("not-modified without a verifiable cached copy", servedFromCache = false))
+                        is FetchResult.Failure ->
+                            record(source.id, ListUpdateStatus.Failed("cached copy failed content verification; ${result.reason}", servedFromCache = false))
+                    }
+                } else {
+                    record(source.id, ListUpdateStatus.Failed("cached copy failed content checksum verification", servedFromCache = false))
+                }
             } else if (policy.fetchOnStartup) {
                 when (val result = fetcher.fetch(source.downloadUrl)) {
                     is FetchResult.Success -> storeAndRecord(source, result, nowMillis)
@@ -165,6 +184,7 @@ class FilterListManager(
             lastModified = result.lastModified,
             version = FilterListVersion.parse(result.body).version,
             ruleCount = parsed.networkRules.size,
+            contentSha256 = FilterListChecksum.sha256(result.body),
         )
         cache.store(source, result.body, metadata)
         put(source, result.body, metadata, parsed, parsedCosmetic)
@@ -185,9 +205,19 @@ class FilterListManager(
         val body = cache.loadBody(source) ?: return null
         val metadata = cache.loadMetadata(source)
             ?: FilterListMetadata(sourceId = source.id, downloadedAtMillis = 0L)
+        if (!verifiedCachedCopy(body, metadata)) return null
         put(source, body, metadata)
         return lists[source.id]
     }
+
+    /**
+     * A cached copy is verifiable when it carries no checksum yet (a
+     * legacy copy stored before pinning existed) or when its body
+     * matches the pinned SHA-256; a mismatch is corruption/tampering
+     * and the copy is never served (G-07).
+     */
+    private fun verifiedCachedCopy(body: String, metadata: FilterListMetadata): Boolean =
+        metadata.contentSha256 == null || FilterListChecksum.sha256(body) == metadata.contentSha256
 
     private fun record(sourceId: String, status: ListUpdateStatus) {
         lastStatus[sourceId] = status

@@ -145,6 +145,7 @@ run_module "src/core/tracking-protection" \
   com.inweb.browser.privacy.TrackingProtectionEngineTest \
   com.inweb.browser.privacy.DomainClassifierTest \
   com.inweb.browser.privacy.lists.FileFilterListCacheTest \
+  com.inweb.browser.privacy.lists.FilterListChecksumTest \
   com.inweb.browser.privacy.lists.InMemoryFilterListCacheTest \
   com.inweb.browser.privacy.lists.FilterListManagerTest \
   com.inweb.browser.privacy.lists.FilterListVersionTest \

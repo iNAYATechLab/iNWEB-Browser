@@ -85,7 +85,7 @@ surfaces:
     module: tracking-protection
     stores: "Filter-list bodies + per-source metadata (download cache)"
     location: "One cache directory, `<id>.txt` body + `<id>.meta` per source (via FileFilterListCache)"
-    corruption: "Atomic temp+rename writes; corrupt metadata degrades to missing — the body stays usable and the next refresh re-downloads"
+    corruption: "Atomic temp+rename writes; corrupt metadata degrades to missing — the body stays usable and the next refresh re-downloads; the body is pinned with its SHA-256 at download and re-verified on load — a mismatching copy is never served and is re-downloaded (G-07, ADR-036)"
     clear: "Clear-browsing-data (cached files) — the cache is disposable by design"
 
   - surface: OfflineStore
