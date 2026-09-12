@@ -1,0 +1,310 @@
+name: B-001 build hop
+
+# =============================================================================
+# B-001 Step 50 — resumable chained build hops on GitHub-hosted runners.
+#
+# One dispatch = one hop. A hop: re-fetches the pinned tree (15 min measured),
+# reinstalls the Android deps, RESUMES the previous hop's out/ build state
+# (transferred as tar.zstd split into <=4 GiB artifacts, mtimes preserved by
+# tar so ninja/siso resume cleanly), runs scripts/build_android.sh inside a
+# time box, and then either uploads the finished APK or packages the new
+# build state for the next hop. Every hop keeps the PASS/FAIL/BLOCKED
+# evidence discipline (§57); nothing is simulated (§71).
+#
+# The dispatcher (agent) reads each hop's outputs and dispatches the next:
+#   gh workflow run b001-build-hop.yml -f resume-from=b001-state-<run#>
+# State artifact names: b001-state-<run#>-part-00.. (-part-07), -manifest.
+# =============================================================================
+
+on:
+  workflow_dispatch:
+    inputs:
+      resume-from:
+        description: "state artifact prefix from the previous hop (empty = fresh compile)"
+        default: ""
+      build-minutes:
+        description: "minutes the build may run before being boxed"
+        default: 265
+
+permissions:
+  contents: read
+
+concurrency:
+  group: b001-build-hop
+  cancel-in-progress: false
+
+jobs:
+  hop:
+    name: "hop ${{ github.run_number }} (resume: ${{ inputs.resume-from || 'fresh' }})"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    outputs:
+      done: ${{ steps.verdict.outputs.done }}
+      state: ${{ steps.verdict.outputs.state }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Record facts (build-id = commit SHA, hop mode)
+        run: |
+          mkdir -p b001-logs
+          {
+            echo "commit_sha=$(git rev-parse HEAD)"
+            echo "run_id=${GITHUB_RUN_ID} run_number=${GITHUB_RUN_NUMBER} attempt=${GITHUB_RUN_ATTEMPT}"
+            echo "date_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "resume_from=${{ inputs.resume-from }}"
+            echo "build_minutes=${{ inputs.build-minutes }}"
+            echo "image_os=${ImageOS:-unknown} image_version=${ImageVersion:-unknown}"
+            echo "nproc=$(nproc)"
+            head -1 /proc/meminfo
+          } | tee b001-logs/00-facts.txt
+          df -h / | tee -a b001-logs/00-facts.txt
+
+      # Standard, documented runner-disk reclamation (preinstalled toolchain
+      # images this job does not use; nothing project-related).
+      - name: Free preinstalled toolchain space (documented)
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+            /usr/local/.ghcup /usr/local/share/boost /opt/hostedtoolcache/CodeQL \
+            /usr/lib/jvm /usr/local/share/chromium 2>/dev/null || true
+          sudo docker system prune -af >/dev/null 2>&1 || true
+          df -h / | tee b001-logs/05-disk.txt
+
+      - name: Fetch pinned Chromium (fetch_chromium.sh)
+        id: fetch
+        timeout-minutes: 75
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          bash scripts/fetch_chromium.sh 2>&1 | tee b001-logs/10-fetch.log
+
+      - name: Verify pinned tag (compact)
+        id: tag
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          WS="$PWD/chromium"
+          EXPECTED=$(sed -n 's/^CHROMIUM_TAG=//p' config/chromium/BASELINE | tr -d '[:space:]')
+          HEAD_SHA=$(git -C "$WS/src" rev-parse HEAD 2>/dev/null || echo none)
+          REMOTE_SHA=$(git -C "$WS/src" ls-remote origin "refs/tags/$EXPECTED^{}" "refs/tags/$EXPECTED" 2>/dev/null | grep -v '\^{}' | head -1 | cut -f1 || true)
+          VERSION=$(sed -n 's/^MAJOR=//p;s/^MINOR=//p;s/^BUILD=//p;s/^PATCH=//p' "$WS/src/chrome/VERSION" 2>/dev/null | paste -sd. || true)
+          echo "expected=$EXPECTED head=$HEAD_SHA remote_tag=$REMOTE_SHA chrome_version=$VERSION" | tee b001-logs/15-tag.txt
+          if [ "$HEAD_SHA" = "none" ] || [ -z "$REMOTE_SHA" ] || [ "$HEAD_SHA" != "$REMOTE_SHA" ] || [ "$VERSION" != "$EXPECTED" ]; then
+            echo "TAG: FAIL/BLOCKED (see above line)" | tee -a b001-logs/15-tag.txt
+            exit 1
+          fi
+          echo "TAG: PASS" | tee -a b001-logs/15-tag.txt
+
+      - name: Install Chromium Android build dependencies
+        id: deps
+        timeout-minutes: 25
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          sudo bash chromium/src/build/install-build-deps.sh --android --no-arm 2>&1 | tee b001-logs/20-deps.log
+
+      # ---- resume: manifest first, then all parts (flat merge) -------------
+      - name: Download previous hop state manifest
+        if: ${{ inputs.resume-from != '' }}
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.resume-from }}-manifest
+          path: state-in
+
+      - name: Download previous hop state parts
+        if: ${{ inputs.resume-from != '' }}
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ inputs.resume-from }}-part-*
+          merge-multiple: true
+          path: state-in
+
+      - name: Verify and extract resumed build state
+        id: resume
+        if: ${{ inputs.resume-from != '' }}
+        timeout-minutes: 45
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          {
+            ls -lh state-in/ || true
+            if [ ! -f state-in/manifest.sha256 ]; then
+              echo "RESUME: FAIL — manifest missing"; exit 1
+            fi
+            (cd state-in && sha256sum -c manifest.sha256)
+            cat state-in/part-* > state.tar.zst
+            mkdir -p chromium/src/out
+            tar --zstd -xf state.tar.zst -C chromium/src/out
+            echo "RESUME: PASS"
+            echo "--- resumed out/ size / object count ---"
+            du -sh chromium/src/out/inweb-development || true
+            find chromium/src/out/inweb-development -name '*.o' 2>/dev/null | wc -l
+          } 2>&1 | tee b001-logs/25-resume.log
+
+      # ---- the build (resumes autoninja state when present) ----------------
+      - name: Boxed build (build_android.sh development)
+        id: build
+        timeout-minutes: ${{ fromJSON(inputs.build-minutes) + 12 }}
+        continue-on-error: true
+        env:
+          HOP_BUILD_MINUTES: ${{ inputs.build-minutes }}
+        run: |
+          set -o pipefail
+          timeout "${HOP_BUILD_MINUTES}m" bash scripts/build_android.sh development 2>&1 | tee b001-logs/30-build.log
+          BUILD_EC=${PIPESTATUS[0]}
+          echo "build_exit=$BUILD_EC" | tee -a b001-logs/30-build.log
+          exit "$BUILD_EC"
+
+      # ---- verdict: APK or resumable state ---------------------------------
+      - name: Post-build evidence, APK check, state packaging
+        id: verdict
+        if: ${{ always() && steps.fetch.outcome == 'success' && steps.tag.outcome == 'success' }}
+        timeout-minutes: 60
+        run: |
+          set -o pipefail
+          WS="$PWD/chromium"
+          OUT="$WS/src/out/inweb-development"
+          {
+            echo "--- build log tail ---"
+            tail -25 b001-logs/30-build.log 2>/dev/null || echo "(no build log)"
+            echo "--- out size / objects ---"
+            du -sh "$OUT" 2>/dev/null || echo "(no out)"
+            find "$OUT" -name '*.o' 2>/dev/null | wc -l
+            df -h /
+          } | tee b001-logs/40-postbuild.txt
+          APKS=$(find "$OUT/apks" -name '*.apk' -type f 2>/dev/null || true)
+          if [ -n "$APKS" ]; then
+            echo "APK: FOUND" | tee b001-logs/45-verdict.txt
+            echo "$APKS" | while read -r apk; do ls -lh "$apk"; sha256sum "$apk"; done | tee -a b001-logs/45-verdict.txt
+            echo "done=true" >> "$GITHUB_OUTPUT"
+            echo "state=none" >> "$GITHUB_OUTPUT"
+          elif [ -d "$OUT" ]; then
+            echo "APK: NONE (yet) — packaging resumable state" | tee b001-logs/45-verdict.txt
+            mkdir -p state-out
+            tar --zstd -cf state-out/state.tar.zst -C "$WS/src/out" inweb-development
+            split -b 4G -d state-out/state.tar.zst state-out/part-
+            rm state-out/state.tar.zst
+            (cd state-out && sha256sum part-* > manifest.sha256)
+            N=$(ls state-out/part-* 2>/dev/null | wc -l)
+            echo "state parts: $N (4 GiB each)" | tee -a b001-logs/45-verdict.txt
+            ls -lh state-out/ | tee -a b001-logs/45-verdict.txt
+            if [ "$N" -gt 8 ]; then
+              echo "STATE: BLOCKED — $N parts exceed the 8-part (32 GiB) upload capacity" | tee -a b001-logs/45-verdict.txt
+              echo "done=false" >> "$GITHUB_OUTPUT"
+              echo "state=none" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "STATE: PACKAGED" | tee -a b001-logs/45-verdict.txt
+            echo "done=false" >> "$GITHUB_OUTPUT"
+            echo "state=b001-state-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          else
+            echo "APK: NONE and no out/ to package — hop produced no resumable state" | tee b001-logs/45-verdict.txt
+            echo "done=false" >> "$GITHUB_OUTPUT"
+            echo "state=none" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload APK artifact (when produced)
+        if: ${{ always() && steps.verdict.outputs.done == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: b001-apk-${{ github.run_number }}
+          path: chromium/src/out/inweb-development/apks/*.apk
+          if-no-files-found: error
+
+      - name: Upload state part 00
+        if: ${{ always() && steps.verdict.outputs.state != 'none' && steps.verdict.outputs.state != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.verdict.outputs.state }}-part-00
+          path: state-out/part-00
+          if-no-files-found: error
+
+      - name: Upload state part 01
+        if: ${{ always() && steps.verdict.outputs.state != 'none' && steps.verdict.outputs.state != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.verdict.outputs.state }}-part-01
+          path: state-out/part-01
+          if-no-files-found: ignore
+
+      - name: Upload state part 02
+        if: ${{ always() && steps.verdict.outputs.state != 'none' && steps.verdict.outputs.state != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.verdict.outputs.state }}-part-02
+          path: state-out/part-02
+          if-no-files-found: ignore
+
+      - name: Upload state part 03
+        if: ${{ always() && steps.verdict.outputs.state != 'none' && steps.verdict.outputs.state != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.verdict.outputs.state }}-part-03
+          path: state-out/part-03
+          if-no-files-found: ignore
+
+      - name: Upload state part 04
+        if: ${{ always() && steps.verdict.outputs.state != 'none' && steps.verdict.outputs.state != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.verdict.outputs.state }}-part-04
+          path: state-out/part-04
+          if-no-files-found: ignore
+
+      - name: Upload state part 05
+        if: ${{ always() && steps.verdict.outputs.state != 'none' && steps.verdict.outputs.state != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.verdict.outputs.state }}-part-05
+          path: state-out/part-05
+          if-no-files-found: ignore
+
+      - name: Upload state part 06
+        if: ${{ always() && steps.verdict.outputs.state != 'none' && steps.verdict.outputs.state != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.verdict.outputs.state }}-part-06
+          path: state-out/part-06
+          if-no-files-found: ignore
+
+      - name: Upload state part 07
+        if: ${{ always() && steps.verdict.outputs.state != 'none' && steps.verdict.outputs.state != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.verdict.outputs.state }}-part-07
+          path: state-out/part-07
+          if-no-files-found: ignore
+
+      - name: Upload state manifest
+        if: ${{ always() && steps.verdict.outputs.state != 'none' && steps.verdict.outputs.state != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.verdict.outputs.state }}-manifest
+          path: state-out/manifest.sha256
+          if-no-files-found: error
+
+      - name: Compose hop summary
+        if: ${{ always() }}
+        run: |
+          {
+            echo "# B-001 build hop ${GITHUB_RUN_NUMBER}"
+            echo
+            echo "- commit: $(git rev-parse HEAD 2>/dev/null || echo unknown)"
+            echo "- resume-from: ${{ inputs.resume-from || 'fresh' }}"
+            echo "- done: ${{ steps.verdict.outputs.done || 'unknown' }}"
+            echo "- state-prefix: ${{ steps.verdict.outputs.state || 'none' }}"
+            echo
+            grep -E "^(APK|STATE|RESUME|TAG): " b001-logs/*.txt b001-logs/*.log 2>/dev/null | head -10 || true
+            tail -5 b001-logs/40-postbuild.txt 2>/dev/null || true
+          } | tee b001-logs/99-summary.md
+          cat b001-logs/99-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload hop logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: b001-hop-${{ github.run_number }}-logs
+          path: b001-logs/
+          if-no-files-found: error

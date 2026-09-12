@@ -66,9 +66,12 @@ build.
   committed args; `autoninja chrome_public_apk` compiled
   **18,104 / 81,578 targets (22.2%) in 1h07m44s** before the box ended;
   out dir 6.6 GB; 65 GiB still free (disk is NOT the limit here).
-- Limitation (measured): ≈ 39.7 targets/min on 4 vCPU ⇒ remaining
-  ~63,474 targets ≈ **~27 hours** of compile, versus the **6-hour maximum**
-  for a GitHub-hosted job. Larger hosted runners (16–64 vCPU) would fit
+- Limitation (measured, corrected in the Step-50 erratum below): ≈ 267 edges/min (4.45/s) on 4 vCPU ⇒ remaining
+  ~63,474 edges ≈ **~4.0 hours** of compile plus a link/packaging tail
+  (≈ 0.5–1.5 h) — ≈ **4.5–5.5 h remaining**, ≈ 5.5–7 h for the whole
+  build. That still exceeds a single 6-hour hosted job once the pinned
+  fetch + dependency setup are included, but only barely — the correct
+  remedy is chained resumable jobs (~2 hops), not a rewrite. Larger hosted runners (16–64 vCPU) would fit
   this comfortably but require a paid GitHub organization plan, which this
   user-account repository does not have. No engine downgrade, no
   component-build trick (Android forbids it), no WebView (§71) was used to
@@ -104,5 +107,16 @@ provisioning, empty-series apply/verify, and the pristine hash invariant
 are all PASS with uploaded evidence; the full compile is BLOCKED by a
 measured, external resource limit (4 vCPU × 6 h job cap), not by any
 repository defect. Completing `chrome_public_apk` requires either chained
-resumable jobs on free hosted runners (proposed Step 50), a paid
+resumable jobs on free hosted runners (Step 50, in progress), a paid
 larger-runner organization plan, or funded cloud build capacity.
+
+## Erratum (Step 50 — arithmetic correction, committed before hop 1)
+
+The original B-3 paragraph above computed the rate as "≈ 39.7
+targets/min ⇒ ~27 hours remaining". That was an arithmetic slip:
+18,104 edges in 1h07m44s (67.73 min) is **267 edges/min (4.45/s)**.
+The corrected figures appear in the paragraph above; the Appendix B
+row, PROJECT_STATE, and BUILD-INFRASTRUCTURE were corrected in the
+same commit. The single-job BLOCKED verdict stands (fetch + deps +
+5.5–7 h build exceeds the 6-h job cap); the chained-hop estimate
+drops from ~5 hops to **~2**.

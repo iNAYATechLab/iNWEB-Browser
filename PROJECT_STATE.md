@@ -26,7 +26,8 @@ next_action: >-
   workflow so each job uploads the out/ build state (and any missing
   tree bits) as workflow artifacts and the next job downloads and
   RESUMES autoninja, chaining ~6-hour free hosted jobs until
-  chrome_public_apk completes (~27 h measured need at 22.2% done);
+  chrome_public_apk completes (corrected measurement: 267 edges/min,
+  ~4.5–5.5 h remaining — an estimated ~2 hops);
   honest risks recorded up front: artifact transfer time per hop,
   retention limits, and possible flakiness — every hop keeps the
   PASS/FAIL/BLOCKED evidence discipline. Alternatives: (a) the user
@@ -1071,8 +1072,9 @@ next_action: >-
   - Run 34691154428 (commit ae247a9) — RECORDED EVIDENCE: B-1 PASS,
     B-2 PASS (pristine hash d4212cfb…, HEAD == remote
     refs/tags/154.0.8037.21, chrome/VERSION match), B-3 BLOCKED on
-    hosted resources (gn gen OK; 18,104/81,578 targets in 1h07m44s
-    on 4 vCPU — ~27 h needed vs the 6 h hosted-job cap; larger
+    hosted resources (gn gen OK; 18,104/81,578 edges in 1h07m44s
+    on 4 vCPU — corrected rate 267 edges/min: ~4.5–5.5 h remained,
+    still over one 6-h job with setup; larger
     runners are an org-plan feature unavailable to this User-account
     repo), B-4 BLOCKED (no artifact); APK: NONE (honest). Appendix B
     row appended; full per-row evidence in

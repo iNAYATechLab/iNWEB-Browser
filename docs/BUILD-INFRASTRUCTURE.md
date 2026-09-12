@@ -95,7 +95,7 @@ release notes.
   proof, Android deps, and empty-series apply/verify + pristine hash
   all PASS with uploaded evidence; the compile itself is measured
   infeasible on 4 vCPU within the 6-hour hosted-job cap
-  (18,104/81,578 targets in 1h07m44s, ~27 h needed) — see
+  (18,104/81,578 edges in 1h07m44s — 267 edges/min, ≈ 4.5–5.5 h remaining, still over a single 6-h hosted job with setup) — see
   `docs/verification/B001-STAGE1-RUN5.md`. Larger hosted runners
   (16–64 vCPU) satisfy §2 but require a paid organization plan,
   unavailable to this User-account repository; the §2 spec stands
