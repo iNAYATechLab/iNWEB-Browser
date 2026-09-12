@@ -86,6 +86,22 @@
     <string name="settings_homepage">Homepage</string>
     <string name="settings_about">About</string>
 
+    <!-- Toolbar customization (§23) -->
+    <string name="settings_customize_toolbar">Customize toolbar</string>
+    <string name="toolbar_reset_to_default">Reset to default</string>
+    <string name="toolbar_item_always_visible">Always visible</string>
+    <string name="toolbar_move_up">Move up</string>
+    <string name="toolbar_move_down">Move down</string>
+    <string name="toolbar_item_visibility">Show in toolbar</string>
+
+    <!-- Notifications (§33) -->
+    <string name="settings_notifications">Notifications</string>
+    <string name="notif_channel_downloads">Downloads</string>
+    <string name="notif_channel_security">Security</string>
+    <string name="notif_channel_vpn">VPN</string>
+    <string name="notif_channel_background">Background operations</string>
+    <string name="notif_policy_caption">Notifications are sent only for real events, and every channel can be turned off. iNWEB never sends promotional notifications.</string>
+
     <!-- Engine integration (explicit, honest binding-point label) -->
     <string name="engine_binding_point">Chromium content surface is not bound in this build configuration. The engine adapter ships with the Chromium build (see the integration plan).</string>
 </resources>

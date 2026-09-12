@@ -83,6 +83,22 @@
     <string name="settings_homepage">হোমপেজ</string>
     <string name="settings_about">পরিচিতি</string>
 
+    <!-- Toolbar customization (§23) -->
+    <string name="settings_customize_toolbar">টুলবার কাস্টমাইজ করুন</string>
+    <string name="toolbar_reset_to_default">ডিফল্টে ফিরিয়ে আনুন</string>
+    <string name="toolbar_item_always_visible">সর্বদা দৃশ্যমান</string>
+    <string name="toolbar_move_up">উপরে সরান</string>
+    <string name="toolbar_move_down">নিচে সরান</string>
+    <string name="toolbar_item_visibility">টুলবারে দেখান</string>
+
+    <!-- Notifications (§33) -->
+    <string name="settings_notifications">নোটিফিকেশন</string>
+    <string name="notif_channel_downloads">ডাউনলোড</string>
+    <string name="notif_channel_security">নিরাপত্তা</string>
+    <string name="notif_channel_vpn">VPN</string>
+    <string name="notif_channel_background">ব্যাকগ্রাউন্ড কার্যক্রম</string>
+    <string name="notif_policy_caption">নোটিফিকেশন পাঠানো হয় শুধুমাত্র প্রকৃত ঘটনার জনিত, এবং প্রতিটি চ্যানেল বন্ধ করা যায়। iNWEB কখনোই প্রচারমূলক নোটিফিকেশন পাঠায় না।</string>
+
     <!-- Engine integration (explicit, honest binding-point label) -->
     <string name="engine_binding_point">এই বিল্ড কনফিগারেশনে Chromium কনটেন্ট সারফেস যুক্ত নেই। ইঞ্জিন অ্যাডাপ্টার Chromium বিল্ডের সাথে আসবে (ইন্টিগ্রেশন প্ল্যান দেখুন)।</string>
 </resources>

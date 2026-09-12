@@ -25,63 +25,77 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.inweb.browser.BrowserViewModel
 import com.inweb.browser.R
+import com.inweb.browser.customization.ToolbarItem
 
 /**
- * Bottom navigation bar: back, forward, home, tabs (with count badge), menu.
- * All controls carry content descriptions for screen readers (MASTER-SPEC §49).
+ * Bottom navigation bar, rendered from the user's toolbar configuration
+ * (MASTER-SPEC §23 — the customization core): item ORDER and VISIBILITY
+ * come from [BrowserViewModel.toolbarVisibleItems]; mandatory items are
+ * always present by core invariant. All controls carry content
+ * descriptions for screen readers (MASTER-SPEC §49).
  */
 @Composable
 fun BrowserBottomBar(viewModel: BrowserViewModel) {
-    val tab = viewModel.selectedTab
     Surface(tonalElevation = 3.dp) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(
-                onClick = { viewModel.goBack() },
-                enabled = tab?.canGoBack == true,
-                modifier = Modifier.weight(1f),
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.action_back),
-                )
+            for (item in viewModel.toolbarVisibleItems) {
+                ToolbarItemButton(item, viewModel, Modifier.weight(1f))
             }
-            IconButton(
-                onClick = { viewModel.goForward() },
-                enabled = tab?.canGoForward == true,
-                modifier = Modifier.weight(1f),
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = stringResource(R.string.action_forward),
-                )
-            }
-            IconButton(
-                onClick = { viewModel.openTab() },
-                modifier = Modifier.weight(1f),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Home,
-                    contentDescription = stringResource(R.string.action_home),
-                )
-            }
-            IconButton(
-                onClick = { viewModel.openTabs() },
-                modifier = Modifier.weight(1f),
-            ) {
-                BadgedBox(
-                    badge = { Badge { androidx.compose.material3.Text("${viewModel.tabIds.size}") } },
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Tab,
-                        contentDescription = stringResource(R.string.action_tabs),
-                    )
-                }
-            }
-            MenuButton(viewModel, Modifier.weight(1f))
         }
+    }
+}
+
+/** One configured bar slot; the item set is the five authored controls. */
+@Composable
+private fun ToolbarItemButton(item: ToolbarItem, viewModel: BrowserViewModel, modifier: Modifier) {
+    val tab = viewModel.selectedTab
+    when (item) {
+        ToolbarItem.BACK -> IconButton(
+            onClick = { viewModel.goBack() },
+            enabled = tab?.canGoBack == true,
+            modifier = modifier,
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.action_back),
+            )
+        }
+        ToolbarItem.FORWARD -> IconButton(
+            onClick = { viewModel.goForward() },
+            enabled = tab?.canGoForward == true,
+            modifier = modifier,
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = stringResource(R.string.action_forward),
+            )
+        }
+        ToolbarItem.HOME -> IconButton(
+            onClick = { viewModel.openTab() },
+            modifier = modifier,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Home,
+                contentDescription = stringResource(R.string.action_home),
+            )
+        }
+        ToolbarItem.TABS -> IconButton(
+            onClick = { viewModel.openTabs() },
+            modifier = modifier,
+        ) {
+            BadgedBox(
+                badge = { Badge { androidx.compose.material3.Text("${viewModel.tabIds.size}") } },
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Tab,
+                    contentDescription = stringResource(R.string.action_tabs),
+                )
+            }
+        }
+        ToolbarItem.MENU -> MenuButton(viewModel, modifier)
     }
 }
 

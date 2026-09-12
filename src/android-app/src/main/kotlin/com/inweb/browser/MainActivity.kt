@@ -5,7 +5,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import com.inweb.browser.settings.SharedPreferencesNotificationStore
 import com.inweb.browser.settings.SharedPreferencesSettingsStore
+import com.inweb.browser.settings.SharedPreferencesToolbarStore
 import com.inweb.browser.session.FileSessionPersistence
 import com.inweb.browser.shell.FileBookmarkStore
 import com.inweb.browser.shell.FileHistoryStore
@@ -31,6 +33,8 @@ class MainActivity : ComponentActivity() {
             sessionPersistence = FileSessionPersistence(this),
             historyStore = FileHistoryStore(File(filesDir, "history.tsv")),
             bookmarkStore = FileBookmarkStore(File(filesDir, "bookmarks.tsv")),
+            toolbarStore = SharedPreferencesToolbarStore(this),
+            notificationStore = SharedPreferencesNotificationStore(this),
         )
     }
 

@@ -69,3 +69,6 @@ jobs:
 
       - name: Compile and run core module tests
         run: bash scripts/validate_kotlin_core.sh
+
+      - name: Structural check of authored Android sources
+        run: bash scripts/validate_authored_structure.sh

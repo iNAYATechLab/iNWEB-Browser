@@ -3,6 +3,17 @@ package com.inweb.browser
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.inweb.browser.customization.InMemoryToolbarStore
+import com.inweb.browser.customization.ToolbarConfig
+import com.inweb.browser.customization.ToolbarConfigurator
+import com.inweb.browser.customization.ToolbarItem
+import com.inweb.browser.customization.ToolbarStore
+import com.inweb.browser.notifications.InMemoryNotificationStore
+import com.inweb.browser.notifications.NotificationChannel
+import com.inweb.browser.notifications.NotificationDecision
+import com.inweb.browser.notifications.NotificationEvent
+import com.inweb.browser.notifications.NotificationPolicy
+import com.inweb.browser.notifications.NotificationStore
 import com.inweb.browser.shell.AppSettings
 import com.inweb.browser.shell.BookmarkEntry
 import com.inweb.browser.shell.BookmarkStore
@@ -27,7 +38,7 @@ import com.inweb.browser.shell.TopSite
 import com.inweb.browser.shell.TabsController
 
 /** Overlay screens of the shell. */
-enum class Screen { BROWSER, SETTINGS, DOWNLOADS, HISTORY, BOOKMARKS, TABS }
+enum class Screen { BROWSER, SETTINGS, DOWNLOADS, HISTORY, BOOKMARKS, TABS, CUSTOMIZE_TOOLBAR }
 
 /**
  * Browser-shell view model: binds the pure-JVM core (TabsController,
@@ -44,6 +55,8 @@ class BrowserViewModel(
     private val sessionPersistence: SessionPersistence = InMemorySessionPersistence(),
     private val historyStore: HistoryStore = InMemoryHistoryStore(),
     private val bookmarkStore: BookmarkStore = InMemoryBookmarkStore(),
+    private val toolbarStore: ToolbarStore = InMemoryToolbarStore(),
+    private val notificationStore: NotificationStore = InMemoryNotificationStore(),
 ) {
 
     var settings by mutableStateOf(AppSettings())
@@ -67,6 +80,14 @@ class BrowserViewModel(
     var bookmarks by mutableStateOf<List<BookmarkEntry>>(emptyList())
         private set
 
+    /** Toolbar configuration (§23) — the bottom bar renders from this. */
+    var toolbarConfig by mutableStateOf(ToolbarConfig.default())
+        private set
+
+    /** Available notification channels and their enabled state (§33). */
+    var notificationChannels by mutableStateOf<List<Pair<NotificationChannel, Boolean>>>(emptyList())
+        private set
+
     var tabs by mutableStateOf<List<TabState>>(emptyList())
         private set
 
@@ -86,10 +107,25 @@ class BrowserViewModel(
     private val controller = TabsController()
     private val sessionManager = SessionManager(sessionPersistence)
     private val downloadsStore = InMemoryDownloadsStore()
-    private val history = PrivacyFilterHistory(historyStore)
+    private val historySource = PrivacyFilterHistory(historyStore)
+    private val toolbarConfigurator = ToolbarConfigurator(toolbarStore)
+
+    /**
+     * The §33 channel-availability set for THIS authored build: only the
+     * downloads source is real today (the Phase 2 downloads core). The
+     * set grows as the event-source patches land (0018 offline,
+     * 0020 app-lock, 0021 VPN, the backup-failed binding) — a channel is
+     * never registered before its source exists (no stubs, ADR-030).
+     */
+    private val notificationPolicy = NotificationPolicy(
+        availableChannels = setOf(NotificationChannel.DOWNLOADS),
+        store = notificationStore,
+    )
 
     init {
         settings = settingsStore.load()
+        toolbarConfig = toolbarConfigurator.current()
+        refreshNotificationChannels()
         // Crash-safe session restore (§51); corrupted/missing snapshots
         // fall back to a fresh session.
         sessionManager.restore(controller)
@@ -110,7 +146,7 @@ class BrowserViewModel(
         // History: private tabs are excluded by the history policy (§13/§14).
         // The engine adapter refines recording to page-load events
         // (docs/PHASE2-INTEGRATION-PLAN.md).
-        history.recordVisit(
+        historySource.recordVisit(
             url = url,
             title = url,
             visitedAtMillis = System.currentTimeMillis(),
@@ -184,6 +220,68 @@ class BrowserViewModel(
         settingsStore.save(settings)
     }
 
+    // --- Toolbar customization (§23, bound to the customization core) -------
+
+    /** The items the bottom bar renders, in the user's order (§23). */
+    val toolbarVisibleItems: List<ToolbarItem> get() = toolbarConfig.visibleItems()
+
+    fun openCustomizeToolbar() {
+        screen = Screen.CUSTOMIZE_TOOLBAR
+    }
+
+    /**
+     * Reorders a toolbar item (remove-then-insert, full-list index).
+     * The customize surface only issues in-range moves; the core still
+     * validates every mutation and keeps the last valid state on error.
+     */
+    fun moveToolbarItem(itemId: String, newIndex: Int) {
+        toolbarConfigurator.move(itemId, newIndex)
+        toolbarConfig = toolbarConfigurator.current()
+    }
+
+    /** Hides/shows an optional item; mandatory items are locked in the core. */
+    fun setToolbarItemVisible(itemId: String, visible: Boolean) {
+        toolbarConfigurator.setVisible(itemId, visible)
+        toolbarConfig = toolbarConfigurator.current()
+    }
+
+    /** Restores the authored default toolbar and persists it. */
+    fun resetToolbar() {
+        toolbarConfigurator.reset()
+        toolbarConfig = toolbarConfigurator.current()
+    }
+
+    // --- Notifications (§33, bound to the notification-policy core) ---------
+
+    fun setNotificationChannelEnabled(channel: NotificationChannel, enabled: Boolean) {
+        notificationPolicy.setChannelEnabled(channel, enabled)
+        refreshNotificationChannels()
+    }
+
+    /**
+     * Binding point (B-001): the engine/download adapter calls this when a
+     * REAL event occurs; the returned decision is the ONLY path to posting
+     * a notification. No caller exists until the adapter ships — nothing
+     * notifies in this authored shell (§57).
+     */
+    fun decideNotification(event: NotificationEvent): NotificationDecision =
+        notificationPolicy.decide(event)
+
+    /** Binding point: the result of the POST_NOTIFICATIONS dialog (Android 13+). */
+    fun onNotificationPermissionResult(granted: Boolean) {
+        notificationPolicy.onPermissionResult(granted)
+    }
+
+    /** Binding point: an observed system permission change (resume/settings). */
+    fun onSystemNotificationPermissionChanged(granted: Boolean) {
+        notificationPolicy.onSystemPermissionChanged(granted)
+    }
+
+    private fun refreshNotificationChannels() {
+        notificationChannels = notificationPolicy.registeredChannels()
+            .map { it to notificationPolicy.isChannelEnabled(it) }
+    }
+
     // --- Overlay screens -----------------------------------------------------
 
     fun openSettings() {
@@ -208,26 +306,26 @@ class BrowserViewModel(
     }
 
     fun deleteHistoryEntry(id: String) {
-        history.delete(id)
+        historySource.delete(id)
         refreshHistory()
     }
 
     fun clearHistory() {
-        history.clearAll()
+        historySource.clearAll()
         refreshHistory()
     }
 
     private fun refreshHistory() {
         history = if (historyQuery.isBlank()) {
-            history.recent(HISTORY_LIMIT)
+            historySource.recent(HISTORY_LIMIT)
         } else {
-            history.search(historyQuery, HISTORY_LIMIT)
+            historySource.search(historyQuery, HISTORY_LIMIT)
         }
     }
 
     private fun refreshHome() {
-        homeShortcuts = TopSites.compute(history.allVisits(), HOME_SHORTCUT_LIMIT)
-        homeRecent = history.recent(HOME_RECENT_LIMIT)
+        homeShortcuts = TopSites.compute(historySource.allVisits(), HOME_SHORTCUT_LIMIT)
+        homeRecent = historySource.recent(HOME_RECENT_LIMIT)
         homeBookmarks = bookmarkStore.all().take(HOME_BOOKMARK_LIMIT)
     }
 
