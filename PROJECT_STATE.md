@@ -4,15 +4,15 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 32 (Phase 11 in progress; Phases 0–10 core done)
+> Last updated: **2026-09-12** — Step 33 (Phase 11 in progress; Phases 0–10 core done)
 
 ```yaml
 project: iNWEB Browser
 repository: iNAYATechLab/iNWEB-Browser
 phase: 11
 phase_title: Advanced Features
-phase_status: in_progress   # design + customization & notification-policy cores done; wiring next
-step: 32
+phase_status: in_progress   # design + cores + authored binding done; remaining §23 settings cores next
+step: 33
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
@@ -21,15 +21,13 @@ ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action m
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 11 / Step 33 — bind the new cores into the authored app
-  source (src/android-app, not compiled until B-001, §36 same-commit
-  en+bn strings): BrowserViewModel wired to ToolbarConfigurator and
-  NotificationPolicy, a Customize-toolbar surface (reorder/hide,
-  mandatory items locked) and a Notifications settings surface
-  (per-channel toggles for available channels only), verified by the
-  externalization + string-parity gates (alternative if directed:
-  downloads/history surface polish, or page-zoom/download-preferences
-  settings cores).
+  Phase 11 / Step 34 — settings cores for the remaining §23 levers
+  (pure JVM, CI-tested): page-zoom preferences (validated default
+  factor + per-site overrides, bounds-checked; bound to Chromium's own
+  Android page-zoom setting via a future settings/ patch) and download
+  preferences (ask-before-download, default folder), extending the
+  browser-shell AppSettings core (alternative if directed:
+  downloads/history surface polish).
 ```
 
 ## Completed
@@ -607,9 +605,49 @@ next_action: >-
     silent ignore
   - ADR-030 recorded
 
+- [x] **Step 33 — Phase 11: authored binding of the customization + notification cores (§23/§33)** (2026-09-12)
+  - BrowserViewModel wired to both cores: the bottom bar now RENDERS
+    from the toolbar configuration (order + visibility from
+    ToolbarConfigurator; mandatory items locked by core invariant);
+    toolbar actions (move / setVisible / reset) and notification
+    toggles write through the cores and refresh observable state
+  - New `ui/CustomizeToolbarScreen` (§23): every entry in the user's
+    order with accessible up/down buttons and a visibility switch
+    (mandatory items: switch disabled + "Always visible" hint; the
+    switch carries a semantics contentDescription); reset-to-default
+    in the top bar; reached from Settings
+  - SettingsScreen: Notifications section (§33) — ONLY the available
+    channels are listed (downloads in this authored build; the set
+    grows as patches 0018/0020/0021 land — no stub channels) with
+    per-channel toggles and the honest policy caption;
+    Customize-toolbar navigation row
+  - decideNotification / onNotificationPermissionResult /
+    onSystemNotificationPermissionChanged exposed as explicit binding
+    points (B-001): the engine/download adapter is the only future
+    caller — NOTHING notifies in the authored shell (§57)
+  - Preference adapters (SharedPreferencesToolbarStore /
+    SharedPreferencesNotificationStore) are deliberately thin: they
+    round-trip the wire form only; validation and corrupt-preference
+    recovery stay in the cores (ADR-029/030 layering)
+  - 12 new strings in en + bn-BD in the same commit (§36): 6 toolbar
+    + 6 notification keys; parity + externalization gates green
+  - DEFECT FOUND AND FIXED (§64 loop): BrowserViewModel declared two
+    properties named `history` (state var + PrivacyFilterHistory
+    source) since Step 4 — a redeclaration that would have failed the
+    B-001 compile; found by the first structural pass over the
+    authored sources, fixed by renaming the source property
+    (historySource)
+  - NEW GATE: `scripts/validate_authored_structure.sh` — kotlinc
+    structural check (conflicting declarations / redeclarations /
+    syntax errors) over every authored .kt file; unresolved
+    references are excluded by design (no AndroidX classpath).
+    Verified: 18 files green and a planted redeclaration is caught;
+    wired into the CI Kotlin job
+  - ADR-031 recorded
+
 ## In progress
 
-- (none — awaiting continuation command for Step 33)
+- (none — awaiting continuation command for Step 34)
 
 ## Not started
 
@@ -653,7 +691,13 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   Step 3 defect found and fixed via the Rule 64 loop: the omnibox
   scheme detection initially treated `host:port` inputs as URLs with an unknown
   scheme; replaced with an explicit `scheme://` authority check plus a
-  known-scheme whitelist, with regression tests.)
+  known-scheme whitelist, with regression tests.
+  Step 33 defect found and fixed via the Rule 64 loop: two properties
+  named `history` in the authored BrowserViewModel (state var +
+  PrivacyFilterHistory source, present since Step 4) — a redeclaration
+  that would have failed the first real compile; fixed by renaming the
+  source property, and the whole defect class is now blocked by the
+  authored-structure gate.)
 
 ## Architecture decision log
 
@@ -689,6 +733,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-028 | 2026-09-12 | Notifications report real user-relevant events only — minimal by default, lazily-requested permission, every channel toggleable, zero promotional content; absent channels (sync, self-update) are stated, never stubbed; the entertainment module is a non-goal for v1 (base APK stays lean); every §23 customization lever must map to a real mechanism | §33/§34/§41/§7 honesty rules; no engagement bait, no claims without infrastructure |
 | ADR-029 | 2026-09-12 | Toolbar configuration core: the item universe mirrors the authored bar exactly (no invented items, stable wire ids); validation is strict (duplicate/unknown/missing/unknown-hidden/mandatory-hidden are hard errors, all offenders reported); a corrupt stored configuration falls back to the authored default, persisted and surfaced — never a crash, never a silent ignore; mandatory items (back/tabs/menu) can never be hidden; a hidden item keeps its slot | §23 lever backed by a real tested mechanism; user customization can never produce a broken or empty-control bar |
 | ADR-030 | 2026-09-12 | Notification policy core: the channel/event registry is the design §1 table exactly and the unit test is its audit; absent events (sync, self-update, promotional, filter-list failure) are structurally absent — no enum value, no code path — never merely undocumented; the only notify entry is a typed real event (no generic notify API); channel availability is an explicit build fact (no default) so unavailable channels are never registered (no stubs); permission is asked lazily at the first show-worthy event, never re-asked after denial; per-channel toggles + corrupt-preference recovery follow the ADR-029 pattern | §33/§41 rules become structural: real events only, user-respecting, zero promotional paths |
+| ADR-031 | 2026-09-12 | The authored app binds the §23/§33 cores directly: the bar renders from the toolbar configuration and settings toggles write through the cores; channel availability in the authored build is downloads-only and grows only as event-source patches land; preference adapters are thin wire-form round-trippers (validation + recovery stay in the cores); authored sources get a permanent structural gate (kotlinc parse/declaration check, dependency resolution excluded by design) because they compile only at B-001 | §23/§33 become reachable in authored source honestly; the B-001 compile cannot again be broken by latent redeclaration/parse defects |
 
 ## Build status
 
