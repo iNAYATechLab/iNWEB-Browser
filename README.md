@@ -22,7 +22,7 @@ written in Kotlin.
 | Item | State |
 |---|---|
 | Development phase | **Phase 12 — Production Hardening: authoring complete** (all five design-order items: storage inventory gate, threat-model review, clear-data core + surface, §47 versioning policy, device-verification matrix, performance budgets, data-safety draft; plus §23 settings binding — every remaining Phase 12 deliverable is B-001-gated; Phases 0–11 core work complete) |
-| Current step | 46 |
+| Current step | 47 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 150 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag, page-zoom §23 with per-site overrides + Chromium preset table, download preferences §23) |
@@ -59,7 +59,8 @@ inweb-browser/
 │   ├── ARCHITECTURE.md
 │   ├── LICENSING.md
 │   ├── BUILD-INFRASTRUCTURE.md
-│   └── THREAT-MODEL.md
+│   ├── THREAT-MODEL.md
+│   └── … (28 documents total — full table in "Documentation" below)
 ├── iNWEB_PATCHES/                   # Tracked patch series (§5)
 │   ├── MANIFEST.yaml                # Patch registry — the single patch authority
 │   ├── README.md                    # Rules, lifecycle, tooling usage
@@ -69,11 +70,15 @@ inweb-browser/
 │   ├── apply_patches.py             # Series convergence: apply / verify / hash (tested)
 │   ├── lint_manifest.py             # Registry validation (tested)
 │   ├── check_baseline.py            # Upstream Android-stable drift check (live)
-│   ├── validate_strings.py          # bn/en string parity + placeholder validation (tested)
+│   ├── validate_strings.py          # bn/en string parity + placeholders + Chromium-baseline mirror (tested)
+│   ├── validate_localization.py     # UI string-externalization gate (tested)
+│   ├── validate_storage_inventory.py # Persisted-surface inventory gate (tested)
 │   ├── validate_kotlin_core.sh      # Compile + run core module tests, multi-module (kotlinc + JUnit)
+│   ├── validate_authored_structure.sh # Structural compile of all authored .kt files (CI)
 │   ├── benchmark_filter_engine.sh   # Filter-engine micro-benchmark (measured baselines, §9)
 │   ├── fetch_chromium.sh            # BUILD HOST: pinned tag checkout (authored)
 │   ├── build_android.sh             # BUILD HOST: GN + ninja build (authored)
+│   ├── check_build_host.py          # BUILD HOST: pre-flight spec verifier (tested, §59 runbook)
 │   └── bootstrap_env.sh             # Authoring-sandbox session bootstrap
 ├── src/
 │   ├── core/browser-shell/          # Pure-JVM core (Gradle project; validated by script + CI)
@@ -86,8 +91,10 @@ inweb-browser/
 │   ├── core/profiles/                    # Pure-JVM profiles core (§28 isolation contract)
 │   ├── core/backup/                      # Pure-JVM backup bundle core (§32 checksums + version gating)
 │   ├── core/sync/                        # Pure-JVM sync queue core (§30 model — future infrastructure, no backend)
-│   │   ├── build.gradle.kts
-│   │   └── src/{main,test}/kotlin/com/inweb/browser/privacy/
+│   ├── core/customization/           # Pure-JVM toolbar-configuration core (§23 reorder/hide, ADR-029)
+│   ├── core/notifications/           # Pure-JVM notification-policy core (§33 real-events-only, ADR-028/030)
+│   ├── core/clear-data/              # Pure-JVM clear-browsing-data core (§37 semantics)
+│   │      (each core module: build.gradle.kts + src/{main,test}/kotlin/… — 11 modules, 414 tests)
 │   └── android-app/src/main/        # Android shell UI (compiled by the Chromium build, ADR-009)
 │       ├── AndroidManifest.xml
 │       ├── kotlin/com/inweb/browser/   (shell, ui, session, settings)

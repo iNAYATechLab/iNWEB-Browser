@@ -12,6 +12,17 @@ proves source structure, not on-device behavior (§57).
 files total; `settings/`, `session/` adapters are non-UI). Audit date:
 2026-09-12.
 
+**Amended (Step 47, §59 accuracy pass):** `ui/AboutScreen.kt` was added
+in Step 46, after this register closed. It was authored to the same
+§49 contracts — heading semantics on the app-name and baseline
+section headers, a labeled back control, fully externalized strings, a
+scrolling column — and passes the same CI gates (externalization,
+string parity). Its record joins this register as a post-audit
+addition; its device verification stays on D10-1…D10-5 like every
+other surface. The authored file count is now **23** (14 `ui/` root
+files + `ui/theme/` + `MainActivity` + `BrowserViewModel` + 5
+`settings/` adapters + 1 `session/` adapter).
+
 ---
 
 ## 1. Findings register (all FIXED in this step)

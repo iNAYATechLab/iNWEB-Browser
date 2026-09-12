@@ -116,10 +116,10 @@ tree), continuing after `0012`:
 
 ## 6. Verification strategy
 
-1. **Core (live today):** the extension management state machine that this
+1. **Core (live today):** the extension management state machine this
    design calls for (install/enable/disable/remove/version checks) is
-   implementable in pure JVM — proposed as the next step's deliverable,
-   CI-tested, exactly like the tracking-protection core was.
+   implemented in pure JVM — `src/core/extensions` (17 unit tests,
+   CI-enforced, ADR-023) — exactly like the tracking-protection core.
 2. **Build-time audit:** a script that extracts the actually-registered
    extension APIs from the built APK and regenerates the §3 table —
    the release notes show reality, not intent.

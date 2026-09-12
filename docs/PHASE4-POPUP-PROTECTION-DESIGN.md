@@ -115,7 +115,7 @@ Continuing the global order after the `ui/` (0001–0004) and `adblock/`
 ## 5. Verification strategy
 
 1. **Core (live today):** `$popup` parsing/matching already covered by the
-   79 Kotlin engine tests; allowlist semantics covered.
+   116 Kotlin engine tests; allowlist semantics covered.
 2. **C++ unit tests (at build time):** guard with scripted
    activation/frame states; throttle with synthetic initiators;
    notification policy table tests.

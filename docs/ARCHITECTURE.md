@@ -55,9 +55,18 @@ iNWEB BROWSER (development → beta → stable channels)
 
 | Module | State |
 |---|---|
-| `src/core/browser-shell` | Implemented & unit-tested (115 tests): tabs, omnibox, session, settings, history + bookmarks (persistent file stores), downloads catalog, top sites |
-| `src/core/tracking-protection` | Implemented & unit-tested (70 tests): EasyList-family parser, URL matching, request-decision engine, per-site allowlist, filter-list download/cache/update management |
-| `src/android-app` | Authored (compiles in the Chromium build, B-001): browser shell, tab switcher, home with real data, onboarding, settings, downloads, history, bookmarks surfaces; bn/en strings |
+| `src/core/browser-shell` | Implemented & unit-tested (150 tests): tabs, omnibox, session, settings, history + bookmarks (persistent file stores), downloads catalog, top sites |
+| `src/core/tracking-protection` | Implemented & unit-tested (116 tests): EasyList-family parser, URL matching, request-decision engine, per-site allowlist, cosmetic filtering, filter-list download/cache/update management with SHA-256 content pinning (ADR-036) |
+| `src/core/extensions` | Implemented & unit-tested (17 tests): extension management state machine (§16, ADR-023) |
+| `src/core/offline` | Implemented & unit-tested (15 tests): offline library — quota accounting, LRU eviction (§17) |
+| `src/core/vpn` | Implemented & unit-tested (17 tests): VPN config validation, opaque secrets (§15, ADR-025) |
+| `src/core/profiles` | Implemented & unit-tested (12 tests): profile isolation contract (§28, ADR-026) |
+| `src/core/backup` | Implemented & unit-tested (13 tests): backup bundles — checksums, version gating (§32, ADR-026) |
+| `src/core/sync` | Implemented & unit-tested (12 tests): sync queue model (§30 — no backend exists; documented absence, §29) |
+| `src/core/customization` | Implemented & unit-tested (25 tests): toolbar configuration — reorder/hide item set (§23, ADR-029) |
+| `src/core/notifications` | Implemented & unit-tested (23 tests): notification policy — real events only, per-channel toggles (§33, ADR-028/030) |
+| `src/core/clear-data` | Implemented & unit-tested (14 tests): clear-browsing-data semantics (§37) |
+| `src/android-app` | Authored (compiles in the Chromium build, B-001; 23 Kotlin files, structural gate in CI): browser shell, tab switcher, home with real data, onboarding, settings, downloads, history, bookmarks, toolbar customization, clear-browsing-data, zoom settings, notifications, About (§39) surfaces; bn/en strings |
 
 | Module | Mechanism | Phase |
 |---|---|---|

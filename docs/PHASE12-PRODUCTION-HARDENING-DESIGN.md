@@ -35,7 +35,7 @@ documentation, store readiness.
 `docs/STORAGE-INVENTORY.yaml` + `scripts/validate_storage_inventory.py`
 (12 unit tests, wired into CI):
 
-- **21 surfaces** (14 seams + 7 adapters) each documented with: what it
+- **23 surfaces** (14 seams + 9 adapters) each documented with: what it
   stores, where it lives, its **corruption/recovery contract** (§50:
   never silently lose user data), and its **clear semantics**
   (clear-browsing-data vs app reset — the contract the future

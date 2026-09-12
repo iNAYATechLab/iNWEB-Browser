@@ -6,7 +6,7 @@ verification happen on build infrastructure against the pinned baseline
 **Governing requirements:** MASTER-SPEC §11 (genuine ad blocking — "Do not
 implement a fake ad blocker that only changes a toggle"), §10, §24; the
 pure-JVM engine and filter-list management already implemented in
-`src/core/tracking-protection` (79 unit tests, CI-enforced).
+`src/core/tracking-protection` (116 unit tests, CI-enforced).
 
 ---
 
@@ -156,7 +156,7 @@ against the real pinned tree (§57).
 
 ## 8. Verification strategy
 
-1. **Core (already live):** 79 Kotlin tests + 30 Python tests in CI —
+1. **Core (already live):** 116 Kotlin tests + 77 Python tests in CI —
    parser, matcher, engine, lists, Security Center model.
 2. **C++ unit tests (at build time):** throttle with a fake
    `Throttle::Callback` + stub engine: BLOCK cancels with

@@ -74,7 +74,7 @@ patch only wires the Chromium side, consistent with ADR-009/ADR-012.)
 
 ## 5. Verification strategy
 
-1. **Core (live today):** 92 Kotlin tests in `tracking-protection`,
+1. **Core (live today):** 116 Kotlin tests in `tracking-protection`,
    including the 13 cosmetic tests (parsing, domain semantics, exception
    cancellation, grouped CSS output, manager integration).
 2. **C++ unit tests (at build time):** injection observer with a stub

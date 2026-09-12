@@ -12,9 +12,10 @@ browser inside the Chromium Android build.
 
 | Piece | State |
 |---|---|
-| `src/core/browser-shell` (pure JVM: tabs, omnibox, session, downloads, settings, history, bookmarks, top sites) | **Implemented and unit-tested — 115 tests** (kotlinc + JUnit, runs in sandbox and CI) |
-| `src/core/tracking-protection` (pure JVM: filter parsing, request decisions, filter-list management) | **Implemented and unit-tested — 70 tests** |
-| `src/android-app` (Compose + Material 3: browser, tab switcher, home with real data, onboarding, settings, downloads, history, bookmarks; bn/en strings) | **Authored** — compiles inside the Chromium build (validated on build host) |
+| `src/core/browser-shell` (pure JVM: tabs, omnibox, session, downloads, settings, history, bookmarks, top sites) | **Implemented and unit-tested — 150 tests** (kotlinc + JUnit, runs in sandbox and CI) |
+| `src/core/tracking-protection` (pure JVM: filter parsing, request decisions, cosmetic filtering, filter-list management) | **Implemented and unit-tested — 116 tests** |
+| `src/core/extensions` / `offline` / `vpn` / `profiles` / `backup` / `sync` / `customization` / `notifications` / `clear-data` (pure JVM, one Gradle module each) | **Implemented and unit-tested — 17 / 15 / 17 / 12 / 13 / 12 / 25 / 23 / 14 tests** (11 core modules, 414 Kotlin tests total) |
+| `src/android-app` (Compose + Material 3: browser, tab switcher, home with real data, onboarding, settings, downloads, history, bookmarks, toolbar customization, clear-browsing-data, zoom settings, notifications, About; bn/en strings) | **Authored** — compiles inside the Chromium build (validated on build host) |
 | Chromium engine adapter | **Not started** — delivered as `ui/` patches |
 
 No page rendering exists yet anywhere. The UI contains an explicit,
