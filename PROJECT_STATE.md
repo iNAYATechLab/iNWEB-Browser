@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 45 (Phase 12 authoring complete; Phases 0–11 complete)
+> Last updated: **2026-09-12** — Step 46 (Phase 12 authoring complete; Phases 0–11 complete)
 
 ```yaml
 project: iNWEB Browser
@@ -12,29 +12,25 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 12
 phase_title: Production Hardening
 phase_status: authoring_complete   # all 5 design-order items done; every remaining Phase 12 deliverable is B-001-gated (device matrix)
-step: 45
+step: 46
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 72 Python + 414 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 77 Python + 414 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs + 5 gates (registry, strings, externalization, structure, storage inventory); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  B-001 tooling is complete: the user provisions the build host per
-  docs/BUILD-HOST-RUNBOOK.md §1 and runs scripts/check_build_host.py
-  (step 2) — when it reports green, fetch_chromium.sh + build_android.sh
-  produce the first artifact and close matrix rows B-1..B-4. Meanwhile
-  (authoring side): proposed Step 46 — authored-app About surface
-  (§39 About): a Settings > About section that is honest by
-  construction — app name, "development build — no release exists"
-  (the VERSIONING registry is empty; versionName appears only with the
-  first tag), the pinned Chromium baseline (single source:
-  config/chromium/BASELINE, surfaced as a resource the upstream-watch
-  keeps in sync), and a link to the versioning policy; en+bn strings
-  same commit (alternative if directed: a §59 full-repository
-  documentation accuracy pass, or PAUSE authoring until the build
-  host is provisioned and Stage-0 results return).
+  Proposed Step 47 — §59 full-repository documentation accuracy pass:
+  walk EVERY document (README, PROJECT_STATE, the 20+ docs/ files)
+  against the repository as it exists at this commit — counts, file
+  lists, section references, status claims — and fix every drift as
+  ordinary commits; the phase designs' "live today" test counts and
+  the docs-table rows are the likely drift points (alternative if
+  directed: run scripts/check_baseline.py against the live upstream
+  API and, if Android stable has moved past 154.0.8037.21, plan the
+  baseline refresh per PHASE0-CHROMIUM-BASELINE; or PAUSE authoring
+  until the build host is provisioned and Stage-0 results return).
 ```
 
 ## Completed
@@ -994,9 +990,30 @@ next_action: >-
     docs but scripts/+tests/ changed -> CI runs and covers the new
     tests
 
+- [x] **Step 46 — authored-app About surface (§39, honest by construction)** (2026-09-12)
+  - New `ui/AboutScreen`: app name; "Development build — no release
+    exists yet" (the release registry is empty — no version number is
+    shown until a tagged release exists to name, VERSIONING.md); the
+    Chromium baseline row pinned to the mirrored resource; §49
+    discipline carried over (heading semantics, back label,
+    externalized strings); Settings nav row (reuses the existing
+    settings_about string) + screen routing
+  - Baseline single-source enforcement: the non-translatable
+    `chromium_baseline` resource (154.0.8037.21) mirrors
+    config/chromium/BASELINE, and scripts/validate_strings.py gained a
+    CI-enforced cross-check (must exist, must be translatable=false,
+    must equal the pinned CHROMIUM_TAG) — the app can never show a
+    baseline the build does not use; +5 unit tests (Python 72 -> 77:
+    synced/missing/drifted/translatable/unreadable-baseline)
+  - 3 new translatable strings en+bn same commit (§36) + the
+    non-translatable mirror (parity gate excludes it by design)
+  - Gates green: strings (mirror in sync), externalization 0,
+    structural 23 authored files, registry, inventory 23, Python 77,
+    Kotlin 414 unchanged; src/+scripts/+tests/ changed -> CI runs
+
 ## In progress
 
-- (none — awaiting continuation command for Step 46)
+- (none — awaiting continuation command for Step 47)
 
 ## Not started
 
