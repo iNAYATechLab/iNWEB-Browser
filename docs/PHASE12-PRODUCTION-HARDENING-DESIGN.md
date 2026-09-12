@@ -1,6 +1,11 @@
 # Phase 12 — Production Hardening Design
 
-**Status:** authored design + first item implemented (Step 35).
+**Status:** authored design; the §2 inventory is live (Step 35) and
+items 1–3 of the order below are implemented (Step 36 threat review,
+Steps 37–38 clear-data core + surface, Step 40 versioning policy —
+plus the Step 39 §23 settings binding from the review's gap register);
+remaining: device-verification matrix, performance budgets +
+data-safety draft.
 Phase 12 is defined by MASTER-SPEC §53: security audit, performance
 audit, regression testing, crash testing, release engineering,
 documentation, store readiness.
@@ -45,17 +50,18 @@ documentation, store readiness.
 
 ## 3. Remaining items (proposed order)
 
-1. **Threat-model review pass** (pure docs vs code): walk
-   `docs/THREAT-MODEL.md` against the 10 cores and the ADR log; record
-   gaps as tracked items, not silent assumptions.
-2. **Clear-data core** (pure JVM): a `ClearBrowsingData` plan model —
-   which stores a "clear" action touches, driven by the inventory's
-   clear column (history, session, filter-list cache, offline entries,
-   per-site zoom overrides) with per-item user choice; the surface +
-   patch bind later.
-3. **Versioning policy** (docs): §47 semver (`1.0.0-alpha.1` style),
-   versionCode/versionName maintenance, tag naming — written before
-   the first build tag exists.
+1. ~~**Threat-model review pass**~~ — **done (Step 36)**:
+   `docs/THREAT-MODEL-REVIEW.md` (14-row coverage matrix, 10-item gap
+   register — tracked, never silent).
+2. ~~**Clear-data core**~~ — **done (Step 37 core, Step 38 authored
+   surface, per ADR-034)**: item universe = the inventory's clear
+   column, real dry-run previews, execution through real store APIs.
+3. ~~**Versioning policy**~~ — **done (Step 40)**:
+   [`docs/VERSIONING.md`](VERSIONING.md) — §47 semver with the
+   alpha→beta→rc→stable ladder, versionCode derivation + overflow
+   rule with an authoritative release registry, annotated `v<semver>`
+   tag naming, and the baseline-independence rule (ADR-001). Written
+   before the first build tag exists, exactly as required.
 4. **Device-verification matrix** (docs): the B-001 checklist per
    phase (already partially in phase designs) consolidated into one
    runnable checklist.
