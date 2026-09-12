@@ -11,9 +11,12 @@
 target_os = "android"
 target_cpu = "arm64"
 
-# Fast iteration for patch development.
+# Fast iteration for patch development. NOTE: component builds are
+# disallowed on Android upstream (BUILDCONFIG.gn asserts
+# !(current_os == "android" && is_component_build)) — first real-build
+# correction from B-001 Stage-1 run 34689824373: is_component_build
+# removed. Debug + symbol_level=1 stays the fast-iteration config.
 is_debug = true
-is_component_build = true
 symbol_level = 1
 
 # Distribution outside Play Store during development.
