@@ -1,0 +1,306 @@
+name: B-001 Stage 1 (hosted-runner path)
+
+# =============================================================================
+# B-001 Stage 1 — GitHub-Actions-only execution path (no local machine needed).
+#
+# Honest scoping (§57): standard GitHub-hosted runners are BELOW the
+# BUILD-INFRASTRUCTURE §2 build-host spec. This workflow therefore:
+#   job audit   — runs the existing pre-flight checker on the hosted runner
+#                 and records the measured hardware gap as evidence;
+#   job attempt — executes the authored Stage-1 sequence as far as the
+#                 hosted hardware legitimately allows:
+#                   1. scripts/fetch_chromium.sh  (pinned tag 154.0.8037.21)
+#                   2. tag verification against config/chromium/BASELINE
+#                   3. apply_patches.py apply + verify (empty series — the
+#                      registry is patches: [] — proving pristine-tag
+#                      convergence, B-1/B-2 semantics)
+#                   4. a TIME/SPACE-BOXED upstream chrome_public_apk build
+#                      attempt (scripts/build_android.sh development)
+#                   5. APK discovery + SHA-256 when one exists
+# Every step records PASS / FAIL / BLOCKED with its real output. Nothing is
+# simulated; no WebView fallback exists or will be added (§71). The repo is
+# public, so standard hosted runners are free; larger runners are an
+# organization-plan feature and are NOT available to this user-owned repo.
+# =============================================================================
+
+on:
+  workflow_dispatch:
+    inputs:
+      build-attempt:
+        description: "Run the time-boxed chrome_public_apk build attempt"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: b001-stage1
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Audit — hosted runner vs BUILD-INFRASTRUCTURE §2
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Record build-id (commit SHA) and runner facts
+        run: |
+          mkdir -p b001-logs
+          {
+            echo "commit_sha=$(git rev-parse HEAD)"
+            echo "run_id=${GITHUB_RUN_ID}"
+            echo "attempt=${GITHUB_RUN_ATTEMPT}"
+            echo "date_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "runner_name=${RUNNER_NAME:-unknown}"
+            echo "image_os=${ImageOS:-unknown} image_version=${ImageVersion:-unknown}"
+            echo "--- uname ---"; uname -a
+            echo "--- cpu ---"; echo "nproc=$(nproc)"; lscpu | grep -E '^(Model name|CPU\(s\)|Thread|Core)' || true
+            echo "--- memory ---"; head -3 /proc/meminfo
+            echo "--- disk ---"; df -h / /mnt /home/runner/work 2>/dev/null || df -h
+            echo "--- os-release ---"; cat /etc/os-release | head -4
+          } | tee b001-logs/00-runner-facts.txt
+
+      - name: Run the existing pre-flight checker (expected FAIL on spec bands)
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python3 scripts/check_build_host.py 2>&1 | tee b001-logs/01-check-build-host.txt
+          ec=${PIPESTATUS[0]}
+          echo "checker_exit=$ec" >> b001-logs/01-check-build-host.txt
+          exit "$ec"
+
+      - name: Upload audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b001-stage1-audit
+          path: b001-logs/
+          if-no-files-found: error
+
+  attempt:
+    name: Attempt — pinned fetch, verify, boxed build
+    needs: audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Record build-id (commit SHA) and starting state
+        run: |
+          mkdir -p b001-logs
+          {
+            echo "commit_sha=$(git rev-parse HEAD)"
+            echo "run_id=${GITHUB_RUN_ID}"
+            echo "date_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "image_os=${ImageOS:-unknown} image_version=${ImageVersion:-unknown}"
+            echo "nproc=$(nproc)"
+            head -1 /proc/meminfo
+          } | tee b001-logs/00-runner-facts.txt
+          df -h | tee -a b001-logs/00-runner-facts.txt
+
+      # Standard, documented runner-disk reclamation: removes only preinstalled
+      # toolchain images this job does not use. Nothing project-related.
+      - name: Free preinstalled toolchain space (documented)
+        run: |
+          set -x
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+            /usr/local/.ghcup /usr/local/share/boost /opt/hostedtoolcache/CodeQL \
+            /usr/lib/jvm /usr/local/share/chromium 2>/dev/null || true
+          sudo docker system prune -af >/dev/null 2>&1 || true
+          sudo docker image prune -af >/dev/null 2>&1 || true
+          df -h / /mnt | tee b001-logs/10-disk-after-cleanup.txt
+
+      - name: Choose the workspace volume (most free space)
+        id: vol
+        run: |
+          ROOT_FREE=$(df --output=avail -BG / | tail -1 | tr -dc '0-9')
+          MNT_FREE=$(df --output=avail -BG /mnt 2>/dev/null | tail -1 | tr -dc '0-9')
+          ROOT_FREE=${ROOT_FREE:-0}
+          MNT_FREE=${MNT_FREE:-0}
+          echo "root_free_gb=$ROOT_FREE mnt_free_gb=$MNT_FREE" | tee b001-logs/11-volumes.txt
+          if [ "${MNT_FREE:-0}" -gt "$ROOT_FREE" ]; then
+            WS=/mnt/inweb-chromium
+          else
+            WS="$PWD/chromium"
+          fi
+          echo "workspace=$WS" | tee -a b001-logs/11-volumes.txt
+          echo "workspace=$WS" >> "$GITHUB_OUTPUT"
+
+      # ---------------------------------------------------------------- B-step
+      # Pinned fetch: scripts/fetch_chromium.sh (tag from config/chromium/BASELINE)
+      - name: Fetch pinned Chromium (fetch_chromium.sh)
+        id: fetch
+        timeout-minutes: 240
+        continue-on-error: true
+        env:
+          INWEB_WORKSPACE: ${{ steps.vol.outputs.workspace }}
+        run: |
+          set -o pipefail
+          bash scripts/fetch_chromium.sh 2>&1 | tee b001-logs/20-fetch.log
+          echo "FETCH: PASS" > b001-logs/20-fetch.verdict
+          df -h "${INWEB_WORKSPACE}" | tee -a b001-logs/20-fetch.log
+
+      - name: Record fetch outcome if it failed or timed out
+        if: ${{ always() && steps.fetch.outcome != 'success' }}
+        run: |
+          {
+            echo "FETCH: FAIL — see b001-logs/20-fetch.log (tail below)"
+            tail -40 b001-logs/20-fetch.log || true
+            df -h / /mnt || true
+          } > b001-logs/20-fetch.verdict
+
+      # ---------------------------------------------------------------- B-step
+      # Tag verification: the tree must be exactly 154.0.8037.21
+      - name: Verify the checked-out Chromium tag
+        id: tag
+        continue-on-error: true
+        env:
+          WS: ${{ steps.vol.outputs.workspace }}
+        run: |
+          set -o pipefail
+          {
+            EXPECTED=$(sed -n 's/^CHROMIUM_TAG=//p' config/chromium/BASELINE | tr -d '[:space:]')
+            echo "expected_tag=$EXPECTED"
+            if [ ! -d "$WS/src/.git" ]; then
+              echo "TAG: BLOCKED — no Chromium checkout at $WS/src" ; exit 1
+            fi
+            ACTUAL_TAG=$(git -C "$WS/src" describe --tags --exact-match HEAD 2>/dev/null || true)
+            HEAD=$(git -C "$WS/src" rev-parse HEAD)
+            echo "head=$HEAD"
+            echo "actual_tag=${ACTUAL_TAG:-<none>}"
+            echo "--- chrome/VERSION ---"; cat "$WS/src/chrome/VERSION" 2>/dev/null || true
+            echo "--- tree status (should be clean) ---"
+            git -C "$WS/src" status --porcelain | head -5
+            if [ "$ACTUAL_TAG" = "$EXPECTED" ]; then
+              echo "TAG: PASS — $ACTUAL_TAG == $EXPECTED"
+            else
+              echo "TAG: FAIL — checked-out '$ACTUAL_TAG' != pinned '$EXPECTED'"; exit 1
+            fi
+          } 2>&1 | tee b001-logs/30-tag-verify.txt
+          cp b001-logs/30-tag-verify.txt b001-logs/30-tag-verify.verdict
+          grep -q "TAG: PASS" b001-logs/30-tag-verify.verdict
+          echo "present=true" >> "$GITHUB_OUTPUT"
+
+      # ---------------------------------------------------------------- B-1/B-2
+      # Empty registry (patches: []): apply+verify must converge on the
+      # pristine tag tree, and the content hash is the recorded invariant.
+      - name: B-1/B-2 — apply_patches.py apply + verify + hash (empty series)
+        id: patches
+        continue-on-error: true
+        env:
+          WS: ${{ steps.vol.outputs.workspace }}
+        run: |
+          set -o pipefail
+          {
+            if [ ! -d "$WS/src/.git" ]; then
+              echo "PATCHES: BLOCKED — no Chromium checkout"; exit 1
+            fi
+            echo "--- apply ---"
+            python3 scripts/apply_patches.py apply "$WS/src"
+            echo "--- verify ---"
+            python3 scripts/apply_patches.py verify "$WS/src"
+            echo "--- hash ---"
+            time python3 scripts/apply_patches.py hash "$WS/src"
+            echo "--- git status after apply ---"
+            git -C "$WS/src" status --porcelain | head -10
+            PINNED=$(sed -n 's/^CHROMIUM_TAG=//p' config/chromium/BASELINE | tr -d '[:space:]')
+            echo "PATCHES: PASS — empty series converges on pristine $PINNED"
+          } 2>&1 | tee b001-logs/40-patches.txt
+          cp b001-logs/40-patches.txt b001-logs/40-patches.verdict
+          grep -q "PATCHES: PASS" b001-logs/40-patches.verdict
+
+      # ---------------------------------------------------------------- B-3
+      # Time-boxed upstream build attempt. On a 4-vCPU hosted runner this is
+      # EXPECTED NOT TO COMPLETE — the box exists to record real evidence of
+      # the hosted-runner limitation, never to claim a spec-compliant build.
+      - name: B-3 (boxed) — build_android.sh development (chrome_public_apk)
+        id: build
+        if: ${{ inputs.build-attempt && steps.tag.outputs.present == 'true' }}
+        timeout-minutes: 75
+        continue-on-error: true
+        env:
+          INWEB_WORKSPACE: ${{ steps.vol.outputs.workspace }}
+        run: |
+          set -o pipefail
+          bash scripts/build_android.sh development 2>&1 | tee b001-logs/50-build.log
+          echo "BUILD: PASS — chrome_public_apk produced" > b001-logs/50-build.verdict
+
+      - name: Record build outcome if it failed, timed out, or was skipped
+        if: ${{ always() && (steps.build.outcome == 'failure' || steps.build.outcome == 'cancelled' || steps.build.outcome == 'skipped') }}
+        env:
+          WS: ${{ steps.vol.outputs.workspace }}
+        run: |
+          {
+            echo "BUILD: ${{ steps.build.outcome == 'skipped' && 'BLOCKED — tag verification did not pass; build not attempted' || format('FAIL — outcome {0}; boxed attempt on below-spec runner', steps.build.outcome) }}"
+            echo "--- build log tail ---"
+            tail -60 b001-logs/50-build.log 2>/dev/null || echo "(no build log)"
+            echo "--- out dir ---"
+            du -sh "${WS}/src/out" 2>/dev/null || echo "(no out dir)"
+            find "${WS}/src/out" -maxdepth 2 -type d 2>/dev/null | head -10
+            echo "--- ninja progress (built targets so far) ---"
+            grep -c '^\[' b001-logs/50-build.log 2>/dev/null || echo 0
+            df -h / /mnt || true
+          } > b001-logs/50-build.verdict
+
+      # ---------------------------------------------------------------- artifact
+      - name: Locate APK and compute SHA-256 (only if one exists)
+        if: ${{ always() }}
+        env:
+          WS: ${{ steps.vol.outputs.workspace }}
+        run: |
+          set -o pipefail
+          {
+            APKS=$(find "${WS}/src/out" -name '*.apk' -type f 2>/dev/null || true)
+            if [ -z "$APKS" ]; then
+              echo "APK: NONE — no APK exists after this run (honest record)"
+            else
+              echo "APK: FOUND"
+              echo "$APKS" | while read -r apk; do
+                ls -lh "$apk"
+                sha256sum "$apk"
+              done
+            fi
+          } | tee b001-logs/60-apk.txt
+
+      - name: Compose the evidence summary
+        if: ${{ always() }}
+        run: |
+          {
+            echo "# B-001 Stage 1 — run ${GITHUB_RUN_ID} (attempt ${GITHUB_RUN_ATTEMPT})"
+            echo
+            echo "- commit: $(git rev-parse HEAD)"
+            echo "- date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- runner: ${ImageOS:-?}/${ImageVersion:-?}, $(nproc) vCPU, $(awk '/MemTotal/ {printf "%.1f GiB", $2/1048576}' /proc/meminfo)"
+            echo
+            echo "## Step verdicts"
+            for v in b001-logs/*.verdict; do
+              echo "### ${v}"
+              grep -E '^(FETCH|TAG|PATCHES|BUILD|APK): ' "$v" | head -3 || echo "(no verdict line)"
+              echo
+            done
+            echo "## Full logs"
+            echo "Uploaded as workflow artifacts (b001-stage1-audit, b001-stage1-attempt)."
+          } | tee b001-logs/99-evidence-summary.md
+          cat b001-logs/99-evidence-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload attempt evidence and logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: b001-stage1-attempt
+          path: b001-logs/
+          if-no-files-found: error
+
+      - name: Upload APK artifact (only if one was produced)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: b001-stage1-apk
+          path: |
+            ${{ steps.vol.outputs.workspace }}/src/out/inweb-development/apks/*.apk
+          if-no-files-found: ignore
