@@ -168,6 +168,19 @@ class NetworkCheckTestCase(unittest.TestCase):
         self.assertEqual(check_build_host.PASS, results[0].status)
 
 
+    def test_http_error_status_means_reachable(self):
+        """An HTTP status response (e.g. GCS 400 to a bare probe) is reachability."""
+        import urllib.error
+
+        error = urllib.error.HTTPError(
+            url="https://storage.googleapis.com", code=400,
+            msg="Bad Request", hdrs=None, fp=None,
+        )
+        with mock.patch("urllib.request.urlopen", side_effect=error):
+            results = check_build_host.check_network(("https://storage.googleapis.com",))
+        self.assertEqual(check_build_host.PASS, results[0].status)
+        self.assertIn("HTTP 400", results[0].detail)
+
 class ReportTestCase(unittest.TestCase):
     def test_report_counts_and_verdict(self):
         results = [

@@ -214,6 +214,29 @@ jobs:
           cp b001-logs/40-patches.txt b001-logs/40-patches.verdict
           grep -q "PATCHES: PASS" b001-logs/40-patches.verdict
 
+      # ---------------------------------------------------------------- deps
+      # Provision Chromium's own Android build dependencies (host system
+      # packages the build needs that are not hermetic).
+      - name: Install Chromium Android build dependencies
+        id: deps
+        if: ${{ inputs.build-attempt && steps.tag.outputs.present == 'true' }}
+        timeout-minutes: 25
+        continue-on-error: true
+        env:
+          WS: ${{ steps.vol.outputs.workspace }}
+        run: |
+          set -o pipefail
+          sudo bash "${WS}/src/build/install-build-deps.sh" --android --no-arm 2>&1 | tee b001-logs/45-build-deps.log
+          echo "DEPS: PASS" > b001-logs/45-build-deps.verdict
+
+      - name: Record dependency-install outcome if it failed
+        if: ${{ always() && steps.deps.outcome != 'success' && steps.deps.outcome != 'skipped' }}
+        run: |
+          {
+            echo "DEPS: ${{ steps.deps.outcome }} — see b001-logs/45-build-deps.log (tail below)"
+            tail -25 b001-logs/45-build-deps.log 2>/dev/null || echo "(no log)"
+          } > b001-logs/45-build-deps.verdict
+
       # ---------------------------------------------------------------- B-3
       # Time-boxed upstream build attempt. On a 4-vCPU hosted runner this is
       # EXPECTED NOT TO COMPLETE — the box exists to record real evidence of

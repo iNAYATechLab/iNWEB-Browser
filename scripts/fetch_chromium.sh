@@ -50,12 +50,25 @@ fi
 )
 export PATH="$WORKSPACE/depot_tools:$PATH"
 
+# Bootstrap the pinned depot_tools (CIPD-managed python + wrappers) WITHOUT
+# updating it — ensure_bootstrap explicitly works on the current checkout.
+# DEPOT_TOOLS_UPDATE=0 then keeps gclient from moving the pinned revision.
+# (Validated on a GitHub-hosted runner: the first real fetch attempt failed
+# with "python3_bin_reldir.txt not found" until this bootstrap was added.)
+export DEPOT_TOOLS_UPDATE=0
+export DEPOT_TOOLS_METRICS=0
+( cd depot_tools && ./ensure_bootstrap )
+
 # -----------------------------------------------------------------------------
 # 3. Chromium checkout (no-history keeps the checkout small and tag-reproducible)
+#
+# Equivalent to `fetch --no-history chromium` but syncs DIRECTLY at the pinned
+# tag: fetch's wrapper would first sync top-of-tree main and the script would
+# then re-sync at the tag — double the network/disk for the same result, which
+# matters on constrained hosted runners.
 # -----------------------------------------------------------------------------
-if [ ! -d src ]; then
-  echo "Fetching Chromium (no history)..."
-  fetch --no-history chromium
+if [ ! -f .gclient ]; then
+  gclient config --name=src "https://chromium.googlesource.com/chromium/src.git"
 fi
 
 # Upstream instruction for Android: add android to target_os in .gclient
@@ -68,7 +81,7 @@ fi
 # 4. Sync dependencies at the pinned tag (-D deletes stale dependencies)
 # -----------------------------------------------------------------------------
 echo "Syncing at src@$TAG (this is the long step)..."
-gclient sync --revision "src@$TAG" --with_branch_heads -D
+gclient sync --no-history --revision "src@$TAG" --with_branch_heads -D
 
 # -----------------------------------------------------------------------------
 # 5. Confirm the checked-out revision

@@ -180,7 +180,13 @@ def check_network(endpoints: tuple[str, ...] = NETWORK_ENDPOINTS, timeout: float
             request = urllib.request.Request(url, method="HEAD")
             urllib.request.urlopen(request, timeout=timeout)
             results.append(CheckResult(f"network: {url}", PASS, "reachable"))
-        except Exception as exc:  # noqa: BLE001 — any failure means unreachable
+        except urllib.error.HTTPError as exc:
+            # An HTTP status response proves the endpoint is reachable: GCS
+            # services answer bare HEAD/GET probes with 4xx by design
+            # (observed on GitHub-hosted runners: HTTP 400 from
+            # storage.googleapis.com while the actual fetch works).
+            results.append(CheckResult(f"network: {url}", PASS, f"reachable (HTTP {exc.code})"))
+        except Exception as exc:  # noqa: BLE001 — no response at all means unreachable
             results.append(CheckResult(f"network: {url}", FAIL, f"unreachable: {exc}"))
     return results
 
