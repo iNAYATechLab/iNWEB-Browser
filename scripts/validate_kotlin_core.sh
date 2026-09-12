@@ -109,6 +109,9 @@ run_module "src/core/backup" \
 run_module "src/core/sync" \
   com.inweb.browser.sync.SyncEngineTest
 
+run_module "src/core/customization" \
+  com.inweb.browser.customization.ToolbarConfiguratorTest
+
 run_module "src/core/tracking-protection" \
   com.inweb.browser.privacy.FilterListParserTest \
   com.inweb.browser.privacy.RuleMatcherTest \

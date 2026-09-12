@@ -57,7 +57,7 @@ references or depends on it.
 
 | Lever | Status / mechanism |
 |---|---|
-| Toolbar configuration | authored bottom bar today; **user-reorderable/hideable item set = Step 31 core** (pure JVM, tested) |
+| Toolbar configuration | authored bottom bar today; **user-reorderable/hideable item set = Step 31 core — implemented `src/core/customization` (25 tests, ADR-029)** |
 | Navigation controls | back/forward/reload in the bottom bar (live in authored UI) |
 | Icons / theme | Material 3 tokens; light/dark/system theme (authored UI) |
 | Font / text size | system font scale + in-app text-size setting; §49 contracts apply |
