@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 26 (Phase 9 in progress; Phases 0–8 core done)
+> Last updated: **2026-09-12** — Step 27 (Phase 9 in progress; Phases 0–8 core done)
 
 ```yaml
 project: iNWEB Browser
@@ -12,21 +12,22 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 9
 phase_title: Profiles / Sync / Backup
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 26
+step: 27
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 30 Python + 277 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 30 Python + 290 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action majors); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 9 / Step 27 — backup bundle core in Kotlin (pure JVM,
-  CI-tested): versioned iNWEB-BACKUP v=1 assembly + manifest, per-
-  entry checksums, version gating (forward-only migration, refuse
-  newer formats), restore preview model, per-entry corruption
-  tolerance — encryption stays at the Android layer (alternative if
-  directed: downloads/history surface polish).
+  Phase 9 / Step 28 — sync queue core in Kotlin (pure JVM, CI-tested,
+  §30 model): transport-agnostic append-only change log with
+  monotonic revisions, retry/backoff, last-writer-wins conflict
+  resolution with tombstones — exercised against a fake transport;
+  FUTURE INFRASTRUCTURE only, never announced as a feature (§29)
+  (alternative if directed: Phase 10 kickoff or downloads/history
+  surface polish).
 ```
 
 ## Completed
@@ -468,9 +469,26 @@ next_action: >-
     extensions 17 + offline 14 + vpn 17 + profiles 12 +
     tracking-protection 102)
 
+- [x] **Step 27 — Phase 9: backup bundle core (§32 model)** (2026-09-12)
+  - NEW MODULE `src/core/backup` (pure JVM, 13 tests): `iNWEB-BACKUP
+    v=1` line format — manifest (format/app-version/created-at/entries;
+    corruption aborts the whole restore), per-entry SHA-256 checksums
+    (platform primitive — no custom crypto), canonical payload form
+    (trailing-newline-free, exact round-trip), per-entry corruption
+    tolerance (skipped + REPORTED, never silent), version gating
+    (newer formats refused with an explicit upgrade message; older
+    formats need an explicit migration function — none exist yet),
+    restore PREVIEW (per-profile/per-store counts + warnings) before
+    any import, and the §32 no-plaintext-secrets guard: only
+    KNOWN_STORES may be bundled — unknown store names rejected at
+    build and skipped at parse (credentials/VPN keys can never enter)
+  - Kotlin total 290 across SEVEN modules (browser-shell 115 +
+    extensions 17 + offline 14 + vpn 17 + profiles 12 + backup 13 +
+    tracking-protection 102)
+
 ## In progress
 
-- (none — awaiting continuation command for Step 27)
+- (none — awaiting continuation command for Step 28)
 
 ## Not started
 
@@ -558,8 +576,8 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 - **Python: 30/30 passing** — patch-series tooling, registry validation, baseline
   parsing, string-resource validation (`python3 -m unittest discover -s tests -t .`).
-- **Kotlin: 277/277 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
-  kotlinc 2.4.20 + JUnit 4.13.2, 6 modules):
+- **Kotlin: 290/290 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
+  kotlinc 2.4.20 + JUnit 4.13.2, 7 modules):
   - `src/core/browser-shell` — 115 tests: tab navigation stack, controller
     (incl. `allTabs` switcher view), top-sites computation,
     session round-trip/corruption + manager, omnibox parsing (incl. Bengali
@@ -568,6 +586,12 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
     history (round-trips, corruption fallback, sanitization, unique ids),
     bookmark store semantics (dedupe, folders, rename/move) + file-backed
     persistent bookmarks, settings.
+  - `src/core/backup` — 13 tests: build/parse/serialize round-trips
+    (multi-profile, empty payloads), checksum verification, secret-
+    safety whitelist (build rejection + parse skip), version gating
+    (newer refused, bad headers/manifests rejected), corruption
+    tolerance (tampered entry skipped, count mismatch warning, missing
+    end marker warning), preview counts.
   - `src/core/profiles` — 12 tests: seeding (default profile, no
     reseed of loaded stores), create/rename/activate semantics, blank
     rejection, namespace routing, delete semantics (fallback active,

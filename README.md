@@ -21,8 +21,8 @@ written in Kotlin.
 
 | Item | State |
 |---|---|
-| Development phase | **Phase 9 — Profiles / Sync / Backup: in progress** (design + profiles core complete; backup core next; execution awaits B-001) — Phases 4–8 core work complete |
-| Current step | 26 |
+| Development phase | **Phase 9 — Profiles / Sync / Backup: in progress** (design + profiles & backup cores complete; execution awaits B-001) — Phases 4–8 core work complete |
+| Current step | 27 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 115 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag) |
@@ -31,9 +31,10 @@ written in Kotlin.
 | Offline core (`src/core/offline`) | **Implemented & unit-tested — 14 Kotlin tests** (§17 library: real byte quota, LRU eviction with pinning, same-URL replace, atomic quota failure, persistence seam) |
 | VPN core (`src/core/vpn`) | **Implemented & unit-tested — 17 Kotlin tests** (§15 config validation: WireGuard-style parsing, strict fields/CIDR/endpoints/keys, secrets opaque by construction) |
 | Profiles core (`src/core/profiles`) | **Implemented & unit-tested — 12 Kotlin tests** (§28: seeded default profile, monotonic never-reused ids, namespace routing contract, delete fallback + last-profile guard) |
+| Backup core (`src/core/backup`) | **Implemented & unit-tested — 13 Kotlin tests** (§32: versioned bundle, per-entry SHA-256, corruption tolerance, restore preview, known-stores-only secret guard) |
 | Android shell UI (`src/android-app`) | Authored — Compose + Material 3 (browser, tab switcher, home page with real data, onboarding, settings, downloads, history, bookmarks), bn/en strings; compiles in the Chromium build (B-001) |
 | Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — tested |
-| CI | **Live**: Python (30 tests) + registry + string parity; Kotlin core (277 tests, 6 modules); weekly upstream watch; benchmark on demand (not in CI) |
+| CI | **Live**: Python (30 tests) + registry + string parity; Kotlin core (290 tests, 7 modules); weekly upstream watch; benchmark on demand (not in CI) |
 | Build | **Not yet executed** — requires external build infrastructure (blocker B-001) |
 | Open defects | None recorded |
 
@@ -79,6 +80,7 @@ inweb-browser/
 │   ├── core/offline/                   # Pure-JVM offline library core (§17 quota + LRU eviction)
 │   ├── core/vpn/                        # Pure-JVM VPN config validation core (§15)
 │   ├── core/profiles/                    # Pure-JVM profiles core (§28 isolation contract)
+│   ├── core/backup/                      # Pure-JVM backup bundle core (§32 checksums + version gating)
 │   │   ├── build.gradle.kts
 │   │   └── src/{main,test}/kotlin/com/inweb/browser/privacy/
 │   └── android-app/src/main/        # Android shell UI (compiled by the Chromium build, ADR-009)
