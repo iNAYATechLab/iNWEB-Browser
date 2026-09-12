@@ -112,6 +112,9 @@ run_module "src/core/sync" \
 run_module "src/core/customization" \
   com.inweb.browser.customization.ToolbarConfiguratorTest
 
+run_module "src/core/notifications" \
+  com.inweb.browser.notifications.NotificationPolicyTest
+
 run_module "src/core/tracking-protection" \
   com.inweb.browser.privacy.FilterListParserTest \
   com.inweb.browser.privacy.RuleMatcherTest \

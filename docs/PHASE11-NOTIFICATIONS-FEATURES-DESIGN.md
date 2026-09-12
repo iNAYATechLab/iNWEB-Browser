@@ -37,9 +37,10 @@ not at startup.
   in-app update service would be false.
 - **Any promotional/usage nudge:** forbidden by policy.
 
-**Core scoping (future step if directed):** a pure-JVM
-`NotificationPolicy` model (event type → channel, per-channel user
-enabled/disabled, permission-requested state) — testable today; the
+**Core (implemented — Step 32):** the pure-JVM
+`NotificationPolicy` model in `src/core/notifications` — event →
+channel registry (this table, audited by its unit test), per-channel
+user enabled/disabled, lazy permission-requested state machine; the
 Android binding (channels, permissions) is patch-side.
 
 ## 2. §34 Offline games / entertainment — documented non-goal for v1
@@ -80,7 +81,7 @@ core — no lever is listed that has no mechanism behind it.
 
 ## 5. Verification strategy
 
-1. **Core (live after Step 31):** toolbar-configuration unit tests.
+1. **Core (live):** toolbar-configuration and notification-policy unit tests (Steps 31–32).
 2. **Build-time:** notification channel registration matches §1 exactly
    (a scriptable audit against the channel table); no extra channels.
 3. **On device (B-001):** no notification without a real event; every
