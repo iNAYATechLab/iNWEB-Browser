@@ -4,15 +4,15 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 29 (Phase 10 in progress; Phases 0–9 core done)
+> Last updated: **2026-09-12** — Step 30 (Phase 11 in progress; Phases 0–10 core done)
 
 ```yaml
 project: iNWEB Browser
 repository: iNAYATechLab/iNWEB-Browser
-phase: 10
-phase_title: Localization / Accessibility
+phase: 11
+phase_title: Advanced Features
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 29
+step: 30
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
@@ -21,12 +21,12 @@ ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action m
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 10 / Step 30 — close-out + Phase 11 kickoff: notifications
-  & advanced-features design (§33/§34/§23) — notification policy
-  (§41 privacy-aligned), entertainment module scoping, advanced
-  customization — each honestly scoped against what a Chromium
-  Android build supports (alternative if directed: downloads/history
-  surface polish).
+  Phase 11 / Step 31 — customization core in Kotlin (pure JVM,
+  CI-tested, §23): toolbar configuration model — user-reorderable/
+  hideable bottom-bar item set with validation (no duplicates, no
+  unknown items, all-mandatory-present) + persistence seam
+  (alternative if directed: notification policy core or downloads/
+  history surface polish).
 ```
 
 ## Completed
@@ -528,9 +528,25 @@ next_action: >-
     device-at-B-001)
   - ADR-027 recorded; Python total 38 (30 + 8)
 
+- [x] **Step 30 — Phase 11: notifications & advanced features design (§33/§34/§23)** (2026-09-12)
+  - New `docs/PHASE11-NOTIFICATIONS-FEATURES-DESIGN.md`: §33 policy —
+    minimal-by-default, real events only, every channel toggleable,
+    POST_NOTIFICATIONS requested lazily at the first REAL notification
+    (§41-aligned); v1 channel plan mapped to real event sources
+    (downloads now; security/VPN when their patches land — NO stub
+    channels); explicitly ABSENT: sync (no backend, §29), self-update
+    (no infrastructure), promotional/engagement notifications (policy
+    violation). §34 entertainment = documented NON-GOAL for v1 (base
+    APK stays lean, §7); any future version = separate installable
+    component with its own APK-size accounting. §23 customization
+    table — every lever mapped to a REAL existing mechanism (no
+    lever without a mechanism); toolbar configuration = Step 31 core
+  - ADR-028 recorded; Phase 10 closed (gate + design live; device
+    accessibility verification B-001-gated)
+
 ## In progress
 
-- (none — awaiting continuation command for Step 30)
+- (none — awaiting continuation command for Step 31)
 
 ## Not started
 
@@ -607,6 +623,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-025 | 2026-09-12 | VPN = real VpnService + WireGuard client, bring-your-own-server (iNWEB operates no servers; hosted service would need its own §15/§20 design first); biometrics = BiometricPrompt + Keystore envelope so data is ACTUALLY encrypted; 2FA absent until an auth backend exists; encryption = platform primitives only, no hand-rolled crypto, no hard-coded secrets | §15/§25/§26/§27 honesty rules made architectural; no cosmetic toggles, no claims without infrastructure |
 | ADR-026 | 2026-09-12 | Profiles isolate at the storage-namespace level (per-profile store dirs + Chromium user-data dirs; cookies never shared); cloud sync is a documented absence (§29) — the §30 queue/conflict model is transport-agnostic future infrastructure, not a feature; backups are versioned, checksummed, preview-gated, forward-migrating bundles encrypted at the Android layer; app data in SQLite, Chromium storage never duplicated | §28 isolation made structural; §29/§30/§31/§32 honesty rules enforced in the data model |
 | ADR-027 | 2026-09-12 | Localization is enforced by CI gates, not convention: bidirectional key/placeholder parity (existing) + source-level externalization of the authored UI (new) with documented exemptions and a reviewed escape hatch; bn-BD is authored, never machine-translated; §49 accessibility is a binding authoring contract + mandatory patch-review gate, device-verified at B-001 | §36/§49 rules become merge-blocking checks; structure proven by CI, prose quality and on-device accessibility honestly labeled as human/device deliverables |
+| ADR-028 | 2026-09-12 | Notifications report real user-relevant events only — minimal by default, lazily-requested permission, every channel toggleable, zero promotional content; absent channels (sync, self-update) are stated, never stubbed; the entertainment module is a non-goal for v1 (base APK stays lean); every §23 customization lever must map to a real mechanism | §33/§34/§41/§7 honesty rules; no engagement bait, no claims without infrastructure |
 
 ## Build status
 
