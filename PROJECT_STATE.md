@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 42 (Phase 12 authoring complete; Phases 0–11 complete)
+> Last updated: **2026-09-12** — Step 43 (Phase 12 authoring complete; Phases 0–11 complete)
 
 ```yaml
 project: iNWEB Browser
@@ -12,7 +12,7 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 12
 phase_title: Production Hardening
 phase_status: authoring_complete   # all 5 design-order items done; every remaining Phase 12 deliverable is B-001-gated (device matrix)
-step: 42
+step: 43
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
@@ -21,18 +21,16 @@ ci_status: authoring-pipeline-live # Python + Kotlin core jobs + 5 gates (regist
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 12 authoring is complete. Proposed Step 43 — §49
-  source-level accessibility audit of the authored surfaces
-  (src/android-app): walk every screen/composable against the §49
-  authoring contracts + PHASE10 §2 (semantics: toggleable/Role usage,
-  contentDescription coverage, state description, heading/labeling
-  structure); record findings as a tracked register and FIX the gaps
-  found — device verification (TalkBack, 200% scale, contrast,
-  touch targets) stays on the D10-* matrix rows (alternative if
-  directed: G-07 filter-list content checksum pinning as a
-  tracking-protection core-hardening step, or B-001 build-host
-  provisioning assistance — walking the exact BUILD-INFRASTRUCTURE.md
-  setup so the first real compile can begin).
+  Proposed Step 44 — G-07 filter-list content checksum pinning
+  (tracking-protection core hardening, closes a threat-register gap):
+  SHA-256 content verification in the filter-list update path — the
+  list body's checksum is computed on download, stored in the cache
+  metadata, and re-verified on load/refresh (detects corruption and
+  tampering beyond the current freshness metadata); pure-JVM core +
+  tests, no device dependency (alternative if directed: B-001
+  build-host provisioning assistance — walking the exact
+  BUILD-INFRASTRUCTURE.md setup so the first real compile can begin,
+  or a §59 full-repository documentation accuracy pass).
 ```
 
 ## Completed
@@ -909,9 +907,36 @@ next_action: >-
   - Docs-only change — no CI run by the paths-filter's design (as
     with Steps 36/40/41)
 
+- [x] **Step 43 — §49 source-level accessibility audit of the authored surfaces + fixes** (2026-09-12)
+  - Walked all 13 ui/ files + MainActivity against the §49 contracts
+    (PHASE10 §3); findings register recorded in
+    docs/ACCESSIBILITY-AUDIT.md and FIXED in the same step
+  - 2 VIOLATIONS fixed: A-1 tab-close button was a 28dp touch target
+    (§49 minimum 48dp) — now the default 48dp; A-2 light-theme primary
+    #00897B measured 4.22:1 as text / 4.34:1 for white-on-primary
+    (WCAG AA needs 4.5:1) — palette primary darkened to #00796B
+    (5.16:1 / 5.28:1; dark theme 9.8:1 unchanged), computed ratios
+    recorded in Theme.kt
+  - 5 GAPS fixed: A-3 onboarding engine rows now whole-row
+    selectable(Role.RadioButton); A-4 all switch rows (notification
+    channels, ask-before-download, toolbar visibility) now whole-row
+    toggleable(Role.Switch) with display-only Switch; A-5 tabs badge
+    announces the localized tabs_count sentence, not a bare digit;
+    A-6 heading semantics on 9 section headers/headlines; A-7 the
+    onboarding step indicator is a polite live region
+  - No new strings needed (A-5 reuses the existing tabs_count) —
+    en/bn parity untouched; PASS table recorded (icon labels, checkbox
+    pattern, sp text, M3 tokens, ProgressBarRangeInfo, focus order,
+    zero animations = trivially reduced-motion compliant)
+  - Honest boundary: source-level proof only — TalkBack, 200% scale,
+    measured contrast, D-pad stay on device-matrix rows D10-1…D10-5
+  - Gates green: structural 22 files, externalization 0, strings,
+    registry, Python 50/50, Kotlin 404 (11 modules) — src/ changed,
+    so CI runs on push
+
 ## In progress
 
-- (none — awaiting continuation command for Step 43)
+- (none — awaiting continuation command for Step 44)
 
 ## Not started
 

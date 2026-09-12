@@ -22,7 +22,7 @@ written in Kotlin.
 | Item | State |
 |---|---|
 | Development phase | **Phase 12 — Production Hardening: authoring complete** (all five design-order items: storage inventory gate, threat-model review, clear-data core + surface, §47 versioning policy, device-verification matrix, performance budgets, data-safety draft; plus §23 settings binding — every remaining Phase 12 deliverable is B-001-gated; Phases 0–11 core work complete) |
-| Current step | 42 |
+| Current step | 43 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 150 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag, page-zoom §23 with per-site overrides + Chromium preset table, download preferences §23) |
@@ -36,7 +36,7 @@ written in Kotlin.
 | Customization core (`src/core/customization`) | **Implemented & unit-tested — 25 Kotlin tests** (§23 toolbar configuration: item universe mirrors the authored bar, strict validation with all offenders reported, corrupt→default recovery, persistence seam) |
 | Notification-policy core (`src/core/notifications`) | **Implemented & unit-tested — 23 Kotlin tests** (§33: registry = design §1 table exactly (audited), real-event-only decisions with no generic notify path, lazy POST_NOTIFICATIONS state machine, per-channel toggles, corrupt→default recovery) |
 | Clear-data core (`src/core/clear-data`) | **Implemented & unit-tested — 14 Kotlin tests** (Phase 12: item universe = the storage inventory's clear column, dry-run previews with real counts, execution through real store APIs, unbound items never silently skipped; first cross-module core via the script's `--deps` mechanism) |
-| Android shell UI (`src/android-app`) | Authored — Compose + Material 3 (browser with configuration-driven bottom bar §23, tab switcher, home page with real data, onboarding, settings incl. toolbar customization §23 + page-zoom surface with core-validated presets + download preferences §23 with system SAF folder picker + notification toggles §33 + clear-browsing-data §39 with real preview counts, downloads, history, bookmarks), bn/en strings; compiles in the Chromium build (B-001); structural gate in CI |
+| Android shell UI (`src/android-app`) | Authored — Compose + Material 3 (browser with configuration-driven bottom bar §23, tab switcher, home page with real data, onboarding, settings incl. toolbar customization §23 + page-zoom surface with core-validated presets + download preferences §23 with system SAF folder picker + notification toggles §33 + clear-browsing-data §39 with real preview counts, downloads, history, bookmarks), bn/en strings; §49 accessibility audit passed (whole-row toggle semantics, heading semantics, 48dp touch targets, AA-contrast palette); compiles in the Chromium build (B-001); structural gate in CI |
 | Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — tested |
 | CI | **Live**: Python (50 tests) + registry + storage-inventory gate + string parity + UI externalization gate; Kotlin core (404 tests, 11 modules, cross-module `--deps` support) + authored-source structural gate; weekly upstream watch; benchmark on demand (not in CI) |
 | Build | **Not yet executed** — requires external build infrastructure (blocker B-001) |
@@ -139,6 +139,7 @@ git-ignored here by design (ADR-004): the tree is always reproducible as
 | [`docs/DEVICE-VERIFICATION-MATRIX.md`](docs/DEVICE-VERIFICATION-MATRIX.md) | The B-001 acceptance checklist: Stage-0 build/patch gates, per-phase device rows (each citing its source design), release gates, G-01…G-10 closure map, empty verification log — nothing verified until the first real build |
 | [`docs/PERFORMANCE-BUDGETS.md`](docs/PERFORMANCE-BUDGETS.md) | §9/§21/§52/§7 budget table — verification targets never claims (P-1…P-9 with their device-matrix verification rows), measured-log discipline, vanilla-same-tag comparison rule |
 | [`docs/DATA-SAFETY-DRAFT.md`](docs/DATA-SAFETY-DRAFT.md) | Store-readiness Play data-safety draft generated from the 23-surface storage inventory: no collection, no sharing, per-surface deletion story, pending-patch rows stated as pending |
+| [`docs/ACCESSIBILITY-AUDIT.md`](docs/ACCESSIBILITY-AUDIT.md) | §49 source-level accessibility audit of the authored UI: 7 findings (2 violations) fixed, PASS evidence table, device verification mapped to D10-* |
 
 ## Development model
 
