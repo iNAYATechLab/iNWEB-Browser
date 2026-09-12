@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 44 (Phase 12 authoring complete; Phases 0–11 complete)
+> Last updated: **2026-09-12** — Step 45 (Phase 12 authoring complete; Phases 0–11 complete)
 
 ```yaml
 project: iNWEB Browser
@@ -12,26 +12,29 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 12
 phase_title: Production Hardening
 phase_status: authoring_complete   # all 5 design-order items done; every remaining Phase 12 deliverable is B-001-gated (device matrix)
-step: 44
+step: 45
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 50 Python + 414 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 72 Python + 414 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs + 5 gates (registry, strings, externalization, structure, storage inventory); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Authoring-side hardening is complete (Phase 12 items 1-5, §49
-  audit, G-07 closed). Proposed Step 45 — B-001 build-host
-  provisioning assistance: walk the exact BUILD-INFRASTRUCTURE.md
-  setup with the user so the first real Chromium compile can begin —
-  hardware/VM specification check, disk + depot_tools + pinned
-  baseline fetch (fetch_chromium.sh), the Docker build container, GN
-  args, and the first Stage-0 matrix pass (B-1..B-4) against the
-  empty patch series (alternative if directed: a §59 full-repository
-  documentation accuracy pass, or the authored-app About surface —
-  §39 About section showing app version + Chromium baseline from the
-  VERSIONING.md registry fields).
+  B-001 tooling is complete: the user provisions the build host per
+  docs/BUILD-HOST-RUNBOOK.md §1 and runs scripts/check_build_host.py
+  (step 2) — when it reports green, fetch_chromium.sh + build_android.sh
+  produce the first artifact and close matrix rows B-1..B-4. Meanwhile
+  (authoring side): proposed Step 46 — authored-app About surface
+  (§39 About): a Settings > About section that is honest by
+  construction — app name, "development build — no release exists"
+  (the VERSIONING registry is empty; versionName appears only with the
+  first tag), the pinned Chromium baseline (single source:
+  config/chromium/BASELINE, surfaced as a resource the upstream-watch
+  keeps in sync), and a link to the versioning policy; en+bn strings
+  same commit (alternative if directed: a §59 full-repository
+  documentation accuracy pass, or PAUSE authoring until the build
+  host is provisioned and Stage-0 results return).
 ```
 
 ## Completed
@@ -959,9 +962,41 @@ next_action: >-
     no upstream list signs content and no such claim is made (§57);
     on-device fault injection stays on D12-1
 
+- [x] **Step 45 — B-001 build-host provisioning assistance (pre-flight checker + runbook)** (2026-09-12)
+  - New `scripts/check_build_host.py`: verifies EVERY
+    BUILD-INFRASTRUCTURE §2 row on the host BEFORE the multi-hour
+    fetch — OS/arch (Linux x86-64 mandatory), CPU (16/32), RAM
+    (64/128 GB), disk (300/500 GB, workspace filesystem), tools
+    (git/python3 mandatory, curl), depot_tools (INFO: the fetch
+    script clones it), Docker (WARN), self-hosted-runner reminder,
+    repository completeness (pinned baseline + GN args + scripts),
+    and outbound HTTPS reachability of the four endpoints
+    (--skip-network to skip); every row cites its spec line; exit
+    0/1/2; +22 unit tests (Python 50 -> 72): meminfo parsing, spec
+    band boundaries, disk-probe ancestor walk, os-release parsing,
+    Ubuntu 22.04/24.04 classification, repo completeness, mocked
+    network reachability, report counts/verdicts, structural smoke
+    run on the real repo
+  - Smoke-run on the authoring sandbox: honest FAIL (2 cores, 1.9
+    GiB RAM, 19.6 GiB disk — exit 1) — measured proof that the
+    sandbox is not the build host (B-001, ADR-003); repo/baseline
+    rows PASS
+  - New `docs/BUILD-HOST-RUNBOOK.md`: the operational walkthrough —
+    §1 provision per spec, §2 pre-flight, §3 fetch (pinned
+    depot_tools + no-history checkout + gclient sync at tag,
+    resumable), §4 first build (honest scoping: upstream
+    chrome_public_apk until the ui/ patches land; apply/verify +
+    reproducibility stamp), §5 Stage-0 matrix recording (B-1..B-4,
+    verification log, defects never silent), §6 optional self-hosted
+    runner (+ security notes), §7 what returns to the repo, §8
+    honest boundaries (incl. check_baseline.py drift note)
+  - BUILD-INFRASTRUCTURE.md §7 records both; no CI run needed for
+    docs but scripts/+tests/ changed -> CI runs and covers the new
+    tests
+
 ## In progress
 
-- (none — awaiting continuation command for Step 45)
+- (none — awaiting continuation command for Step 46)
 
 ## Not started
 
