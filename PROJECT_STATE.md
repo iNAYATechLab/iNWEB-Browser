@@ -4,28 +4,29 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 28 (Phase 9 core complete; awaiting Phase 10)
+> Last updated: **2026-09-12** — Step 29 (Phase 10 in progress; Phases 0–9 core done)
 
 ```yaml
 project: iNWEB Browser
 repository: iNAYATechLab/iNWEB-Browser
-phase: 9
-phase_title: Profiles / Sync / Backup
+phase: 10
+phase_title: Localization / Accessibility
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 28
+step: 29
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 30 Python + 302 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 38 Python + 302 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action majors); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 10 / Step 29 — localization & accessibility design (§36/§49)
-  + Phase 9 close-out: Bengali/English coverage policy, string-parity
-  automation expansion, TalkBack semantics & content-labeling
-  contract, layout/boundary testing scope (alternative if directed:
-  downloads/history surface polish).
+  Phase 10 / Step 30 — close-out + Phase 11 kickoff: notifications
+  & advanced-features design (§33/§34/§23) — notification policy
+  (§41 privacy-aligned), entertainment module scoping, advanced
+  customization — each honestly scoped against what a Chromium
+  Android build supports (alternative if directed: downloads/history
+  surface polish).
 ```
 
 ## Completed
@@ -505,9 +506,31 @@ next_action: >-
     extensions 17 + offline 14 + vpn 17 + profiles 12 + backup 13 +
     sync 12 + tracking-protection 102)
 
+- [x] **Step 29 — Phase 10: localization & accessibility design + CI gate (§36/§49)** (2026-09-12)
+  - NEW `scripts/validate_localization.py` — the §36 externalization
+    gate, LIVE in CI: authored UI (ui/**, MainActivity.kt) may not
+    contain hardcoded user-visible literals (Text positional +
+    text/label/title/contentDescription/description/placeholder
+    named params); documented exemptions (empty, digits, ${}
+    interpolation, reviewed // NON-LOCALIZED hatch reported as a CI
+    note); 8 unit tests for the gate itself (flags, exemptions,
+    scope, entry file, missing-UI error)
+  - Current authored UI: ZERO violations, ZERO escape hatches — fully
+    externalized with full bn-BD parity (validate_strings continues
+    to enforce bidirectional key + placeholder parity)
+  - New `docs/PHASE10-LOCALIZATION-ACCESSIBILITY-DESIGN.md`: §36
+    policy (en+bn-BD first-class, same-commit parity, plurals/locale
+    formatters, no machine-translation claims, prose quality =
+    human-review deliverable) + §49 authoring contracts (TalkBack
+    labels, 200% font scale, WCAG AA contrast via M3 tokens only,
+    48dp targets, keyboard/D-pad, reduced motion) as mandatory review
+    gates on every ui/settings patch; verification matrix (CI-now vs
+    device-at-B-001)
+  - ADR-027 recorded; Python total 38 (30 + 8)
+
 ## In progress
 
-- (none — awaiting continuation command for Step 29)
+- (none — awaiting continuation command for Step 30)
 
 ## Not started
 
@@ -583,6 +606,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-024 | 2026-09-12 | Offline strategy: reuse upstream DOM distiller (reader mode), MHTML offline pages (snapshots), and the browsing-data remover (cache); offline snapshots are USER DATA distinct from HTTP cache (clear-cache never deletes them); data saver = rule-class mode over the iNWEB filter engine counting REAL avoided requests; proxy/compression is a documented non-goal (§19/§20 truthfulness) | No client-only HTTPS compression claims ever; separation enforced in the data model, not just UI; one decision path reused for data saving |
 | ADR-025 | 2026-09-12 | VPN = real VpnService + WireGuard client, bring-your-own-server (iNWEB operates no servers; hosted service would need its own §15/§20 design first); biometrics = BiometricPrompt + Keystore envelope so data is ACTUALLY encrypted; 2FA absent until an auth backend exists; encryption = platform primitives only, no hand-rolled crypto, no hard-coded secrets | §15/§25/§26/§27 honesty rules made architectural; no cosmetic toggles, no claims without infrastructure |
 | ADR-026 | 2026-09-12 | Profiles isolate at the storage-namespace level (per-profile store dirs + Chromium user-data dirs; cookies never shared); cloud sync is a documented absence (§29) — the §30 queue/conflict model is transport-agnostic future infrastructure, not a feature; backups are versioned, checksummed, preview-gated, forward-migrating bundles encrypted at the Android layer; app data in SQLite, Chromium storage never duplicated | §28 isolation made structural; §29/§30/§31/§32 honesty rules enforced in the data model |
+| ADR-027 | 2026-09-12 | Localization is enforced by CI gates, not convention: bidirectional key/placeholder parity (existing) + source-level externalization of the authored UI (new) with documented exemptions and a reviewed escape hatch; bn-BD is authored, never machine-translated; §49 accessibility is a binding authoring contract + mandatory patch-review gate, device-verified at B-001 | §36/§49 rules become merge-blocking checks; structure proven by CI, prose quality and on-device accessibility honestly labeled as human/device deliverables |
 
 ## Build status
 

@@ -21,8 +21,8 @@ written in Kotlin.
 
 | Item | State |
 |---|---|
-| Development phase | **Phase 9 core work complete** (profiles, backup, sync-queue model; patches await B-001) — next: Phase 10 Localization / Accessibility |
-| Current step | 28 |
+| Development phase | **Phase 10 — Localization / Accessibility: in progress** (design + CI externalization gate live; device verification awaits B-001) — Phases 0–9 core work complete |
+| Current step | 29 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 115 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag) |
@@ -35,7 +35,7 @@ written in Kotlin.
 | Sync core (`src/core/sync`) | **Implemented & unit-tested — 12 Kotlin tests** (§30 model: monotonic change log, backoff/retry with explicit failure reporting, LWW conflicts with tombstones — future infrastructure, §29) |
 | Android shell UI (`src/android-app`) | Authored — Compose + Material 3 (browser, tab switcher, home page with real data, onboarding, settings, downloads, history, bookmarks), bn/en strings; compiles in the Chromium build (B-001) |
 | Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — tested |
-| CI | **Live**: Python (30 tests) + registry + string parity; Kotlin core (302 tests, 8 modules); weekly upstream watch; benchmark on demand (not in CI) |
+| CI | **Live**: Python (38 tests) + registry + string parity + UI externalization gate; Kotlin core (302 tests, 8 modules); weekly upstream watch; benchmark on demand (not in CI) |
 | Build | **Not yet executed** — requires external build infrastructure (blocker B-001) |
 | Open defects | None recorded |
 
@@ -126,6 +126,7 @@ git-ignored here by design (ADR-004): the tree is always reproducible as
 | [`docs/PHASE7-OFFLINE-DESIGN.md`](docs/PHASE7-OFFLINE-DESIGN.md) | Offline reading, snapshots, cache controls, honest data saver — patch plan |
 | [`docs/PHASE8-VPN-SECURITY-DESIGN.md`](docs/PHASE8-VPN-SECURITY-DESIGN.md) | Bring-your-own VPN, biometric app lock, encryption model, documented 2FA absence |
 | [`docs/PHASE9-PROFILES-SYNC-DESIGN.md`](docs/PHASE9-PROFILES-SYNC-DESIGN.md) | Isolated profiles, documented sync absence, queue model, encrypted backup format |
+| [`docs/PHASE10-LOCALIZATION-ACCESSIBILITY-DESIGN.md`](docs/PHASE10-LOCALIZATION-ACCESSIBILITY-DESIGN.md) | bn-BD/en policy, CI externalization gate, §49 authoring contracts, verification matrix |
 | [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md) | Security threat model (living document) |
 
 ## Development model
