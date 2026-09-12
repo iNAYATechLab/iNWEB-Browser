@@ -1,11 +1,11 @@
 # Phase 12 — Production Hardening Design
 
 **Status:** authored design; the §2 inventory is live (Step 35) and
-items 1–3 of the order below are implemented (Step 36 threat review,
-Steps 37–38 clear-data core + surface, Step 40 versioning policy —
-plus the Step 39 §23 settings binding from the review's gap register);
-remaining: device-verification matrix, performance budgets +
-data-safety draft.
+items 1–4 of the order below are implemented (Step 36 threat review,
+Steps 37–38 clear-data core + surface, Step 40 versioning policy,
+Step 41 device-verification matrix — plus the Step 39 §23 settings
+binding from the review's gap register); remaining: performance
+budgets + data-safety draft.
 Phase 12 is defined by MASTER-SPEC §53: security audit, performance
 audit, regression testing, crash testing, release engineering,
 documentation, store readiness.
@@ -62,9 +62,12 @@ documentation, store readiness.
    rule with an authoritative release registry, annotated `v<semver>`
    tag naming, and the baseline-independence rule (ADR-001). Written
    before the first build tag exists, exactly as required.
-4. **Device-verification matrix** (docs): the B-001 checklist per
-   phase (already partially in phase designs) consolidated into one
-   runnable checklist.
+4. ~~**Device-verification matrix**~~ — **done (Step 41)**:
+   [`docs/DEVICE-VERIFICATION-MATRIX.md`](DEVICE-VERIFICATION-MATRIX.md)
+   — Stage-0 build/patch gates, per-phase device rows citing their
+   source designs, release gates per VERSIONING.md, the G-01…G-10
+   closure map, and an empty verification log (nothing is verified
+   until B-001 — stated, not hidden).
 5. Performance budgets table + store-readiness data-safety draft.
 
 ## 4. Honest boundaries
