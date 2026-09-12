@@ -103,6 +103,9 @@ run_module "src/core/vpn" \
 run_module "src/core/profiles" \
   com.inweb.browser.profiles.ProfileRegistryTest
 
+run_module "src/core/backup" \
+  com.inweb.browser.backup.BackupBundleTest
+
 run_module "src/core/tracking-protection" \
   com.inweb.browser.privacy.FilterListParserTest \
   com.inweb.browser.privacy.RuleMatcherTest \
