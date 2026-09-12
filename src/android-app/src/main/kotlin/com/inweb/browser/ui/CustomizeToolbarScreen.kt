@@ -2,6 +2,7 @@ package com.inweb.browser.ui
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -21,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -87,8 +89,18 @@ private fun ToolbarEntryRow(
     onVisibilityChange: (Boolean) -> Unit,
 ) {
     val visibilityLabel = stringResource(R.string.toolbar_item_visibility)
+    // §49: the whole row is one switch target (mandatory items: the
+    // toggle is disabled with the row); the switch itself is
+    // display-only (audit finding A-4).
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth()
+            .toggleable(
+                value = entry.visible,
+                enabled = !entry.item.mandatory,
+                role = Role.Switch,
+                onValueChange = onVisibilityChange,
+            )
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -118,7 +130,7 @@ private fun ToolbarEntryRow(
         }
         Switch(
             checked = entry.visible,
-            onCheckedChange = onVisibilityChange,
+            onCheckedChange = null,
             enabled = !entry.item.mandatory,
             modifier = Modifier.semantics { contentDescription = visibilityLabel },
         )

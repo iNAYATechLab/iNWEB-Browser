@@ -89,9 +89,14 @@ private fun ToolbarItemButton(item: ToolbarItem, viewModel: BrowserViewModel, mo
             BadgedBox(
                 badge = { Badge { androidx.compose.material3.Text("${viewModel.tabIds.size}") } },
             ) {
+                // §49: the open-tab count is announced as the localized
+                // sentence, not a bare digit (audit finding A-5).
                 Icon(
                     imageVector = Icons.Filled.Tab,
-                    contentDescription = stringResource(R.string.action_tabs),
+                    contentDescription = stringResource(
+                        R.string.tabs_count,
+                        viewModel.tabIds.size,
+                    ),
                 )
             }
         }

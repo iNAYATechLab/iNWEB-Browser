@@ -22,6 +22,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.inweb.browser.BrowserViewModel
 import com.inweb.browser.R
@@ -64,6 +66,7 @@ fun ZoomSettingsScreen(viewModel: BrowserViewModel) {
             Text(
                 text = stringResource(R.string.zoom_default_factor),
                 style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.semantics { heading() },
             )
             for (factor in ZoomPreferences.PRESET_FACTORS) {
                 SelectableRow(
@@ -76,7 +79,7 @@ fun ZoomSettingsScreen(viewModel: BrowserViewModel) {
             Text(
                 text = stringResource(R.string.zoom_site_overrides),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 24.dp),
+                modifier = Modifier.padding(top = 24.dp).semantics { heading() },
             )
             val siteZooms = viewModel.zoomPreferences.siteZooms.entries.sortedBy { it.key }
             if (siteZooms.isEmpty()) {

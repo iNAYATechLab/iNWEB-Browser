@@ -138,7 +138,9 @@ private fun TabCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
-                IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
+                // §49 touch accessibility: full 48dp touch target (the
+                // compact 28dp sizing was an audit finding, A-1).
+                IconButton(onClick = onClose) {
                     Icon(
                         imageVector = Icons.Filled.Close,
                         contentDescription = stringResource(R.string.action_close_tab),

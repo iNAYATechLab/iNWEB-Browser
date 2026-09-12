@@ -9,7 +9,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 // iNWEB brand palette — teal accent family (Material 3 color roles).
-private val INWEB_PRIMARY = Color(0xFF00897B)
+//
+// §49 contrast (PHASE10 §3.4, WCAG AA 4.5:1): teal-600 (0xFF00897B)
+// measured only 4.22:1 as text on the light background and 4.34:1 for
+// white onPrimary buttons — below AA. Teal-700 (0xFF00796B) measures
+// 5.16:1 (text on background) and 5.28:1 (white on primary); the dark
+// theme primary measures 9.8:1 (audit finding A-2, unchanged).
+private val INWEB_PRIMARY = Color(0xFF00796B)
 private val INWEB_ON_PRIMARY = Color(0xFFFFFFFF)
 private val INWEB_PRIMARY_CONTAINER = Color(0xFFB2DFDB)
 private val INWEB_ON_PRIMARY_CONTAINER = Color(0xFF00201C)

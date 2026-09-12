@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -27,6 +28,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.inweb.browser.BrowserViewModel
@@ -91,6 +97,8 @@ fun OnboardingScreen(viewModel: BrowserViewModel) {
                 text = stringResource(R.string.onboarding_step, step + 1, 2),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                // §49: step changes announce themselves (audit finding A-7).
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             )
             Button(
                 onClick = {
@@ -124,6 +132,7 @@ private fun WelcomeStep() {
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.semantics { heading() },
         )
         Text(
             text = stringResource(R.string.onboarding_welcome_text),
@@ -170,6 +179,7 @@ private fun EngineChoiceStep(
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.semantics { heading() },
         )
         Text(
             text = stringResource(R.string.onboarding_search_text),
@@ -178,14 +188,21 @@ private fun EngineChoiceStep(
         )
         Spacer(modifier = Modifier.height(12.dp))
         engines.forEach { engine ->
+            // §49: the WHOLE row is the touch target with radio-button
+            // semantics; the label is never a separate dead zone
+            // (audit finding A-3).
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().selectable(
+                    selected = engine.id == selectedEngineId,
+                    role = Role.RadioButton,
+                    onClick = { onSelect(engine.id) },
+                ),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 RadioButton(
                     selected = engine.id == selectedEngineId,
-                    onClick = { onSelect(engine.id) },
+                    onClick = null,
                 )
                 Text(
                     text = engine.name,

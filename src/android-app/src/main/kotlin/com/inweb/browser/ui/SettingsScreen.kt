@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -27,6 +28,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.inweb.browser.BrowserViewModel
@@ -72,6 +76,7 @@ fun SettingsScreen(viewModel: BrowserViewModel) {
             Text(
                 text = stringResource(R.string.settings_search_engine),
                 style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.semantics { heading() },
             )
             for (engine in SearchEngine.DEFAULTS) {
                 SelectableRow(
@@ -84,7 +89,7 @@ fun SettingsScreen(viewModel: BrowserViewModel) {
             Text(
                 text = stringResource(R.string.settings_theme),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 24.dp),
+                modifier = Modifier.padding(top = 24.dp).semantics { heading() },
             )
             for (mode in listOf(ThemeMode.SYSTEM, ThemeMode.LIGHT, ThemeMode.DARK)) {
                 SelectableRow(
@@ -119,7 +124,7 @@ fun SettingsScreen(viewModel: BrowserViewModel) {
             Text(
                 text = stringResource(R.string.settings_notifications),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 24.dp),
+                modifier = Modifier.padding(top = 24.dp).semantics { heading() },
             )
             Text(
                 text = stringResource(R.string.notif_policy_caption),
@@ -169,10 +174,16 @@ private fun DownloadsSection(viewModel: BrowserViewModel) {
     Text(
         text = stringResource(R.string.settings_downloads),
         style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(top = 24.dp),
+        modifier = Modifier.padding(top = 24.dp).semantics { heading() },
     )
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth()
+            .toggleable(
+                value = viewModel.downloadPreferences.askBeforeDownload,
+                role = Role.Switch,
+                onValueChange = { viewModel.setAskBeforeDownload(it) },
+            )
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -182,7 +193,7 @@ private fun DownloadsSection(viewModel: BrowserViewModel) {
         )
         Switch(
             checked = viewModel.downloadPreferences.askBeforeDownload,
-            onCheckedChange = { viewModel.setAskBeforeDownload(it) },
+            onCheckedChange = null,
         )
     }
     Row(
@@ -262,8 +273,16 @@ private fun NotificationChannelRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
+    // §49: the whole row is one switch target with its label; the
+    // switch itself is display-only (audit finding A-4).
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth()
+            .toggleable(
+                value = checked,
+                role = Role.Switch,
+                onValueChange = onCheckedChange,
+            )
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -271,7 +290,7 @@ private fun NotificationChannelRow(
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f),
         )
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(checked = checked, onCheckedChange = null)
     }
 }
 
