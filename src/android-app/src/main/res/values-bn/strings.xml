@@ -129,6 +129,11 @@
     <string name="download_folder_system">সিস্টেম ডাউনলোড ফোল্ডার</string>
     <string name="download_folder_reset">সিস্টেম ডাউনলোড ফোল্ডার ব্যবহার করুন</string>
 
+    <!-- পরিচিতি (§39) -->
+    <string name="about_version_state">ডেভেলপমেন্ট বিল্ড — এখনো কোনো রিলিজ নেই</string>
+    <string name="about_version_note">ভার্সন নম্বর প্রথম ট্যাগকৃত রিলিজের সাথে আসবে।</string>
+    <string name="about_chromium_baseline">Chromium বেসলাইন</string>
+
     <!-- Engine integration (explicit, honest binding-point label) -->
     <string name="engine_binding_point">এই বিল্ড কনফিগারেশনে Chromium কনটেন্ট সারফেস যুক্ত নেই। ইঞ্জিন অ্যাডাপ্টার Chromium বিল্ডের সাথে আসবে (ইন্টিগ্রেশন প্ল্যান দেখুন)।</string>
 </resources>

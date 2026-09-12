@@ -132,6 +132,14 @@
     <string name="download_folder_system">System Downloads folder</string>
     <string name="download_folder_reset">Use system Downloads folder</string>
 
+    <!-- About (§39) — honest by construction; the baseline resource below
+         MIRRORS config/chromium/BASELINE and is CI-enforced in sync by
+         scripts/validate_strings.py (update it with every baseline refresh). -->
+    <string name="about_version_state">Development build — no release exists yet</string>
+    <string name="about_version_note">The version number appears with the first tagged release.</string>
+    <string name="about_chromium_baseline">Chromium baseline</string>
+    <string name="chromium_baseline" translatable="false">154.0.8037.21</string>
+
     <!-- Engine integration (explicit, honest binding-point label) -->
     <string name="engine_binding_point">Chromium content surface is not bound in this build configuration. The engine adapter ships with the Chromium build (see the integration plan).</string>
 </resources>

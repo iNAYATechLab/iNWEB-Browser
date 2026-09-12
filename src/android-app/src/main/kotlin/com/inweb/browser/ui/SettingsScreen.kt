@@ -138,6 +138,13 @@ fun SettingsScreen(viewModel: BrowserViewModel) {
                     onCheckedChange = { viewModel.setNotificationChannelEnabled(channel, it) },
                 )
             }
+
+            // --- About (§39 — last section per the spec's ordering) -------------
+            SettingsNavRow(
+                label = stringResource(R.string.settings_about),
+                onClick = { viewModel.openAbout() },
+                modifier = Modifier.padding(top = 24.dp),
+            )
         }
     }
 }

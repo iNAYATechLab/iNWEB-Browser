@@ -34,6 +34,7 @@ fun BrowserScreen(viewModel: BrowserViewModel = remember { BrowserViewModel() })
         Screen.CUSTOMIZE_TOOLBAR -> CustomizeToolbarScreen(viewModel)
         Screen.CLEAR_DATA -> ClearDataScreen(viewModel)
         Screen.ZOOM_SETTINGS -> ZoomSettingsScreen(viewModel)
+        Screen.ABOUT -> AboutScreen(viewModel)
     }
 }
 

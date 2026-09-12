@@ -114,5 +114,57 @@ class ValidateStringsTestCase(unittest.TestCase):
         self.assertTrue(any("baseline strings file missing" in e for e in errors))
 
 
+class AboutBaselineMirrorTestCase(unittest.TestCase):
+    """The §39 About surface's chromium_baseline resource must mirror the pinned tag."""
+
+    def setUp(self):
+        import shutil
+
+        self.tmp = tempfile.mkdtemp(prefix="inweb-mirror-")
+        self.res = os.path.join(self.tmp, "res")
+        self.baseline = os.path.join(self.tmp, "BASELINE")
+        self._shutil = shutil
+
+    def tearDown(self):
+        self._shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def make(self, resource_line, tag="154.0.8037.21"):
+        write(
+            os.path.join(self.res, "values", "strings.xml"),
+            '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n'
+            + resource_line
+            + "\n</resources>\n",
+        )
+        write(self.baseline, f"# comment\nCHROMIUM_TAG={tag}\nPINNED_ON=2026-09-12\n")
+
+    def test_synced_mirror_passes(self):
+        self.make('<string name="chromium_baseline" translatable="false">154.0.8037.21</string>')
+        self.assertEqual([], validate_strings.check_about_baseline(self.res, self.baseline))
+
+    def test_missing_resource_is_an_error(self):
+        self.make('<string name="other">x</string>')
+        errors = validate_strings.check_about_baseline(self.res, self.baseline)
+        self.assertEqual(1, len(errors))
+        self.assertIn("must define", errors[0])
+
+    def test_drifted_value_reports_both_sides(self):
+        self.make('<string name="chromium_baseline" translatable="false">153.0.0.1</string>')
+        errors = validate_strings.check_about_baseline(self.res, self.baseline)
+        self.assertEqual(1, len(errors))
+        self.assertIn("153.0.0.1", errors[0])
+        self.assertIn("154.0.8037.21", errors[0])
+
+    def test_translatable_mirror_is_rejected(self):
+        self.make('<string name="chromium_baseline">154.0.8037.21</string>')
+        errors = validate_strings.check_about_baseline(self.res, self.baseline)
+        self.assertTrue(any("translatable" in error for error in errors))
+
+    def test_unreadable_baseline_is_an_error(self):
+        self.make('<string name="chromium_baseline" translatable="false">154.0.8037.21</string>')
+        errors = validate_strings.check_about_baseline(self.res, os.path.join(self.tmp, "nope"))
+        self.assertEqual(1, len(errors))
+        self.assertIn("cannot read", errors[0])
+
+
 if __name__ == "__main__":
     unittest.main()

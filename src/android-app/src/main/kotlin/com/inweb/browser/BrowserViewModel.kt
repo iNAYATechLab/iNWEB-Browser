@@ -61,7 +61,7 @@ import com.inweb.browser.shell.TopSite
 import com.inweb.browser.shell.TabsController
 
 /** Overlay screens of the shell. */
-enum class Screen { BROWSER, SETTINGS, DOWNLOADS, HISTORY, BOOKMARKS, TABS, CUSTOMIZE_TOOLBAR, CLEAR_DATA, ZOOM_SETTINGS }
+enum class Screen { BROWSER, SETTINGS, DOWNLOADS, HISTORY, BOOKMARKS, TABS, CUSTOMIZE_TOOLBAR, CLEAR_DATA, ZOOM_SETTINGS, ABOUT }
 
 /**
  * Browser-shell view model: binds the pure-JVM core (TabsController,
@@ -435,6 +435,11 @@ class BrowserViewModel(
 
     fun openSettings() {
         screen = Screen.SETTINGS
+    }
+
+    /** Opens the About surface (§39) — honest development-build state. */
+    fun openAbout() {
+        screen = Screen.ABOUT
     }
 
     fun openDownloads() {
