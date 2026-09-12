@@ -4,30 +4,30 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 33 (Phase 11 in progress; Phases 0–10 core done)
+> Last updated: **2026-09-12** — Step 34 (Phase 11 in progress; Phases 0–10 core done)
 
 ```yaml
 project: iNWEB Browser
 repository: iNAYATechLab/iNWEB-Browser
 phase: 11
 phase_title: Advanced Features
-phase_status: in_progress   # design + cores + authored binding done; remaining §23 settings cores next
-step: 33
+phase_status: in_progress   # design + cores + authored binding + §23 settings cores done; Phase 11 authoring complete
+step: 34
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 38 Python + 350 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 38 Python + 382 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action majors); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 11 / Step 34 — settings cores for the remaining §23 levers
-  (pure JVM, CI-tested): page-zoom preferences (validated default
-  factor + per-site overrides, bounds-checked; bound to Chromium's own
-  Android page-zoom setting via a future settings/ patch) and download
-  preferences (ask-before-download, default folder), extending the
-  browser-shell AppSettings core (alternative if directed:
-  downloads/history surface polish).
+  Phase 12 / Step 35 — begin production hardening per MASTER-SPEC §53
+  Phase 12 definition: propose the concrete audit scope first (crash
+  reporting honesty §46, storage/data-clearing completeness §47,
+  test-gap review across cores, CI hardening), then implement the
+  first item as a pure-JVM/Python-verifiable step (alternative if
+  directed: downloads/history surface polish, or the authored-UI
+  binding step for zoom/download settings).
 ```
 
 ## Completed
@@ -645,9 +645,38 @@ next_action: >-
     wired into the CI Kotlin job
   - ADR-031 recorded
 
+- [x] **Step 34 — Phase 11: settings cores for the remaining §23 levers (page zoom + download preferences)** (2026-09-12)
+  - Two new preference models in the browser-shell settings core
+    (same module as AppSettings; own store seams — the AppSettings
+    data class is unchanged, its authored-UI wiring comes with a
+    future binding step, Step-33 pattern):
+  - `ZoomPreferences`/`ZoomSettings` (§23 page zoom): validated
+    default factor + per-site overrides keyed by normalized host
+    (trim + lowercase); bounds match upstream Chromium's supported
+    page-zoom range 25%–500% (verified against the upstream preset
+    list); NaN/∞ rejected by the bounds check; parse validates in a
+    fixed order (default bounds → blank hosts → site-factor bounds →
+    hosts colliding after normalization = ambiguous) with every
+    offender reported; corrupt stored data recovers to defaults with
+    the repair persisted + reported (ADR-029/030 pattern); the
+    settings/ patch binds to Chromium's OWN zoom mechanism — no
+    custom renderer scaling
+  - `DownloadPreferences`/`DownloadSettings` (§23 download
+    preferences): ask-before-download (default YES — downloads never
+    begin silently) + default folder (null = the platform's public
+    Downloads directory, the only real default; otherwise a
+    non-blank user-picked directory reference, trimmed on store;
+    blank rejected); same corrupt-recovery contract
+  - 32 new tests (ZoomPreferencesTest 21 + DownloadPreferencesTest
+    11), both registered in the core script; browser-shell 115 →
+    147, Kotlin total 382
+  - ADR-032 recorded; Phase 11 authoring work complete (design §33/
+    §34/§23 + cores + authored binding + settings cores — remaining
+    Phase 11 items are B-001-gated patch entries)
+
 ## In progress
 
-- (none — awaiting continuation command for Step 34)
+- (none — awaiting continuation command for Step 35)
 
 ## Not started
 
@@ -734,6 +763,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-029 | 2026-09-12 | Toolbar configuration core: the item universe mirrors the authored bar exactly (no invented items, stable wire ids); validation is strict (duplicate/unknown/missing/unknown-hidden/mandatory-hidden are hard errors, all offenders reported); a corrupt stored configuration falls back to the authored default, persisted and surfaced — never a crash, never a silent ignore; mandatory items (back/tabs/menu) can never be hidden; a hidden item keeps its slot | §23 lever backed by a real tested mechanism; user customization can never produce a broken or empty-control bar |
 | ADR-030 | 2026-09-12 | Notification policy core: the channel/event registry is the design §1 table exactly and the unit test is its audit; absent events (sync, self-update, promotional, filter-list failure) are structurally absent — no enum value, no code path — never merely undocumented; the only notify entry is a typed real event (no generic notify API); channel availability is an explicit build fact (no default) so unavailable channels are never registered (no stubs); permission is asked lazily at the first show-worthy event, never re-asked after denial; per-channel toggles + corrupt-preference recovery follow the ADR-029 pattern | §33/§41 rules become structural: real events only, user-respecting, zero promotional paths |
 | ADR-031 | 2026-09-12 | The authored app binds the §23/§33 cores directly: the bar renders from the toolbar configuration and settings toggles write through the cores; channel availability in the authored build is downloads-only and grows only as event-source patches land; preference adapters are thin wire-form round-trippers (validation + recovery stay in the cores); authored sources get a permanent structural gate (kotlinc parse/declaration check, dependency resolution excluded by design) because they compile only at B-001 | §23/§33 become reachable in authored source honestly; the B-001 compile cannot again be broken by latent redeclaration/parse defects |
+| ADR-032 | 2026-09-12 | Page-zoom and download preferences are validated models in the browser-shell settings core with their own store seams (AppSettings itself unchanged until its binding step): zoom bounds mirror upstream Chromium's 25%–500% supported range and bind to Chromium's own zoom mechanism via a settings/ patch (no custom renderer scaling); per-site zoom keys are normalized hosts with collision detection (ambiguous = corrupt); downloads ask before starting by default and use the platform's public Downloads directory unless the user picks a folder; both follow the ADR-029/030 corrupt-recovery contract | the remaining §23 levers get real, tested mechanisms; no setting without behavior, no silent fallback |
 
 ## Build status
 

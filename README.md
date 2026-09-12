@@ -21,11 +21,11 @@ written in Kotlin.
 
 | Item | State |
 |---|---|
-| Development phase | **Phase 11 — Advanced Features: in progress** (notifications/customization design, toolbar-configuration + notification-policy cores, and the authored binding of both complete; execution awaits B-001) — Phases 0–10 core work complete |
-| Current step | 33 |
+| Development phase | **Phase 11 — Advanced Features: authoring complete** (design, toolbar-configuration + notification-policy cores, authored binding, page-zoom + download-preference settings cores; patch execution awaits B-001) — Phases 0–11 core work complete |
+| Current step | 34 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
-| Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 115 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag) |
+| Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 147 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag, page-zoom §23 with per-site overrides, download preferences §23) |
 | Privacy core (`src/core/tracking-protection`) | **Implemented & unit-tested — 102 Kotlin tests** (EasyList-family parser, URL matching, request decisions, per-site allowlist, statistics; filter-list download/cache/update management; Security Center model §24; cosmetic filtering engine; combined matcher ~165–259× faster, equivalence-verified) |
 | Extension core (`src/core/extensions`) | **Implemented & unit-tested — 17 Kotlin tests** (§16 management model: install/review/enable/disable/update/remove state machine with upgrade consent, version comparison, permission-review records) |
 | Offline core (`src/core/offline`) | **Implemented & unit-tested — 14 Kotlin tests** (§17 library: real byte quota, LRU eviction with pinning, same-URL replace, atomic quota failure, persistence seam) |
@@ -37,7 +37,7 @@ written in Kotlin.
 | Notification-policy core (`src/core/notifications`) | **Implemented & unit-tested — 23 Kotlin tests** (§33: registry = design §1 table exactly (audited), real-event-only decisions with no generic notify path, lazy POST_NOTIFICATIONS state machine, per-channel toggles, corrupt→default recovery) |
 | Android shell UI (`src/android-app`) | Authored — Compose + Material 3 (browser with configuration-driven bottom bar §23, tab switcher, home page with real data, onboarding, settings incl. toolbar customization §23 + notification toggles §33, downloads, history, bookmarks), bn/en strings; compiles in the Chromium build (B-001); structural gate in CI |
 | Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — tested |
-| CI | **Live**: Python (38 tests) + registry + string parity + UI externalization gate; Kotlin core (350 tests, 10 modules) + authored-source structural gate; weekly upstream watch; benchmark on demand (not in CI) |
+| CI | **Live**: Python (38 tests) + registry + string parity + UI externalization gate; Kotlin core (382 tests, 10 modules) + authored-source structural gate; weekly upstream watch; benchmark on demand (not in CI) |
 | Build | **Not yet executed** — requires external build infrastructure (blocker B-001) |
 | Open defects | None recorded |
 
