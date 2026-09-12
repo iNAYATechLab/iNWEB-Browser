@@ -169,18 +169,34 @@ jobs:
             if [ ! -d "$WS/src/.git" ]; then
               echo "TAG: BLOCKED — no Chromium checkout at $WS/src" ; exit 1
             fi
-            ACTUAL_TAG=$(git -C "$WS/src" describe --tags --exact-match HEAD 2>/dev/null || true)
-            HEAD=$(git -C "$WS/src" rev-parse HEAD)
-            echo "head=$HEAD"
-            echo "actual_tag=${ACTUAL_TAG:-<none>}"
-            echo "--- chrome/VERSION ---"; cat "$WS/src/chrome/VERSION" 2>/dev/null || true
+            HEAD_SHA=$(git -C "$WS/src" rev-parse HEAD)
+            echo "head=$HEAD_SHA"
+            # --no-history syncs do not carry tag refs locally (run 34686746853
+            # proved git describe finds none), so the authoritative proof is
+            # the REMOTE tag ref — peeled to its commit — versus local HEAD,
+            # cross-checked against the tree's own chrome/VERSION.
+            REMOTE=$(git -C "$WS/src" ls-remote origin "refs/tags/$EXPECTED" "refs/tags/$EXPECTED^{}" || true)
+            echo "--- remote tag refs ---"
+            echo "$REMOTE"
+            REMOTE_SHA=$(echo "$REMOTE" | grep "refs/tags/$EXPECTED^{}" | cut -f1)
+            if [ -z "$REMOTE_SHA" ]; then
+              REMOTE_SHA=$(echo "$REMOTE" | grep "refs/tags/$EXPECTED" | grep -v '\^{}' | cut -f1)
+            fi
+            echo "remote_tag_commit=$REMOTE_SHA"
+            VERSION=$(sed -n 's/^MAJOR=//p;s/^MINOR=//p;s/^BUILD=//p;s/^PATCH=//p' "$WS/src/chrome/VERSION" 2>/dev/null | paste -sd.)
+            echo "chrome_version=$VERSION"
             echo "--- tree status (should be clean) ---"
             git -C "$WS/src" status --porcelain | head -5
-            if [ "$ACTUAL_TAG" = "$EXPECTED" ]; then
-              echo "TAG: PASS — $ACTUAL_TAG == $EXPECTED"
-            else
-              echo "TAG: FAIL — checked-out '$ACTUAL_TAG' != pinned '$EXPECTED'"; exit 1
+            if [ -z "$REMOTE_SHA" ]; then
+              echo "TAG: FAIL — could not resolve refs/tags/$EXPECTED on origin"; exit 1
             fi
+            if [ "$HEAD_SHA" != "$REMOTE_SHA" ]; then
+              echo "TAG: FAIL — HEAD $HEAD_SHA != remote tag commit $REMOTE_SHA"; exit 1
+            fi
+            if [ "$VERSION" != "$EXPECTED" ]; then
+              echo "TAG: FAIL — chrome/VERSION '$VERSION' != pinned '$EXPECTED'"; exit 1
+            fi
+            echo "TAG: PASS — HEAD == refs/tags/$EXPECTED ($REMOTE_SHA); chrome/VERSION $VERSION"
           } 2>&1 | tee b001-logs/30-tag-verify.txt
           cp b001-logs/30-tag-verify.txt b001-logs/30-tag-verify.verdict
           grep -q "TAG: PASS" b001-logs/30-tag-verify.verdict
