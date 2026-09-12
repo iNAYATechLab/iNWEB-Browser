@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 27 (Phase 9 in progress; Phases 0–8 core done)
+> Last updated: **2026-09-12** — Step 28 (Phase 9 core complete; awaiting Phase 10)
 
 ```yaml
 project: iNWEB Browser
@@ -12,22 +12,20 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 9
 phase_title: Profiles / Sync / Backup
 phase_status: in_progress   # decision engine implemented & tested; enforcement wiring awaits B-001
-step: 27
+step: 28
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 30 Python + 290 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 30 Python + 302 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action majors); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 9 / Step 28 — sync queue core in Kotlin (pure JVM, CI-tested,
-  §30 model): transport-agnostic append-only change log with
-  monotonic revisions, retry/backoff, last-writer-wins conflict
-  resolution with tombstones — exercised against a fake transport;
-  FUTURE INFRASTRUCTURE only, never announced as a feature (§29)
-  (alternative if directed: Phase 10 kickoff or downloads/history
-  surface polish).
+  Phase 10 / Step 29 — localization & accessibility design (§36/§49)
+  + Phase 9 close-out: Bengali/English coverage policy, string-parity
+  automation expansion, TalkBack semantics & content-labeling
+  contract, layout/boundary testing scope (alternative if directed:
+  downloads/history surface polish).
 ```
 
 ## Completed
@@ -486,9 +484,30 @@ next_action: >-
     extensions 17 + offline 14 + vpn 17 + profiles 12 + backup 13 +
     tracking-protection 102)
 
+- [x] **Step 28 — Phase 9: sync queue core (§30 model, future infrastructure)** (2026-09-12)
+  - NEW MODULE `src/core/sync` (pure JVM, 12 tests): `SyncEngine` —
+    durable append-only change log with MONOTONIC revisions; batch
+    flush with retry gating; `RetryPolicy` (exponential backoff,
+    capped, max attempts — exhausted retries move the batch to FAILED
+    with an explicit reason, never silently dropped); permanent
+    transport failures reported immediately; `ConflictResolver` —
+    last-writer-wins with tombstones (newer upsert legitimately beats
+    an older tombstone and vice versa; exact ties resolve to the
+    LOCAL entry deterministically; NO CRDT claims); `SyncTransport`
+    seam exercised against a scriptable fake; `SyncQueueStore`
+    persistence seam with round-trip incl. durable retry state
+  - §29 honesty: the module README and KDoc state FUTURE
+    INFRASTRUCTURE — no backend exists, nothing may present it as a
+    feature
+  - **Phase 9 core work COMPLETE** (design + profiles + backup +
+    sync cores; patches 0022–0023 remain B-001-gated)
+  - Kotlin total 302 across EIGHT modules (browser-shell 115 +
+    extensions 17 + offline 14 + vpn 17 + profiles 12 + backup 13 +
+    sync 12 + tracking-protection 102)
+
 ## In progress
 
-- (none — awaiting continuation command for Step 28)
+- (none — awaiting continuation command for Step 29)
 
 ## Not started
 
@@ -576,8 +595,8 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 - **Python: 30/30 passing** — patch-series tooling, registry validation, baseline
   parsing, string-resource validation (`python3 -m unittest discover -s tests -t .`).
-- **Kotlin: 290/290 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
-  kotlinc 2.4.20 + JUnit 4.13.2, 7 modules):
+- **Kotlin: 302/302 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
+  kotlinc 2.4.20 + JUnit 4.13.2, 8 modules):
   - `src/core/browser-shell` — 115 tests: tab navigation stack, controller
     (incl. `allTabs` switcher view), top-sites computation,
     session round-trip/corruption + manager, omnibox parsing (incl. Bengali
@@ -586,6 +605,11 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
     history (round-trips, corruption fallback, sanitization, unique ids),
     bookmark store semantics (dedupe, folders, rename/move) + file-backed
     persistent bookmarks, settings.
+  - `src/core/sync` — 12 tests: monotonic revision log, successful
+    flush, exponential backoff gating + deferral, retry recovery with
+    state reset, permanent failure + exhausted-retry reporting, LWW
+    conflicts (later wins, deterministic local tie-break, tombstones
+    both ways), store round-trip with durable retry state.
   - `src/core/backup` — 13 tests: build/parse/serialize round-trips
     (multi-profile, empty payloads), checksum verification, secret-
     safety whitelist (build rejection + parse skip), version gating
