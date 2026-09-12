@@ -85,5 +85,9 @@ release notes.
 - Designed in Phase 0: this document.
 - Authored in Phase 1: GitHub Actions workflows, `ci/Dockerfile`, GN arg files,
   `scripts/` orchestration.
+- Authored in Step 45: the build-host pre-flight checker
+  (`scripts/check_build_host.py`, 22 unit tests — verifies every §2 row
+  BEFORE the multi-hour fetch) and the operational walkthrough
+  ([`docs/BUILD-HOST-RUNBOOK.md`](BUILD-HOST-RUNBOOK.md)).
 - Blocked until B-001 resolution: every BUILD and later stage. **No build or test
   results exist or are claimed.**
