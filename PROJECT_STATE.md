@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 46 (Phase 12 authoring complete; Phases 0–11 complete)
+> Last updated: **2026-09-12** — Step 47 (Phase 12 authoring complete; Phases 0–11 complete)
 
 ```yaml
 project: iNWEB Browser
@@ -12,7 +12,7 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 12
 phase_title: Production Hardening
 phase_status: authoring_complete   # all 5 design-order items done; every remaining Phase 12 deliverable is B-001-gated (device matrix)
-step: 46
+step: 47
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
@@ -21,16 +21,15 @@ ci_status: authoring-pipeline-live # Python + Kotlin core jobs + 5 gates (regist
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Proposed Step 47 — §59 full-repository documentation accuracy pass:
-  walk EVERY document (README, PROJECT_STATE, the 20+ docs/ files)
-  against the repository as it exists at this commit — counts, file
-  lists, section references, status claims — and fix every drift as
-  ordinary commits; the phase designs' "live today" test counts and
-  the docs-table rows are the likely drift points (alternative if
-  directed: run scripts/check_baseline.py against the live upstream
-  API and, if Android stable has moved past 154.0.8037.21, plan the
-  baseline refresh per PHASE0-CHROMIUM-BASELINE; or PAUSE authoring
-  until the build host is provisioned and Stage-0 results return).
+  Proposed Step 48 — live upstream baseline drift check: run
+  scripts/check_baseline.py against the Chrome Version History API;
+  if Android stable has moved past 154.0.8037.21, produce the
+  PHASE0-CHROMIUM-BASELINE refresh plan (new tag, mirror-resource
+  update enforced by the strings gate, patch-series rebase check,
+  changelog entry) WITHOUT rebasing yet — the rebase itself stays
+  B-001-gated; if the baseline is still current, authoring PAUSES
+  with a clean, fully-accurate tree until the build host is
+  provisioned and Stage-0 results return (B-001).
 ```
 
 ## Completed
@@ -1011,9 +1010,37 @@ next_action: >-
     structural 23 authored files, registry, inventory 23, Python 77,
     Kotlin 414 unchanged; src/+scripts/+tests/ changed -> CI runs
 
+- [x] **Step 47 — §59 full-repository documentation accuracy pass** (2026-09-12)
+  - Method: every living document walked against the tree at this
+    commit — counts, file lists, status claims; historical step
+    entries in PROJECT_STATE were left untouched (they were true when
+    written — history stays honest)
+  - Fixed drift: ARCHITECTURE §4a rebuilt (all 11 core modules with
+    current test counts 150/116/17/15/17/12/13/12/25/23/14 = 414;
+    android-app row now lists every authored surface incl. About);
+    PHASE2 §1 table same treatment; PHASE4-ADBLOCK 79→116 (×2) and
+    Python 30→77; PHASE4-COSMETIC 92→116; PHASE4-POPUP 79→116;
+    PHASE6 extensions core "proposed"→implemented (17 tests);
+    PHASE12 storage inventory 21→23 surfaces (14 seams + 9 adapters);
+    THREAT-MODEL-REVIEW counts refreshed (row 5: 116; row 13: 23
+    surfaces) + explicit amendment log + verdict re-phrased (G-07
+    closed → 9 open gaps); ACCESSIBILITY-AUDIT amendment note
+    (AboutScreen post-audit addition; 23 authored files);
+    README tree: +4 scripts (validate_localization,
+    validate_storage_inventory, validate_authored_structure,
+    check_build_host), +3 core modules (customization,
+    notifications, clear-data), misplaced subtree under sync fixed,
+    docs/ excerpt made explicitly partial
+  - Verified accurate as-is: README docs-table 28/28 rows; device
+    matrix 51 D-rows; patch-subdir list; BUILD-INFRASTRUCTURE (Step
+    45); DATA-SAFETY 23-surface figure; PHASE7/8/9/11 "live" claims;
+    VERSIONING empty-registry statements; cosmetic 13-test claim
+  - Docs-only change — CI skips by paths-filter design; gates
+    re-run locally below
+
 ## In progress
 
-- (none — awaiting continuation command for Step 47)
+- (none — awaiting continuation command for Step 48)
 
 ## Not started
 
