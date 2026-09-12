@@ -33,6 +33,12 @@ data class ZoomPreferences(
     fun removeSiteZoom(host: String): ZoomPreferences =
         copy(siteZooms = siteZooms - normalizeHost(host))
 
+    /**
+     * Removes EVERY site override at once (the clear-browsing-data
+     * item); the default factor is user preference and stays.
+     */
+    fun clearSiteZooms(): ZoomPreferences = copy(siteZooms = emptyMap())
+
     fun setDefaultFactor(factor: Double): ZoomResult<ZoomPreferences> {
         if (!isValidFactor(factor)) return ZoomResult.Err(ZoomError.FactorOutOfRange)
         return ZoomResult.Ok(copy(defaultFactor = factor))
@@ -189,6 +195,13 @@ class ZoomSettings(private val store: ZoomPreferencesStore = InMemoryZoomPrefere
 
     fun removeSiteZoom(host: String): ZoomPreferences {
         prefs = prefs.removeSiteZoom(host)
+        persist()
+        return prefs
+    }
+
+    /** Clears every per-site override (clear-browsing-data); the default stays. */
+    fun clearSiteZooms(): ZoomPreferences {
+        prefs = prefs.clearSiteZooms()
         persist()
         return prefs
     }

@@ -150,6 +150,20 @@ class ZoomPreferencesTest {
     }
 
     @Test
+    fun clearSiteZoomsRemovesAllOverridesButKeepsTheDefault() {
+        val store = InMemoryZoomPreferencesStore()
+        val settings = ZoomSettings(store)
+        ok(settings.setDefaultFactor(1.5))
+        ok(settings.setSiteZoom("a.example", 2.0))
+        ok(settings.setSiteZoom("b.example", 0.5))
+        val cleared = settings.clearSiteZooms()
+        assertTrue(cleared.siteZooms.isEmpty())
+        assertEquals(1.5, cleared.defaultFactor, 0.0)
+        assertEquals(1.5, settings.zoomFor("a.example"), 0.0)
+        assertTrue(store.load()?.siteZooms.isNullOrEmpty())
+    }
+
+    @Test
     fun resetRestoresIdentityDefaults() {
         val settings = seeded(defaultFactor = 2.0, siteZooms = mapOf("a.example" to 0.5))
         val reset = settings.reset()

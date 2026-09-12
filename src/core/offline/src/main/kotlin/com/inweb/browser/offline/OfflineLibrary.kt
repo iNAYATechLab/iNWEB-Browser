@@ -146,6 +146,17 @@ class OfflineLibrary(
     /** Insertion order, oldest first (project-wide order contract). */
     fun all(): List<OfflinePageRecord> = entries.values.toList()
 
+    /**
+     * Deletes EVERY offline page (the clear-browsing-data item) and
+     * persists the empty library. Returns the number of pages removed.
+     */
+    fun clearAll(): Int {
+        val removed = entries.size
+        entries.clear()
+        persist()
+        return removed
+    }
+
     fun totalBytes(): Long = entries.values.sumOf { it.sizeBytes }
 
     fun remainingBytes(): Long = (quotaBytes - totalBytes()).coerceAtLeast(0L)

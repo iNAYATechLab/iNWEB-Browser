@@ -7,6 +7,20 @@ import org.junit.Test
 
 class OfflineLibraryTest {
 
+    @Test
+    fun clearAllRemovesEveryPageAndPersistsTheEmptyLibrary() {
+        val store = InMemoryOfflineStore()
+        val library = OfflineLibrary(store, quotaBytes = 1_000_000L)
+        library.save(page("https://a.example", size = 100L))
+        library.save(page("https://b.example", size = 200L))
+        val removed = library.clearAll()
+        org.junit.Assert.assertEquals(2, removed)
+        org.junit.Assert.assertTrue(library.all().isEmpty())
+        org.junit.Assert.assertEquals(0L, library.totalBytes())
+        org.junit.Assert.assertTrue(store.load().isEmpty())
+    }
+
+
     private fun page(
         url: String,
         size: Long = 100L,

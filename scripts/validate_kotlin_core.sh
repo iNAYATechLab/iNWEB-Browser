@@ -51,12 +51,31 @@ HAMCREST_JAR="$LIBS/hamcrest-core-$HAMCREST_VERSION.jar"
 STDLIB="$KOTLINC_HOME/lib/kotlin-stdlib.jar"
 
 # --- per-module compile + test ------------------------------------------------
+# run_module <module_dir> [--deps "<module-name> ..."] <test classes...>
+#
+# Optional --deps: space-separated names of modules already built into
+# $BUILD_DIR by earlier run_module calls — their class directories are
+# put on the compile AND test classpath (cross-module cores must run
+# after their dependencies, e.g. clear-data after tracking-protection).
 run_module() {
   local module_dir="$1"
+  local deps=""
+  if [ "${2:-}" = "--deps" ]; then
+    deps="$3"
+    shift 2
+  fi
   shift
   local name
   name="$(basename "$module_dir")"
   local out="$BUILD_DIR/$name"
+  local deps_cp=""
+  for dep in $deps; do
+    if [ ! -d "$BUILD_DIR/$dep" ]; then
+      echo "[kotlin-core:$name] ERROR: dependency module '$dep' not built (order the run_module calls)" >&2
+      exit 1
+    fi
+    deps_cp="$deps_cp:$BUILD_DIR/$dep"
+  done
 
   echo ""
   echo "[kotlin-core:$name] compiling main + tests ..."
@@ -65,11 +84,11 @@ run_module() {
   "$KOTLINC" \
     "$ROOT/$module_dir/src/main/kotlin" \
     "$ROOT/$module_dir/src/test/kotlin" \
-    -cp "$JUNIT_JAR:$HAMCREST_JAR" \
+    -cp "$JUNIT_JAR:$HAMCREST_JAR$deps_cp" \
     -d "$out"
 
   echo "[kotlin-core:$name] running $# test classes ..."
-  java -cp "$out:$STDLIB:$JUNIT_JAR:$HAMCREST_JAR" \
+  java -cp "$out:$STDLIB:$JUNIT_JAR:$HAMCREST_JAR$deps_cp" \
     org.junit.runner.JUnitCore "$@"
 
   echo "[kotlin-core:$name] PASSED"
@@ -130,6 +149,9 @@ run_module "src/core/tracking-protection" \
   com.inweb.browser.privacy.lists.FilterListVersionTest \
   com.inweb.browser.privacy.lists.HttpFilterListFetcherTest \
   com.inweb.browser.privacy.lists.UpdatePolicyTest
+
+run_module "src/core/clear-data" --deps "browser-shell tracking-protection offline" \
+  com.inweb.browser.cleardata.ClearDataManagerTest
 
 echo ""
 echo "[kotlin-core] ALL MODULES PASSED"
