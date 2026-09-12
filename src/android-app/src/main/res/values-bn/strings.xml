@@ -114,6 +114,21 @@
     <string name="clear_preview_pages">%1$dটি পেজ</string>
     <string name="clear_preview_sites">%1$dটি সাইট</string>
 
+    <!-- পৃষ্ঠা জুম (§23) -->
+    <string name="settings_page_zoom">পৃষ্ঠা জুম</string>
+    <string name="zoom_default_factor">ডিফল্ট জুম লেভেল</string>
+    <string name="zoom_factor_percent">%1$d%%</string>
+    <string name="zoom_site_overrides">সাইট-নির্দিষ্ট জুম লেভেল</string>
+    <string name="zoom_no_site_overrides">কোনো সাইট-নির্দিষ্ট জুম লেভেল সেট করা নেই</string>
+    <string name="zoom_remove_site_override">%1$s-এর জুম লেভেল সরান</string>
+
+    <!-- ডাউনলোড পছন্দসমূহ (§23) -->
+    <string name="settings_downloads">ডাউনলোড</string>
+    <string name="download_ask_before">ডাউনলোড শুরুর আগে জিজ্ঞাসা করুন</string>
+    <string name="download_folder">ডাউনলোড ফোল্ডার</string>
+    <string name="download_folder_system">সিস্টেম ডাউনলোড ফোল্ডার</string>
+    <string name="download_folder_reset">সিস্টেম ডাউনলোড ফোল্ডার ব্যবহার করুন</string>
+
     <!-- Engine integration (explicit, honest binding-point label) -->
     <string name="engine_binding_point">এই বিল্ড কনফিগারেশনে Chromium কনটেন্ট সারফেস যুক্ত নেই। ইঞ্জিন অ্যাডাপ্টার Chromium বিল্ডের সাথে আসবে (ইন্টিগ্রেশন প্ল্যান দেখুন)।</string>
 </resources>

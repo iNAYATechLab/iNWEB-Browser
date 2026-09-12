@@ -50,6 +50,18 @@ data class ZoomPreferences(
         const val MAX_FACTOR = 5.0
         const val DEFAULT_FACTOR = 1.0
 
+        /**
+         * Upstream Chromium's preset page-zoom steps (as factors),
+         * ascending — the table the settings surface (§23) offers for
+         * the default factor. Every value is inside the supported
+         * range, so core validation accepts each one; the engine
+         * adapter reuses the same table for the page-zoom control.
+         */
+        val PRESET_FACTORS: List<Double> = listOf(
+            0.25, 0.333, 0.5, 0.667, 0.75, 0.8, 0.9, 1.0,
+            1.1, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 4.0, 5.0,
+        )
+
         /** Bounds check; also rejects NaN and infinities. */
         fun isValidFactor(factor: Double): Boolean =
             factor.isFinite() && factor in MIN_FACTOR..MAX_FACTOR

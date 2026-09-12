@@ -23,8 +23,15 @@ import com.inweb.browser.offline.InMemoryOfflineStore
 import com.inweb.browser.offline.OfflineLibrary
 import com.inweb.browser.privacy.lists.FilterListCache
 import com.inweb.browser.privacy.lists.InMemoryFilterListCache
+import com.inweb.browser.shell.DownloadPreferences
+import com.inweb.browser.shell.DownloadPreferencesStore
+import com.inweb.browser.shell.DownloadPrefsResult
+import com.inweb.browser.shell.DownloadSettings
+import com.inweb.browser.shell.InMemoryDownloadPreferencesStore
 import com.inweb.browser.shell.InMemoryZoomPreferencesStore
+import com.inweb.browser.shell.ZoomPreferences
 import com.inweb.browser.shell.ZoomPreferencesStore
+import com.inweb.browser.shell.ZoomResult
 import com.inweb.browser.shell.ZoomSettings
 import com.inweb.browser.notifications.NotificationDecision
 import com.inweb.browser.notifications.NotificationEvent
@@ -54,7 +61,7 @@ import com.inweb.browser.shell.TopSite
 import com.inweb.browser.shell.TabsController
 
 /** Overlay screens of the shell. */
-enum class Screen { BROWSER, SETTINGS, DOWNLOADS, HISTORY, BOOKMARKS, TABS, CUSTOMIZE_TOOLBAR, CLEAR_DATA }
+enum class Screen { BROWSER, SETTINGS, DOWNLOADS, HISTORY, BOOKMARKS, TABS, CUSTOMIZE_TOOLBAR, CLEAR_DATA, ZOOM_SETTINGS }
 
 /**
  * Browser-shell view model: binds the pure-JVM core (TabsController,
@@ -74,6 +81,7 @@ class BrowserViewModel(
     private val toolbarStore: ToolbarStore = InMemoryToolbarStore(),
     private val notificationStore: NotificationStore = InMemoryNotificationStore(),
     private val zoomStore: ZoomPreferencesStore = InMemoryZoomPreferencesStore(),
+    private val downloadStore: DownloadPreferencesStore = InMemoryDownloadPreferencesStore(),
     private val filterListCache: FilterListCache = InMemoryFilterListCache(),
 ) {
 
@@ -117,6 +125,14 @@ class BrowserViewModel(
     var clearDataSelection by mutableStateOf<Set<ClearDataItem>>(emptySet())
         private set
 
+    /** Page-zoom preferences (§23) — the zoom settings surface renders from this. */
+    var zoomPreferences by mutableStateOf(ZoomPreferences())
+        private set
+
+    /** Download preferences (§23) — ask-first flag + default folder. */
+    var downloadPreferences by mutableStateOf(DownloadPreferences())
+        private set
+
     var tabs by mutableStateOf<List<TabState>>(emptyList())
         private set
 
@@ -139,6 +155,7 @@ class BrowserViewModel(
     private val historySource = PrivacyFilterHistory(historyStore)
     private val toolbarConfigurator = ToolbarConfigurator(toolbarStore)
     private val zoomSettings = ZoomSettings(zoomStore)
+    private val downloadSettings = DownloadSettings(downloadStore)
     private val offlineLibrary = OfflineLibrary(InMemoryOfflineStore())
     private val clearDataManager = ClearDataManager(
         listOf(
@@ -165,6 +182,8 @@ class BrowserViewModel(
     init {
         settings = settingsStore.load()
         toolbarConfig = toolbarConfigurator.current()
+        zoomPreferences = zoomSettings.current()
+        downloadPreferences = downloadSettings.current()
         refreshNotificationChannels()
         // Crash-safe session restore (§51); corrupted/missing snapshots
         // fall back to a fresh session.
@@ -289,6 +308,54 @@ class BrowserViewModel(
     fun resetToolbar() {
         toolbarConfigurator.reset()
         toolbarConfig = toolbarConfigurator.current()
+    }
+
+    // --- Page zoom & download preferences (§23, bound to the preference cores) --
+
+    /** Opens the page-zoom surface with fresh state from the core. */
+    fun openZoomSettings() {
+        zoomPreferences = zoomSettings.current()
+        screen = Screen.ZOOM_SETTINGS
+    }
+
+    /**
+     * Sets the default page-zoom factor through the core (bounds-validated).
+     * The surface offers only core-valid preset steps, so the Err branch is
+     * structurally unreachable — kept defensive, never silently ignored.
+     */
+    fun setZoomDefaultFactor(factor: Double) {
+        when (val next = zoomSettings.setDefaultFactor(factor)) {
+            is ZoomResult.Ok -> zoomPreferences = next.value
+            is ZoomResult.Err -> {
+                // Unreachable from this surface; state stays for the user.
+            }
+        }
+    }
+
+    /** Removes a site's zoom override; that site falls back to the default. */
+    fun removeSiteZoom(host: String) {
+        zoomPreferences = zoomSettings.removeSiteZoom(host)
+    }
+
+    /** Ask-before-download toggle, validated and persisted by the core. */
+    fun setAskBeforeDownload(ask: Boolean) {
+        downloadPreferences = downloadSettings.setAskBeforeDownload(ask)
+    }
+
+    /**
+     * Sets the default download folder: the SAF tree URI the system
+     * folder picker returned, or null to restore the platform's public
+     * Downloads directory. The surface only passes a non-blank URI or
+     * null, so the core's BlankFolder rejection is structurally
+     * unreachable — kept defensive.
+     */
+    fun setDownloadFolder(folder: String?) {
+        when (val next = downloadSettings.setDownloadFolder(folder)) {
+            is DownloadPrefsResult.Ok -> downloadPreferences = next.value
+            is DownloadPrefsResult.Err -> {
+                // Unreachable from this surface; state stays for the user.
+            }
+        }
     }
 
     // --- Notifications (§33, bound to the notification-policy core) ---------

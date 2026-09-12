@@ -140,7 +140,7 @@ surfaces:
     kind: seam
     module: browser-shell
     stores: "ask-before-download flag + default download folder"
-    location: "In-memory core; the preference-backed adapter ships with the authored-UI binding step"
+    location: "app preferences `inweb_downloads` (via SharedPreferencesDownloadPreferencesStore)"
     corruption: "Blank stored folder recovers to defaults; the repair is persisted and reported (ADR-032)"
     clear: "App reset"
 
@@ -221,3 +221,13 @@ surfaces:
     location: "app preferences `inweb_zoom`"
     corruption: "Thin wire-form round-trip; value-level validation + recovery live in the core (ADR-032); structurally invalid entries cannot be represented in the typed wire form and are skipped (wire-format boundary)"
     clear: "Same as its seam (ZoomPreferencesStore)"
+
+  - surface: SharedPreferencesDownloadPreferencesStore
+    kind: adapter
+    module: android-app
+    implements: DownloadPreferencesStore
+    prefs_name: inweb_downloads
+    stores: "DownloadPreferencesStore implementation (ask flag + folder string; absent folder key = the platform's public Downloads directory)"
+    location: "app preferences `inweb_downloads`"
+    corruption: "Thin wire-form round-trip; value-level validation + recovery live in the core (ADR-032)"
+    clear: "Same as its seam (DownloadPreferencesStore)"

@@ -117,6 +117,21 @@
     <string name="clear_preview_pages">%1$d pages</string>
     <string name="clear_preview_sites">%1$d sites</string>
 
+    <!-- Page zoom (§23) -->
+    <string name="settings_page_zoom">Page zoom</string>
+    <string name="zoom_default_factor">Default zoom level</string>
+    <string name="zoom_factor_percent">%1$d%%</string>
+    <string name="zoom_site_overrides">Site-specific zoom levels</string>
+    <string name="zoom_no_site_overrides">No site-specific zoom levels set</string>
+    <string name="zoom_remove_site_override">Remove zoom level for %1$s</string>
+
+    <!-- Download preferences (§23) -->
+    <string name="settings_downloads">Downloads</string>
+    <string name="download_ask_before">Ask before starting a download</string>
+    <string name="download_folder">Download folder</string>
+    <string name="download_folder_system">System Downloads folder</string>
+    <string name="download_folder_reset">Use system Downloads folder</string>
+
     <!-- Engine integration (explicit, honest binding-point label) -->
     <string name="engine_binding_point">Chromium content surface is not bound in this build configuration. The engine adapter ships with the Chromium build (see the integration plan).</string>
 </resources>

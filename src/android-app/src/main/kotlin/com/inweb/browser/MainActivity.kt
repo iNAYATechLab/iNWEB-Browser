@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.inweb.browser.privacy.lists.FileFilterListCache
+import com.inweb.browser.settings.SharedPreferencesDownloadPreferencesStore
 import com.inweb.browser.settings.SharedPreferencesNotificationStore
 import com.inweb.browser.settings.SharedPreferencesSettingsStore
 import com.inweb.browser.settings.SharedPreferencesToolbarStore
@@ -38,6 +39,7 @@ class MainActivity : ComponentActivity() {
             toolbarStore = SharedPreferencesToolbarStore(this),
             notificationStore = SharedPreferencesNotificationStore(this),
             zoomStore = SharedPreferencesZoomPreferencesStore(this),
+            downloadStore = SharedPreferencesDownloadPreferencesStore(this),
             filterListCache = FileFilterListCache(File(filesDir, "filter-lists")),
         )
     }

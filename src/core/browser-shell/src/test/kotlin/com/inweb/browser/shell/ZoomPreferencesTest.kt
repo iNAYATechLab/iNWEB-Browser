@@ -233,6 +233,24 @@ class ZoomPreferencesTest {
         assertTrue(settings.current().siteZooms.isEmpty())
     }
 
+    // --- preset zoom steps (§23 settings surface) --------------------------------
+
+    @Test
+    fun presetFactorsAreAscendingUniqueAndWithinBounds() {
+        val presets = ZoomPreferences.PRESET_FACTORS
+        assertEquals(presets.sorted(), presets)
+        assertEquals(presets.size, presets.toSet().size)
+        assertTrue(presets.all { ZoomPreferences.isValidFactor(it) })
+    }
+
+    @Test
+    fun presetFactorsSpanTheSupportedRangeAndIncludeTheDefault() {
+        val presets = ZoomPreferences.PRESET_FACTORS
+        assertEquals(ZoomPreferences.MIN_FACTOR, presets.first(), 0.0)
+        assertEquals(ZoomPreferences.MAX_FACTOR, presets.last(), 0.0)
+        assertTrue(ZoomPreferences.DEFAULT_FACTOR in presets)
+    }
+
     // --- store seam --------------------------------------------------------------
 
     @Test
