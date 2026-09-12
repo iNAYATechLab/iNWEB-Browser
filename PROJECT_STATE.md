@@ -4,30 +4,29 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 34 (Phase 11 in progress; Phases 0–10 core done)
+> Last updated: **2026-09-12** — Step 35 (Phase 12 in progress; Phases 0–11 complete)
 
 ```yaml
 project: iNWEB Browser
 repository: iNAYATechLab/iNWEB-Browser
-phase: 11
-phase_title: Advanced Features
-phase_status: in_progress   # design + cores + authored binding + §23 settings cores done; Phase 11 authoring complete
-step: 34
+phase: 12
+phase_title: Production Hardening
+phase_status: in_progress   # hardening design + storage-inventory gate live; audits next
+step: 35
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 38 Python + 382 Kotlin tests (local + CI)
-ci_status: authoring-pipeline-live # Python + Kotlin core jobs (current action majors); upstream watch live
+test_status: unit-tests-passing    # 50 Python + 382 Kotlin tests (local + CI)
+ci_status: authoring-pipeline-live # Python + Kotlin core jobs + 5 gates (registry, strings, externalization, structure, storage inventory); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 12 / Step 35 — begin production hardening per MASTER-SPEC §53
-  Phase 12 definition: propose the concrete audit scope first (crash
-  reporting honesty §46, storage/data-clearing completeness §47,
-  test-gap review across cores, CI hardening), then implement the
-  first item as a pure-JVM/Python-verifiable step (alternative if
-  directed: downloads/history surface polish, or the authored-UI
-  binding step for zoom/download settings).
+  Phase 12 / Step 36 — threat-model review pass (design item 1): walk
+  docs/THREAT-MODEL.md against the 10 core modules and the ADR log,
+  record coverage/gaps as tracked items (never silent assumptions);
+  pure docs-vs-code, CI-unaffected (alternative if directed: the
+  clear-browsing-data core driven by STORAGE-INVENTORY.yaml's clear
+  column, or the §47 versioning-policy document).
 ```
 
 ## Completed
@@ -674,9 +673,40 @@ next_action: >-
     §34/§23 + cores + authored binding + settings cores — remaining
     Phase 11 items are B-001-gated patch entries)
 
+- [x] **Step 35 — Phase 12: hardening design + storage inventory gate (§50/§51)** (2026-09-12)
+  - New `docs/PHASE12-PRODUCTION-HARDENING-DESIGN.md`: §53's seven
+    bullets (security/performance audit, regression/crash testing,
+    release engineering, documentation, store readiness) each mapped
+    to concrete pre-B-001 vs B-001-gated work with status; proposed
+    order for the remaining items; honest boundaries (no
+    running-app claims before B-001; no crash-reporting
+    infrastructure exists and none is claimed)
+  - REFERENCE CORRECTION recorded: the Step-34 proposal's "§46 crash
+    reporting / §47 storage clearing" citations were wrong (those are
+    CI/CD and Release Channels); correct anchors are §50 Error
+    Handling ("never silently lose user data") and §51 Crash/Recovery
+  - FIRST ITEM IMPLEMENTED — storage inventory gate: new
+    `docs/STORAGE-INVENTORY.yaml` (21 surfaces: 14 seams + 7 adapters;
+    each documents what it stores, where, its corruption/recovery
+    contract, and its clear semantics) + new
+    `scripts/validate_storage_inventory.py` with 12 unit tests, wired
+    into the CI Python job. Bidirectional CI enforcement: every
+    persistence surface discovered in code (Store/Persistence/Cache
+    interfaces, File*/SharedPreferences* adapters, prefs names) MUST
+    have an entry; stale rows fail; `discoverable: false` is the
+    reviewed manual-extra hatch, reported in gate output
+  - The inventory's clear column is the contract for the future
+    clear-data surface; the corruption column IS the §51 audit of
+    recovery contracts; in-memory-only seams state which patch will
+    persist them
+  - Python total 50 (38 + 12); Kotlin unchanged 382 (10 modules);
+    all 5 gates + registry + strings + externalization + structure
+    green locally
+  - ADR-033 recorded
+
 ## In progress
 
-- (none — awaiting continuation command for Step 35)
+- (none — awaiting continuation command for Step 36)
 
 ## Not started
 
@@ -764,6 +794,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-030 | 2026-09-12 | Notification policy core: the channel/event registry is the design §1 table exactly and the unit test is its audit; absent events (sync, self-update, promotional, filter-list failure) are structurally absent — no enum value, no code path — never merely undocumented; the only notify entry is a typed real event (no generic notify API); channel availability is an explicit build fact (no default) so unavailable channels are never registered (no stubs); permission is asked lazily at the first show-worthy event, never re-asked after denial; per-channel toggles + corrupt-preference recovery follow the ADR-029 pattern | §33/§41 rules become structural: real events only, user-respecting, zero promotional paths |
 | ADR-031 | 2026-09-12 | The authored app binds the §23/§33 cores directly: the bar renders from the toolbar configuration and settings toggles write through the cores; channel availability in the authored build is downloads-only and grows only as event-source patches land; preference adapters are thin wire-form round-trippers (validation + recovery stay in the cores); authored sources get a permanent structural gate (kotlinc parse/declaration check, dependency resolution excluded by design) because they compile only at B-001 | §23/§33 become reachable in authored source honestly; the B-001 compile cannot again be broken by latent redeclaration/parse defects |
 | ADR-032 | 2026-09-12 | Page-zoom and download preferences are validated models in the browser-shell settings core with their own store seams (AppSettings itself unchanged until its binding step): zoom bounds mirror upstream Chromium's 25%–500% supported range and bind to Chromium's own zoom mechanism via a settings/ patch (no custom renderer scaling); per-site zoom keys are normalized hosts with collision detection (ambiguous = corrupt); downloads ask before starting by default and use the platform's public Downloads directory unless the user picks a folder; both follow the ADR-029/030 corrupt-recovery contract | the remaining §23 levers get real, tested mechanisms; no setting without behavior, no silent fallback |
+| ADR-033 | 2026-09-12 | Every persisted-data surface is inventoried in docs/STORAGE-INVENTORY.yaml and the inventory is CI-enforced bidirectionally (discovered surfaces must have entries; entries must exist in code); each entry's corruption column is that store's §50/§51 recovery contract and its clear column is the clear-data contract; in-memory-only seams must name the patch that will persist them; `discoverable: false` is the reviewed manual-extra hatch, surfaced in gate output | "never silently lose user data" becomes an auditable, merge-blocking property of the codebase; the data-safety story for store readiness is generated from the same inventory |
 
 ## Build status
 

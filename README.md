@@ -21,8 +21,8 @@ written in Kotlin.
 
 | Item | State |
 |---|---|
-| Development phase | **Phase 11 — Advanced Features: authoring complete** (design, toolbar-configuration + notification-policy cores, authored binding, page-zoom + download-preference settings cores; patch execution awaits B-001) — Phases 0–11 core work complete |
-| Current step | 34 |
+| Development phase | **Phase 12 — Production Hardening: in progress** (hardening design + CI-enforced storage inventory; Phases 0–11 core work complete) |
+| Current step | 35 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 147 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag, page-zoom §23 with per-site overrides, download preferences §23) |
@@ -37,7 +37,7 @@ written in Kotlin.
 | Notification-policy core (`src/core/notifications`) | **Implemented & unit-tested — 23 Kotlin tests** (§33: registry = design §1 table exactly (audited), real-event-only decisions with no generic notify path, lazy POST_NOTIFICATIONS state machine, per-channel toggles, corrupt→default recovery) |
 | Android shell UI (`src/android-app`) | Authored — Compose + Material 3 (browser with configuration-driven bottom bar §23, tab switcher, home page with real data, onboarding, settings incl. toolbar customization §23 + notification toggles §33, downloads, history, bookmarks), bn/en strings; compiles in the Chromium build (B-001); structural gate in CI |
 | Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — tested |
-| CI | **Live**: Python (38 tests) + registry + string parity + UI externalization gate; Kotlin core (382 tests, 10 modules) + authored-source structural gate; weekly upstream watch; benchmark on demand (not in CI) |
+| CI | **Live**: Python (50 tests) + registry + storage-inventory gate + string parity + UI externalization gate; Kotlin core (382 tests, 10 modules) + authored-source structural gate; weekly upstream watch; benchmark on demand (not in CI) |
 | Build | **Not yet executed** — requires external build infrastructure (blocker B-001) |
 | Open defects | None recorded |
 
@@ -130,6 +130,8 @@ git-ignored here by design (ADR-004): the tree is always reproducible as
 | [`docs/PHASE9-PROFILES-SYNC-DESIGN.md`](docs/PHASE9-PROFILES-SYNC-DESIGN.md) | Isolated profiles, documented sync absence, queue model, encrypted backup format |
 | [`docs/PHASE10-LOCALIZATION-ACCESSIBILITY-DESIGN.md`](docs/PHASE10-LOCALIZATION-ACCESSIBILITY-DESIGN.md) | bn-BD/en policy, CI externalization gate, §49 authoring contracts, verification matrix |
 | [`docs/PHASE11-NOTIFICATIONS-FEATURES-DESIGN.md`](docs/PHASE11-NOTIFICATIONS-FEATURES-DESIGN.md) | Privacy-first notifications, entertainment non-goal, §23 customization mapping |
+| [`docs/PHASE12-PRODUCTION-HARDENING-DESIGN.md`](docs/PHASE12-PRODUCTION-HARDENING-DESIGN.md) | Phase 12 audit scope (§53): pre-B-001 vs device-gated work, proposed order, honest boundaries |
+| [`docs/STORAGE-INVENTORY.yaml`](docs/STORAGE-INVENTORY.yaml) | Every persisted-data surface: what/where, corruption recovery (§50/§51), clear semantics — CI-enforced |
 | [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md) | Security threat model (living document) |
 
 ## Development model
