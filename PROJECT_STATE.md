@@ -4,15 +4,15 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 41 (Phase 12 in progress; Phases 0–11 complete)
+> Last updated: **2026-09-12** — Step 42 (Phase 12 authoring complete; Phases 0–11 complete)
 
 ```yaml
 project: iNWEB Browser
 repository: iNAYATechLab/iNWEB-Browser
 phase: 12
 phase_title: Production Hardening
-phase_status: in_progress   # items 1-4 done (inventory, threat review, clear-data, versioning, verification matrix); remaining: perf budgets + data-safety draft
-step: 41
+phase_status: authoring_complete   # all 5 design-order items done; every remaining Phase 12 deliverable is B-001-gated (device matrix)
+step: 42
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
@@ -21,17 +21,18 @@ ci_status: authoring-pipeline-live # Python + Kotlin core jobs + 5 gates (regist
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 12 / Step 42 — design-order item 5, the final Phase 12
-  authoring item (docs): (a) the performance budgets table — §9/§21/§52
-  verification targets (startup, navigation, memory, battery, APK size
-  §7) consolidated from PHASE5 §2 into one budget table with the
-  measurement protocol per matrix row D5-*, budgets are TARGETS to
-  verify at B-001, never claims; (b) the store-readiness data-safety
-  DRAFT generated from STORAGE-INVENTORY.yaml (23 surfaces: what is
-  stored, where it lives, what clears it) feeding the Play data-safety
-  form (alternative if directed: a §49 accessibility audit pass over
-  the authored surfaces, or the G-07 filter-list content checksum
-  pinning as a core-hardening step).
+  Phase 12 authoring is complete. Proposed Step 43 — §49
+  source-level accessibility audit of the authored surfaces
+  (src/android-app): walk every screen/composable against the §49
+  authoring contracts + PHASE10 §2 (semantics: toggleable/Role usage,
+  contentDescription coverage, state description, heading/labeling
+  structure); record findings as a tracked register and FIX the gaps
+  found — device verification (TalkBack, 200% scale, contrast,
+  touch targets) stays on the D10-* matrix rows (alternative if
+  directed: G-07 filter-list content checksum pinning as a
+  tracking-protection core-hardening step, or B-001 build-host
+  provisioning assistance — walking the exact BUILD-INFRASTRUCTURE.md
+  setup so the first real compile can begin).
 ```
 
 ## Completed
@@ -877,9 +878,40 @@ next_action: >-
     existing contracts, not a new decision); docs-only change — no CI
     run by the paths-filter's design
 
+- [x] **Step 42 — Phase 12: performance budgets table + store-readiness data-safety draft (design-order item 5 — Phase 12 authoring COMPLETE)** (2026-09-12)
+  - New `docs/PERFORMANCE-BUDGETS.md`: P-1…P-9 verification targets —
+    the five PHASE5 §2 budgets (decision p95, page-load overhead,
+    engine init, engine memory, cold start) consolidated plus the
+    §7 APK-size budget (≤ vanilla same-tag + 10%; the absolute
+    reference is fixed by the FIRST vanilla baseline build, never
+    invented), §21 battery (< 5% drain delta, A/B scripted session)
+    and §21/§52 background red line (patches never defeat upstream
+    tab-freezing/timer-throttling), §9 scrolling; each row names its
+    device-matrix verification row (D5-1…D5-4); rules: budgets are
+    targets until measured, missed budget = filed defect (never a
+    rewritten budget — ADR-gated), comparisons always vs a vanilla
+    build of the SAME tag; measured-log discipline with hardware +
+    build id; the ONLY measured facts today remain the JVM benchmark
+    rows (v2 combined matcher 0.10 ms / ~21 MB, decision-equivalent)
+  - New `docs/DATA-SAFETY-DRAFT.md`: Play "Data safety" answers
+    GENERATED from the 23-surface storage inventory (inventory wins on
+    disagreement, §59): NO data collected, NO data shared (no
+    telemetry/analytics/crash-upload/developer servers — §41, ADR-025/
+    026); per-surface on-device table (where it lives, what clears it,
+    "leaves the device? never"); deletion story (clear-browsing-data
+    5 items + per-entry deletions + app reset + uninstall); local
+    security practices (Android sandbox, SecretValue, pending-patch
+    rows stated as pending); honest boundary: source-level draft, the
+    final declaration follows the D12-3 built-APK audit
+  - Phase 12 design doc: item 5 marked done, status = ALL FIVE order
+    items implemented — Phase 12 authoring COMPLETE; every remaining
+    Phase 12 deliverable is B-001-gated (device matrix)
+  - Docs-only change — no CI run by the paths-filter's design (as
+    with Steps 36/40/41)
+
 ## In progress
 
-- (none — awaiting continuation command for Step 42)
+- (none — awaiting continuation command for Step 43)
 
 ## Not started
 
