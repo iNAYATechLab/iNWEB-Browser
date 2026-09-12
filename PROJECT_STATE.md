@@ -4,31 +4,31 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 36 (Phase 12 in progress; Phases 0–11 complete)
+> Last updated: **2026-09-12** — Step 37 (Phase 12 in progress; Phases 0–11 complete)
 
 ```yaml
 project: iNWEB Browser
 repository: iNAYATechLab/iNWEB-Browser
 phase: 12
 phase_title: Production Hardening
-phase_status: in_progress   # hardening design + storage gate + threat-model re-validation done; remaining audit items next
-step: 36
+phase_status: in_progress   # design + storage gate + threat review + clear-data core done; surfaces/versioning next
+step: 37
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 50 Python + 382 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 50 Python + 398 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs + 5 gates (registry, strings, externalization, structure, storage inventory); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 12 / Step 37 — clear-browsing-data core (design item 2, pure
-  JVM, CI-tested): a plan model driven by STORAGE-INVENTORY.yaml's
-  clear column — which stores a clear action touches (history,
-  session, filter-list cache, offline entries, per-site zoom
-  overrides), per-item user choice, dry-run preview of what would be
-  cleared, and execution through each store's real API; the surface +
-  patch bind later (alternative if directed: the §47 versioning-
-  policy document, or the B-001 device-verification matrix).
+  Phase 12 / Step 38 — authored clear-browsing-data surface
+  (src/android-app, not compiled until B-001, §36 same-commit en+bn
+  strings): Settings entry + dialog with per-item checkboxes bound to
+  ClearDataManager via the ViewModel, real dry-run preview counts,
+  explicit confirmation, and honest wording (caches re-download);
+  verified by the externalization + string-parity + structural gates
+  (alternative if directed: the §23 settings-surface binding for
+  zoom/download preferences, or the §47 versioning-policy document).
 ```
 
 ## Completed
@@ -733,9 +733,41 @@ next_action: >-
     inventory 21 surfaces); CI skips by paths-filter design — last
     full-green run 34669595528 (Step 35)
 
+- [x] **Step 37 — Phase 12: clear-browsing-data core (design item 2)** (2026-09-12)
+  - New pure-JVM module `src/core/clear-data` (package
+    `com.inweb.browser.cleardata`) — the FIRST cross-module core:
+    `scripts/validate_kotlin_core.sh` gained a `--deps` mechanism
+    (dependency modules' build outputs on the compile+test classpath;
+    missing-dependency ordering fails the script) and clear-data is
+    registered after browser-shell/tracking-protection/offline
+  - `ClearDataItem`: the item universe is EXACTLY the
+    STORAGE-INVENTORY clear column — history, session,
+    filter-list cache, offline pages, per-site zoom overrides;
+    deliberately NOT items: bookmarks (deliberate user data),
+    preference stores (app reset only), downloads catalog (nothing
+    persisted yet — joins when the patch lands)
+  - Five REAL bindings, each delegating to a store API that already
+    existed (HistoryStore.clearAll, SessionPersistence.clear,
+    FilterListCache.clear) or was added with this step for the same
+    purpose (OfflineLibrary.clearAll — offline 14→15 tests;
+    ZoomSettings.clearSiteZooms — browser-shell 147→148 tests): NO
+    invented clearing paths
+  - `ClearDataManager`: duplicate-binding guard (fail-fast),
+    canonical availableItems, `preview(items)` dry-run with REAL
+    counts (null = not countable, e.g. the disposable filter-list
+    cache) that never mutates, `clear(items)` with validation — a
+    selection naming an UNBOUND item is rejected (never silently
+    skipped); selection is transient dialog state, not a persisted
+    preference
+  - 14 tests using the REAL store implementations (in-memory stores,
+    the file-backed FileFilterListCache with a temp directory, the
+    real OfflineLibrary/ZoomSettings holders)
+  - Kotlin total 398 (11 modules); all gates green locally
+  - ADR-034 recorded
+
 ## In progress
 
-- (none — awaiting continuation command for Step 37)
+- (none — awaiting continuation command for Step 38)
 
 ## Not started
 
@@ -824,6 +856,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-031 | 2026-09-12 | The authored app binds the §23/§33 cores directly: the bar renders from the toolbar configuration and settings toggles write through the cores; channel availability in the authored build is downloads-only and grows only as event-source patches land; preference adapters are thin wire-form round-trippers (validation + recovery stay in the cores); authored sources get a permanent structural gate (kotlinc parse/declaration check, dependency resolution excluded by design) because they compile only at B-001 | §23/§33 become reachable in authored source honestly; the B-001 compile cannot again be broken by latent redeclaration/parse defects |
 | ADR-032 | 2026-09-12 | Page-zoom and download preferences are validated models in the browser-shell settings core with their own store seams (AppSettings itself unchanged until its binding step): zoom bounds mirror upstream Chromium's 25%–500% supported range and bind to Chromium's own zoom mechanism via a settings/ patch (no custom renderer scaling); per-site zoom keys are normalized hosts with collision detection (ambiguous = corrupt); downloads ask before starting by default and use the platform's public Downloads directory unless the user picks a folder; both follow the ADR-029/030 corrupt-recovery contract | the remaining §23 levers get real, tested mechanisms; no setting without behavior, no silent fallback |
 | ADR-033 | 2026-09-12 | Every persisted-data surface is inventoried in docs/STORAGE-INVENTORY.yaml and the inventory is CI-enforced bidirectionally (discovered surfaces must have entries; entries must exist in code); each entry's corruption column is that store's §50/§51 recovery contract and its clear column is the clear-data contract; in-memory-only seams must name the patch that will persist them; `discoverable: false` is the reviewed manual-extra hatch, surfaced in gate output | "never silently lose user data" becomes an auditable, merge-blocking property of the codebase; the data-safety story for store readiness is generated from the same inventory |
+| ADR-034 | 2026-09-12 | The clear-browsing-data item universe is the storage inventory's clear column and NOTHING else (bookmarks/preference stores/downloads catalog are deliberately excluded with reasons); every binding delegates to a real store API — no invented clearing paths; a selection naming an unbound item is rejected, never silently skipped; previews are real counts from the stores (null = not countable) and never mutate; selection is transient dialog state; cross-module cores are validated via the script's --deps classpath with build-order enforcement | clearing user data is orchestrated, auditable, and honest; the dialog can never pretend to clear something it cannot |
 
 ## Build status
 

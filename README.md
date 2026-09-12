@@ -21,23 +21,24 @@ written in Kotlin.
 
 | Item | State |
 |---|---|
-| Development phase | **Phase 12 — Production Hardening: in progress** (hardening design, CI-enforced storage inventory, threat-model re-validation v0.2 with gap register; Phases 0–11 core work complete) |
-| Current step | 36 |
+| Development phase | **Phase 12 — Production Hardening: in progress** (hardening design, CI-enforced storage inventory, threat-model re-validation v0.2, clear-browsing-data core; Phases 0–11 core work complete) |
+| Current step | 37 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
-| Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 147 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag, page-zoom §23 with per-site overrides, download preferences §23) |
+| Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 148 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag, page-zoom §23 with per-site overrides, download preferences §23) |
 | Privacy core (`src/core/tracking-protection`) | **Implemented & unit-tested — 102 Kotlin tests** (EasyList-family parser, URL matching, request decisions, per-site allowlist, statistics; filter-list download/cache/update management; Security Center model §24; cosmetic filtering engine; combined matcher ~165–259× faster, equivalence-verified) |
 | Extension core (`src/core/extensions`) | **Implemented & unit-tested — 17 Kotlin tests** (§16 management model: install/review/enable/disable/update/remove state machine with upgrade consent, version comparison, permission-review records) |
-| Offline core (`src/core/offline`) | **Implemented & unit-tested — 14 Kotlin tests** (§17 library: real byte quota, LRU eviction with pinning, same-URL replace, atomic quota failure, persistence seam) |
+| Offline core (`src/core/offline`) | **Implemented & unit-tested — 15 Kotlin tests** (§17 library: real byte quota, LRU eviction with pinning, same-URL replace, atomic quota failure, persistence seam, clear-all) |
 | VPN core (`src/core/vpn`) | **Implemented & unit-tested — 17 Kotlin tests** (§15 config validation: WireGuard-style parsing, strict fields/CIDR/endpoints/keys, secrets opaque by construction) |
 | Profiles core (`src/core/profiles`) | **Implemented & unit-tested — 12 Kotlin tests** (§28: seeded default profile, monotonic never-reused ids, namespace routing contract, delete fallback + last-profile guard) |
 | Backup core (`src/core/backup`) | **Implemented & unit-tested — 13 Kotlin tests** (§32: versioned bundle, per-entry SHA-256, corruption tolerance, restore preview, known-stores-only secret guard) |
 | Sync core (`src/core/sync`) | **Implemented & unit-tested — 12 Kotlin tests** (§30 model: monotonic change log, backoff/retry with explicit failure reporting, LWW conflicts with tombstones — future infrastructure, §29) |
 | Customization core (`src/core/customization`) | **Implemented & unit-tested — 25 Kotlin tests** (§23 toolbar configuration: item universe mirrors the authored bar, strict validation with all offenders reported, corrupt→default recovery, persistence seam) |
 | Notification-policy core (`src/core/notifications`) | **Implemented & unit-tested — 23 Kotlin tests** (§33: registry = design §1 table exactly (audited), real-event-only decisions with no generic notify path, lazy POST_NOTIFICATIONS state machine, per-channel toggles, corrupt→default recovery) |
+| Clear-data core (`src/core/clear-data`) | **Implemented & unit-tested — 14 Kotlin tests** (Phase 12: item universe = the storage inventory's clear column, dry-run previews with real counts, execution through real store APIs, unbound items never silently skipped; first cross-module core via the script's `--deps` mechanism) |
 | Android shell UI (`src/android-app`) | Authored — Compose + Material 3 (browser with configuration-driven bottom bar §23, tab switcher, home page with real data, onboarding, settings incl. toolbar customization §23 + notification toggles §33, downloads, history, bookmarks), bn/en strings; compiles in the Chromium build (B-001); structural gate in CI |
 | Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — tested |
-| CI | **Live**: Python (50 tests) + registry + storage-inventory gate + string parity + UI externalization gate; Kotlin core (382 tests, 10 modules) + authored-source structural gate; weekly upstream watch; benchmark on demand (not in CI) |
+| CI | **Live**: Python (50 tests) + registry + storage-inventory gate + string parity + UI externalization gate; Kotlin core (398 tests, 11 modules, cross-module `--deps` support) + authored-source structural gate; weekly upstream watch; benchmark on demand (not in CI) |
 | Build | **Not yet executed** — requires external build infrastructure (blocker B-001) |
 | Open defects | None recorded |
 
