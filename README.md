@@ -21,8 +21,8 @@ written in Kotlin.
 
 | Item | State |
 |---|---|
-| Development phase | **Phase 12 — Production Hardening: in progress** (hardening design, CI-enforced storage inventory, threat-model re-validation v0.2, clear-browsing-data core + authored surface, §23 zoom/download settings binding; Phases 0–11 core work complete) |
-| Current step | 39 |
+| Development phase | **Phase 12 — Production Hardening: in progress** (hardening design, CI-enforced storage inventory, threat-model re-validation v0.2, clear-browsing-data core + authored surface, §23 zoom/download settings binding, §47 versioning policy; Phases 0–11 core work complete) |
+| Current step | 40 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 150 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag, page-zoom §23 with per-site overrides + Chromium preset table, download preferences §23) |
@@ -135,6 +135,7 @@ git-ignored here by design (ADR-004): the tree is always reproducible as
 | [`docs/STORAGE-INVENTORY.yaml`](docs/STORAGE-INVENTORY.yaml) | Every persisted-data surface: what/where, corruption recovery (§50/§51), clear semantics — CI-enforced |
 | [`docs/THREAT-MODEL-REVIEW.md`](docs/THREAT-MODEL-REVIEW.md) | Phase 12 re-validation: 14-row coverage matrix vs cores/ADRs, 10-item gap register (tracked, never silent) |
 | [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md) | Security threat model (living document) |
+| [`docs/VERSIONING.md`](docs/VERSIONING.md) | §47 versioning policy: semver ladder from `1.0.0-alpha.1`, versionCode derivation + overflow rule + release registry, tag naming & the §45 release record — written before the first tag exists |
 
 ## Development model
 
@@ -148,7 +149,10 @@ git-ignored here by design (ADR-004): the tree is always reproducible as
    `fetch_chromium.sh` / `build_android.sh` / the Docker image are **authored but not yet
    executed** — no build result is claimed.
 3. **Release engineering.** Channel-based releases (development → beta → stable) with
-   semantic versioning starting at `1.0.0-alpha.1`.
+   semantic versioning starting at `1.0.0-alpha.1`, governed by the versioning policy
+   ([`docs/VERSIONING.md`](docs/VERSIONING.md)): semver ladder, monotonic `versionCode`
+   with an authoritative release registry, annotated `v<semver>` tags carrying the full
+   §45 release record.
 
 ## Language policy
 

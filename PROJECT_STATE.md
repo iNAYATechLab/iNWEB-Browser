@@ -4,15 +4,15 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 39 (Phase 12 in progress; Phases 0–11 complete)
+> Last updated: **2026-09-12** — Step 40 (Phase 12 in progress; Phases 0–11 complete)
 
 ```yaml
 project: iNWEB Browser
 repository: iNAYATechLab/iNWEB-Browser
 phase: 12
 phase_title: Production Hardening
-phase_status: in_progress   # clear-data core + surface, settings binding done; remaining: versioning, verification matrix
-step: 39
+phase_status: in_progress   # clear-data core + surface, settings binding, versioning policy done; remaining: verification matrix, perf budgets
+step: 40
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
@@ -21,13 +21,16 @@ ci_status: authoring-pipeline-live # Python + Kotlin core jobs + 5 gates (regist
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 12 / Step 40 — §47 versioning policy (docs/VERSIONING.md, per
-  the Phase 12 design order item 3): semantic versioning starting at
-  1.0.0-alpha.1, versionCode/versionName maintenance rules, and tag
-  naming — written BEFORE the first build tag exists (alternative if
-  directed: the B-001 device-verification matrix consolidating the
-  per-phase checklists, or a §49 accessibility audit pass over the
-  authored surfaces).
+  Phase 12 / Step 41 — device-verification matrix (Phase 12 design
+  order item 4, docs/DEVICE-VERIFICATION-MATRIX.md): consolidate the
+  per-phase B-001 checklists already spread across the phase designs
+  into ONE runnable checklist — per phase: what must be verified on a
+  real device/build, the exact gate (manual test, instrumentation, or
+  store form), and its honest current state (authored / awaiting
+  B-001). It is the acceptance document the first real build is walked
+  through (alternative if directed: the Phase 12 item-5 performance
+  budgets table + store-readiness data-safety draft, or a §49
+  accessibility audit pass over the authored surfaces).
 ```
 
 ## Completed
@@ -821,10 +824,36 @@ next_action: >-
     files) gates green; Kotlin total 404 (11 modules)
   - Honest boundary: no preference affects a real download or page
     until the build exists (B-001); authored source verified by gates
+- [x] **Step 40 — Phase 12: §47 versioning policy (docs/VERSIONING.md, design-order item 3)** (2026-09-12)
+  - New `docs/VERSIONING.md`: SemVer 2.0.0 with the §47 example start
+    `1.0.0-alpha.1` and an explicit pre-release ladder
+    (alpha → beta → rc → stable); bump rules (MAJOR = data-format
+    break without forward migration, MINOR = feature work, PATCH =
+    fixes incl. ANY Chromium baseline refresh at minimum)
+  - versionName = the exact semver string; versionCode = strictly
+    monotonic integer with a documented derivation
+    (MAJOR×1,000,000 + MINOR×10,000 + PATCH×100 + channelRank) PLUS
+    an overflow rule for the patch-line-after-stable case, recorded
+    per-tag in an authoritative release registry (Appendix A — empty
+    today, filled only at real tags)
+  - Tag naming: annotated `v<semver>` tags only, the pre-release
+    identifier IS the channel marker; each tag's annotation carries
+    the full §45 release record (semver, versionCode, date, Chromium
+    baseline, patch-set hash, container digest, changelog summary);
+    CHANGELOG.md is created with the first tagged release — no empty
+    placeholder (§57)
+  - Channels per §47: Development (untagged main builds), Beta
+    (v*-beta.*), Stable (promoted only after the §46 release-
+    validation gate); NO separate canary line in v1 — introducing one
+    later requires a new ADR; the iNWEB version and the pinned
+    Chromium baseline are independent axes (ADR-001)
+  - ADR-035 recorded; Phase 12 design doc items 1–3 marked done with
+    step numbers (§59 accuracy); docs-only change — no CI run by the
+    paths-filter's design (same as Step 36)
 
 ## In progress
 
-- (none — awaiting continuation command for Step 40)
+- (none — awaiting continuation command for Step 41)
 
 ## Not started
 
@@ -914,6 +943,7 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-032 | 2026-09-12 | Page-zoom and download preferences are validated models in the browser-shell settings core with their own store seams (AppSettings itself unchanged until its binding step): zoom bounds mirror upstream Chromium's 25%–500% supported range and bind to Chromium's own zoom mechanism via a settings/ patch (no custom renderer scaling); per-site zoom keys are normalized hosts with collision detection (ambiguous = corrupt); downloads ask before starting by default and use the platform's public Downloads directory unless the user picks a folder; both follow the ADR-029/030 corrupt-recovery contract | the remaining §23 levers get real, tested mechanisms; no setting without behavior, no silent fallback |
 | ADR-033 | 2026-09-12 | Every persisted-data surface is inventoried in docs/STORAGE-INVENTORY.yaml and the inventory is CI-enforced bidirectionally (discovered surfaces must have entries; entries must exist in code); each entry's corruption column is that store's §50/§51 recovery contract and its clear column is the clear-data contract; in-memory-only seams must name the patch that will persist them; `discoverable: false` is the reviewed manual-extra hatch, surfaced in gate output | "never silently lose user data" becomes an auditable, merge-blocking property of the codebase; the data-safety story for store readiness is generated from the same inventory |
 | ADR-034 | 2026-09-12 | The clear-browsing-data item universe is the storage inventory's clear column and NOTHING else (bookmarks/preference stores/downloads catalog are deliberately excluded with reasons); every binding delegates to a real store API — no invented clearing paths; a selection naming an unbound item is rejected, never silently skipped; previews are real counts from the stores (null = not countable) and never mutate; selection is transient dialog state; cross-module cores are validated via the script's --deps classpath with build-order enforcement | clearing user data is orchestrated, auditable, and honest; the dialog can never pretend to clear something it cannot |
+| ADR-035 | 2026-09-12 | Versioning policy (docs/VERSIONING.md): SemVer with the alpha→beta→rc→stable ladder from 1.0.0-alpha.1; versionName = exact semver; versionCode strictly monotonic via a documented derivation + overflow rule, recorded per-tag in an authoritative release registry; annotated v<semver> tags only, channel identified by the pre-release identifier, each annotation carrying the full §45 release record; development channel = untagged main builds, no canary line in v1 (a later canary needs a new ADR); the iNWEB version is independent of the pinned Chromium baseline (baseline = build metadata; a refresh is at minimum a PATCH bump); the policy was written BEFORE the first build tag exists, registry empty | §47/§45 rules become a written, auditable contract before any release artifact exists; version assignments can never drift because every code is recorded at tag time and nothing predates the policy |
 
 ## Build status
 
