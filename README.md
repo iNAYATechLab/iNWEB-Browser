@@ -21,8 +21,8 @@ written in Kotlin.
 
 | Item | State |
 |---|---|
-| Development phase | **Phase 12 — Production Hardening: in progress** (hardening design, CI-enforced storage inventory, threat-model re-validation v0.2, clear-browsing-data core + authored surface, §23 zoom/download settings binding, §47 versioning policy; Phases 0–11 core work complete) |
-| Current step | 40 |
+| Development phase | **Phase 12 — Production Hardening: in progress** (hardening design, CI-enforced storage inventory, threat-model re-validation v0.2, clear-browsing-data core + authored surface, §23 zoom/download settings binding, §47 versioning policy, B-001 device-verification matrix; Phases 0–11 core work complete) |
+| Current step | 41 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 150 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag, page-zoom §23 with per-site overrides + Chromium preset table, download preferences §23) |
@@ -136,6 +136,7 @@ git-ignored here by design (ADR-004): the tree is always reproducible as
 | [`docs/THREAT-MODEL-REVIEW.md`](docs/THREAT-MODEL-REVIEW.md) | Phase 12 re-validation: 14-row coverage matrix vs cores/ADRs, 10-item gap register (tracked, never silent) |
 | [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md) | Security threat model (living document) |
 | [`docs/VERSIONING.md`](docs/VERSIONING.md) | §47 versioning policy: semver ladder from `1.0.0-alpha.1`, versionCode derivation + overflow rule + release registry, tag naming & the §45 release record — written before the first tag exists |
+| [`docs/DEVICE-VERIFICATION-MATRIX.md`](docs/DEVICE-VERIFICATION-MATRIX.md) | The B-001 acceptance checklist: Stage-0 build/patch gates, per-phase device rows (each citing its source design), release gates, G-01…G-10 closure map, empty verification log — nothing verified until the first real build |
 
 ## Development model
 

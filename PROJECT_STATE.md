@@ -4,15 +4,15 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 40 (Phase 12 in progress; Phases 0–11 complete)
+> Last updated: **2026-09-12** — Step 41 (Phase 12 in progress; Phases 0–11 complete)
 
 ```yaml
 project: iNWEB Browser
 repository: iNAYATechLab/iNWEB-Browser
 phase: 12
 phase_title: Production Hardening
-phase_status: in_progress   # clear-data core + surface, settings binding, versioning policy done; remaining: verification matrix, perf budgets
-step: 40
+phase_status: in_progress   # items 1-4 done (inventory, threat review, clear-data, versioning, verification matrix); remaining: perf budgets + data-safety draft
+step: 41
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
@@ -21,16 +21,17 @@ ci_status: authoring-pipeline-live # Python + Kotlin core jobs + 5 gates (regist
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 12 / Step 41 — device-verification matrix (Phase 12 design
-  order item 4, docs/DEVICE-VERIFICATION-MATRIX.md): consolidate the
-  per-phase B-001 checklists already spread across the phase designs
-  into ONE runnable checklist — per phase: what must be verified on a
-  real device/build, the exact gate (manual test, instrumentation, or
-  store form), and its honest current state (authored / awaiting
-  B-001). It is the acceptance document the first real build is walked
-  through (alternative if directed: the Phase 12 item-5 performance
-  budgets table + store-readiness data-safety draft, or a §49
-  accessibility audit pass over the authored surfaces).
+  Phase 12 / Step 42 — design-order item 5, the final Phase 12
+  authoring item (docs): (a) the performance budgets table — §9/§21/§52
+  verification targets (startup, navigation, memory, battery, APK size
+  §7) consolidated from PHASE5 §2 into one budget table with the
+  measurement protocol per matrix row D5-*, budgets are TARGETS to
+  verify at B-001, never claims; (b) the store-readiness data-safety
+  DRAFT generated from STORAGE-INVENTORY.yaml (23 surfaces: what is
+  stored, where it lives, what clears it) feeding the Play data-safety
+  form (alternative if directed: a §49 accessibility audit pass over
+  the authored surfaces, or the G-07 filter-list content checksum
+  pinning as a core-hardening step).
 ```
 
 ## Completed
@@ -851,9 +852,34 @@ next_action: >-
     step numbers (§59 accuracy); docs-only change — no CI run by the
     paths-filter's design (same as Step 36)
 
+- [x] **Step 41 — Phase 12: B-001 device-verification matrix (docs/DEVICE-VERIFICATION-MATRIX.md, design-order item 4)** (2026-09-12)
+  - ONE runnable checklist consolidating the per-phase B-001
+    verification items already written across the phase designs
+    (PHASE2 §4, PHASE4 ×3, PHASE5 §5, PHASE6–PHASE11 verification
+    sections, THREAT-MODEL-REVIEW gap register): every row cites its
+    source design; where they disagree the design doc wins (§59)
+  - Protocol: Stage 0 (build/patch level: apply+verify, hash
+    invariant, GN build, install/launch, C++ suites, build-time
+    audits, signing, SBOM) gates every device row; results recorded
+    in a verification log with build id + hardware; FAIL = filed
+    defect, SKIPPED = feature not claimed (§57); full matrix = the §46
+    release-validation gate before stable promotion
+  - 51 device rows across Phases 2–12 (D2-1…D12-5) + 8 Stage-0 build/patch
+    rows (B-1…B-8) + 3 release gates
+    (R-1…R-3 per VERSIONING.md) + G-01…G-10 closure map (G-03→D8-1,
+    G-04→D9-2, G-05→D9-1, G-08→B-8, G-09→D12-1/2, G-10→D6-4;
+    documented absences stay documented)
+  - Honest state: every row PENDING — no build exists (B-001), the
+    patch registry is intentionally empty (patches: [], §57); the
+    verification log (Appendix B) is empty and that emptiness is the
+    truth; no partial credit, no "should work"
+  - ADR-035 unchanged (no new ADR — this is the consolidation of
+    existing contracts, not a new decision); docs-only change — no CI
+    run by the paths-filter's design
+
 ## In progress
 
-- (none — awaiting continuation command for Step 41)
+- (none — awaiting continuation command for Step 42)
 
 ## Not started
 
