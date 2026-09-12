@@ -146,7 +146,7 @@ jobs:
       # ---- the build (resumes autoninja state when present) ----------------
       - name: Boxed build (build_android.sh development)
         id: build
-        timeout-minutes: ${{ fromJSON(inputs.build-minutes) + 12 }}
+        timeout-minutes: 340  # safety net; the inner `timeout` does the precise boxing
         continue-on-error: true
         env:
           HOP_BUILD_MINUTES: ${{ inputs.build-minutes }}
