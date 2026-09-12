@@ -40,6 +40,9 @@ jobs:
       - name: Validate patch registry
         run: python3 scripts/lint_manifest.py
 
+      - name: Validate storage inventory
+        run: python3 scripts/validate_storage_inventory.py
+
       - name: Validate localized string resources
         run: python3 scripts/validate_strings.py
       - name: Validate authored-UI string externalization

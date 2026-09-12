@@ -1,0 +1,213 @@
+# =============================================================================
+# iNWEB Browser — Storage Inventory (Phase 12 hardening)
+# =============================================================================
+# Every persisted-data surface in the codebase, with an honest entry:
+# what it stores, where it lives, what happens on corruption, and what
+# "clear" means for it. Enforced by scripts/validate_storage_inventory.py
+# (CI): a surface missing here, or a stale row, fails the build.
+#
+# MASTER-SPEC §50 ("never silently lose user data") and §51 (corrupted-
+# data detection) are audited by this file: the corruption column IS the
+# recovery contract for each store, and the clear column is the contract
+# the future clear-data surface must honor.
+#
+# Entry fields:
+#   surface       interface name (kind: seam) or adapter class name
+#                 (kind: adapter)
+#   kind          seam | adapter
+#   module        owning core module, or android-app
+#   stores        what is persisted (one line)
+#   location      where it lives (file path, prefs name, or in-memory
+#                 with the patch that will persist it)
+#   corruption    the recovery contract on corrupted data
+#   clear         what clears it (clear-browsing-data vs app reset)
+#   implements    (adapters) the seam this adapter implements
+#   prefs_name    (SharedPreferences* adapters) the preferences name
+#   discoverable  true (default) = must exist in code; false = manually
+#                 maintained extra (none today)
+# =============================================================================
+
+schema_version: 1
+
+surfaces:
+  # --- seams (core persistence ports) --------------------------------------
+
+  - surface: SettingsStore
+    kind: seam
+    module: browser-shell
+    stores: "App settings: search engine id, theme, onboarding flag"
+    location: "app preferences `inweb_settings` (via SharedPreferencesSettingsStore)"
+    corruption: "Unknown stored values fall back to the privacy-preserving defaults inside AppSettings — never a crash"
+    clear: "App reset only — settings are not browsing data"
+
+  - surface: SessionPersistence
+    kind: seam
+    module: browser-shell
+    stores: "Crash-safe tab/session snapshot (versioned line format)"
+    location: "`filesDir/session.inweb` + `.tmp` staging (via FileSessionPersistence)"
+    corruption: "Corrupted snapshot falls back to a fresh session, detected on load (never crashes); writes are atomic temp+rename (ADR-011)"
+    clear: "Clear-browsing-data (session/tabs) on the future clear-data surface"
+
+  - surface: HistoryStore
+    kind: seam
+    module: browser-shell
+    stores: "Browsing history visits (private-mode excluded upstream by the history policy)"
+    location: "`filesDir/history.tsv` (via FileHistoryStore)"
+    corruption: "Wrong/missing header → fresh empty store; malformed lines under a valid header are skipped and counted (lastLoadSkippedLines), never silently reinterpreted"
+    clear: "Clear-browsing-data (history); range deletes already exist in the core"
+
+  - surface: BookmarkStore
+    kind: seam
+    module: browser-shell
+    stores: "User bookmarks (created by explicit user action only)"
+    location: "`filesDir/bookmarks.tsv` (via FileBookmarkStore)"
+    corruption: "Header corruption → fresh start; malformed lines skipped and counted; tabs/newlines in text escaped (wire-format contract)"
+    clear: "Per-entry user deletion or app reset — bookmarks are deliberate user data, not part of clear-browsing-data"
+
+  - surface: DownloadsStore
+    kind: seam
+    module: browser-shell
+    stores: "Downloads catalog (DownloadRecord state machine)"
+    location: "In-memory until the downloads patch persists the catalog"
+    corruption: "Not applicable yet (no file form); the persisted form ships with its own corruption contract when written"
+    clear: "Clear-browsing-data (downloads list) once persisted"
+
+  - surface: ExtensionStore
+    kind: seam
+    module: extensions
+    stores: "Extension registry state (install/review/enable state machine with snapshots)"
+    location: "In-memory until the extension patches (0013–0016) persist registry state"
+    corruption: "Snapshot-restore recovery implemented in the core; the file form ships with the patches"
+    clear: "Extension removal or app reset"
+
+  - surface: FilterListCache
+    kind: seam
+    module: tracking-protection
+    stores: "Filter-list bodies + per-source metadata (download cache)"
+    location: "One cache directory, `<id>.txt` body + `<id>.meta` per source (via FileFilterListCache)"
+    corruption: "Atomic temp+rename writes; corrupt metadata degrades to missing — the body stays usable and the next refresh re-downloads"
+    clear: "Clear-browsing-data (cached files) — the cache is disposable by design"
+
+  - surface: OfflineStore
+    kind: seam
+    module: offline
+    stores: "Offline library entries (byte quota + LRU eviction with pinning)"
+    location: "In-memory until the offline patches (0017–0019) persist the library"
+    corruption: "Core enforces quota and atomic-failure semantics; the file form ships with the patches"
+    clear: "Per-entry deletion + clear-browsing-data (offline pages)"
+
+  - surface: ProfileStore
+    kind: seam
+    module: profiles
+    stores: "Profile records + active profile id"
+    location: "In-memory until the profiles patch (0022) binds per-profile data directories"
+    corruption: "The registry seeds a default profile when the store is empty; ids are monotonic and never reused"
+    clear: "Profile deletion (namespace retired by the caller) or app reset"
+
+  - surface: SyncQueueStore
+    kind: seam
+    module: sync
+    stores: "Outgoing sync change queue (monotonic revisions, backoff gate)"
+    location: "In-memory; future infrastructure only (§29/ADR-026 — no sync backend exists)"
+    corruption: "Queue failures are reported, never silent; no file form exists until sync exists"
+    clear: "Not applicable — no sync data exists (documented absence, §29)"
+
+  - surface: ToolbarStore
+    kind: seam
+    module: customization
+    stores: "Toolbar configuration (item order + hidden items)"
+    location: "app preferences `inweb_toolbar` (via SharedPreferencesToolbarStore)"
+    corruption: "Corrupt stored config falls back to the authored default; the repair is persisted and reported via lastRecovery (ADR-029)"
+    clear: "App reset — user customization, not browsing data"
+
+  - surface: NotificationStore
+    kind: seam
+    module: notifications
+    stores: "Per-channel enabled state + POST_NOTIFICATIONS phase"
+    location: "app preferences `inweb_notifications` (via SharedPreferencesNotificationStore)"
+    corruption: "Unknown channel ids or permission phases recover to defaults; the repair is persisted and reported (ADR-030)"
+    clear: "App reset"
+
+  - surface: ZoomPreferencesStore
+    kind: seam
+    module: browser-shell
+    stores: "Page-zoom default factor + per-site overrides (normalized hosts)"
+    location: "In-memory core; the preference-backed adapter ships with the authored-UI binding step"
+    corruption: "Fixed-order validation with every offender reported; corrupt data recovers to defaults, persisted + reported (ADR-032)"
+    clear: "App reset; per-site overrides are cleared with site data on the future clear-data surface"
+
+  - surface: DownloadPreferencesStore
+    kind: seam
+    module: browser-shell
+    stores: "ask-before-download flag + default download folder"
+    location: "In-memory core; the preference-backed adapter ships with the authored-UI binding step"
+    corruption: "Blank stored folder recovers to defaults; the repair is persisted and reported (ADR-032)"
+    clear: "App reset"
+
+  # --- adapters (app-layer / core file implementations) ----------------------
+
+  - surface: FileSessionPersistence
+    kind: adapter
+    module: android-app
+    implements: SessionPersistence
+    stores: "SessionPersistence implementation for the app"
+    location: "`filesDir/session.inweb` + `.tmp` (atomic temp+rename)"
+    corruption: "Delegates to the seam's contract (corrupted snapshot → fresh session)"
+    clear: "Same as its seam (SessionPersistence)"
+
+  - surface: FileHistoryStore
+    kind: adapter
+    module: browser-shell
+    implements: HistoryStore
+    stores: "HistoryStore implementation (TSV line format with header)"
+    location: "`filesDir/history.tsv`"
+    corruption: "Header corruption → fresh start; malformed lines skipped + counted"
+    clear: "Same as its seam (HistoryStore)"
+
+  - surface: FileBookmarkStore
+    kind: adapter
+    module: browser-shell
+    implements: BookmarkStore
+    stores: "BookmarkStore implementation (TSV line format with header)"
+    location: "`filesDir/bookmarks.tsv`"
+    corruption: "Header corruption → fresh start; malformed lines skipped + counted"
+    clear: "Same as its seam (BookmarkStore)"
+
+  - surface: FileFilterListCache
+    kind: adapter
+    module: tracking-protection
+    implements: FilterListCache
+    stores: "FilterListCache implementation (per-source body + meta files)"
+    location: "Caller-provided cache directory"
+    corruption: "Corrupt metadata degrades to missing; the body stays usable"
+    clear: "Same as its seam (FilterListCache)"
+
+  - surface: SharedPreferencesSettingsStore
+    kind: adapter
+    module: android-app
+    implements: SettingsStore
+    prefs_name: inweb_settings
+    stores: "SettingsStore implementation for the app"
+    location: "app preferences `inweb_settings`"
+    corruption: "Unknown values fall back to AppSettings defaults"
+    clear: "Same as its seam (SettingsStore)"
+
+  - surface: SharedPreferencesToolbarStore
+    kind: adapter
+    module: android-app
+    implements: ToolbarStore
+    prefs_name: inweb_toolbar
+    stores: "ToolbarStore implementation (comma-joined stable item ids)"
+    location: "app preferences `inweb_toolbar`"
+    corruption: "Thin wire-form round-trip; validation + recovery live in the core (ADR-029)"
+    clear: "Same as its seam (ToolbarStore)"
+
+  - surface: SharedPreferencesNotificationStore
+    kind: adapter
+    module: android-app
+    implements: NotificationStore
+    prefs_name: inweb_notifications
+    stores: "NotificationStore implementation (channel ids CSV + phase name)"
+    location: "app preferences `inweb_notifications`"
+    corruption: "Thin wire-form round-trip; validation + recovery live in the core (ADR-030)"
+    clear: "Same as its seam (NotificationStore)"
