@@ -4,15 +4,15 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 35 (Phase 12 in progress; Phases 0–11 complete)
+> Last updated: **2026-09-12** — Step 36 (Phase 12 in progress; Phases 0–11 complete)
 
 ```yaml
 project: iNWEB Browser
 repository: iNAYATechLab/iNWEB-Browser
 phase: 12
 phase_title: Production Hardening
-phase_status: in_progress   # hardening design + storage-inventory gate live; audits next
-step: 35
+phase_status: in_progress   # hardening design + storage gate + threat-model re-validation done; remaining audit items next
+step: 36
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
@@ -21,12 +21,14 @@ ci_status: authoring-pipeline-live # Python + Kotlin core jobs + 5 gates (regist
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 12 / Step 36 — threat-model review pass (design item 1): walk
-  docs/THREAT-MODEL.md against the 10 core modules and the ADR log,
-  record coverage/gaps as tracked items (never silent assumptions);
-  pure docs-vs-code, CI-unaffected (alternative if directed: the
-  clear-browsing-data core driven by STORAGE-INVENTORY.yaml's clear
-  column, or the §47 versioning-policy document).
+  Phase 12 / Step 37 — clear-browsing-data core (design item 2, pure
+  JVM, CI-tested): a plan model driven by STORAGE-INVENTORY.yaml's
+  clear column — which stores a clear action touches (history,
+  session, filter-list cache, offline entries, per-site zoom
+  overrides), per-item user choice, dry-run preview of what would be
+  cleared, and execution through each store's real API; the surface +
+  patch bind later (alternative if directed: the §47 versioning-
+  policy document, or the B-001 device-verification matrix).
 ```
 
 ## Completed
@@ -704,9 +706,36 @@ next_action: >-
     green locally
   - ADR-033 recorded
 
+- [x] **Step 36 — Phase 12: threat-model review pass (§42 re-validation, design item 1)** (2026-09-12)
+  - New `docs/THREAT-MODEL-REVIEW.md`: THREAT-MODEL v0.1 (Phase 0)
+    walked against the 10 core modules, the authored app, the ADR log
+    (001–033), and the storage inventory — every threat row mapped to
+    a status (implemented-with-evidence / designed / planned /
+    documented-absence) citing module + tests + ADR
+  - 14-row coverage matrix; NEW threat row registered: notification
+    abuse (impersonation, promotional pressure) — structurally
+    mitigated by ADR-028/030 (no generic notify path, no promotional
+    code path, per-channel toggles, lazy permission)
+  - GAP REGISTER: 10 tracked items (G-01..G-10), none silently
+    assumed — download-safety logic, fingerprinting scope, Keystore/
+    biometric binding (0020), backup encryption, per-profile dirs
+    (0022), sync E2E (future infra, §29), filter-list content
+    integrity (candidate, not committed), SBOM, device verification
+    of corruption contracts, extension enforcement patches (0013–0016)
+  - THREAT-MODEL.md updated to v0.2: notification-abuse row added,
+    data-loss row extended to name the storage inventory (ADR-033),
+    residual risks refreshed (extensions scope now DECIDED per
+    ADR-023 — the Phase 0 "undecided" note was stale), review pointer
+    added
+  - Verdict: no threat row uncovered by design; all runtime claims
+    remain B-001-gated
+  - Docs-only step: local gates re-run green (Python 50/50, storage
+    inventory 21 surfaces); CI skips by paths-filter design — last
+    full-green run 34669595528 (Step 35)
+
 ## In progress
 
-- (none — awaiting continuation command for Step 36)
+- (none — awaiting continuation command for Step 37)
 
 ## Not started
 

@@ -21,8 +21,8 @@ written in Kotlin.
 
 | Item | State |
 |---|---|
-| Development phase | **Phase 12 — Production Hardening: in progress** (hardening design + CI-enforced storage inventory; Phases 0–11 core work complete) |
-| Current step | 35 |
+| Development phase | **Phase 12 — Production Hardening: in progress** (hardening design, CI-enforced storage inventory, threat-model re-validation v0.2 with gap register; Phases 0–11 core work complete) |
+| Current step | 36 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 147 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag, page-zoom §23 with per-site overrides, download preferences §23) |
@@ -132,6 +132,7 @@ git-ignored here by design (ADR-004): the tree is always reproducible as
 | [`docs/PHASE11-NOTIFICATIONS-FEATURES-DESIGN.md`](docs/PHASE11-NOTIFICATIONS-FEATURES-DESIGN.md) | Privacy-first notifications, entertainment non-goal, §23 customization mapping |
 | [`docs/PHASE12-PRODUCTION-HARDENING-DESIGN.md`](docs/PHASE12-PRODUCTION-HARDENING-DESIGN.md) | Phase 12 audit scope (§53): pre-B-001 vs device-gated work, proposed order, honest boundaries |
 | [`docs/STORAGE-INVENTORY.yaml`](docs/STORAGE-INVENTORY.yaml) | Every persisted-data surface: what/where, corruption recovery (§50/§51), clear semantics — CI-enforced |
+| [`docs/THREAT-MODEL-REVIEW.md`](docs/THREAT-MODEL-REVIEW.md) | Phase 12 re-validation: 14-row coverage matrix vs cores/ADRs, 10-item gap register (tracked, never silent) |
 | [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md) | Security threat model (living document) |
 
 ## Development model
