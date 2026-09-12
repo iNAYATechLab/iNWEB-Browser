@@ -22,7 +22,7 @@ written in Kotlin.
 | Item | State |
 |---|---|
 | Development phase | **Phase 12 — Production Hardening: authoring complete** (all five design-order items: storage inventory gate, threat-model review, clear-data core + surface, §47 versioning policy, device-verification matrix, performance budgets, data-safety draft; plus §23 settings binding — every remaining Phase 12 deliverable is B-001-gated; Phases 0–11 core work complete) |
-| Current step | 48 (authoring paused — awaiting B-001 build host) |
+| Current step | 49 |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 150 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag, page-zoom §23 with per-site overrides + Chromium preset table, download preferences §23) |
@@ -38,8 +38,8 @@ written in Kotlin.
 | Clear-data core (`src/core/clear-data`) | **Implemented & unit-tested — 14 Kotlin tests** (Phase 12: item universe = the storage inventory's clear column, dry-run previews with real counts, execution through real store APIs, unbound items never silently skipped; first cross-module core via the script's `--deps` mechanism) |
 | Android shell UI (`src/android-app`) | Authored — Compose + Material 3 (browser with configuration-driven bottom bar §23, tab switcher, home page with real data, onboarding, settings incl. toolbar customization §23 + page-zoom surface with core-validated presets + download preferences §23 with system SAF folder picker + notification toggles §33 + clear-browsing-data §39 with real preview counts, downloads, history, bookmarks), About surface §39 (honest development-build state + CI-synced Chromium baseline), bn/en strings; §49 accessibility audit passed (whole-row toggle semantics, heading semantics, 48dp touch targets, AA-contrast palette); compiles in the Chromium build (B-001); structural gate in CI |
 | Patch framework | `iNWEB_PATCHES/` registry + apply/verify/hash tooling — tested |
-| CI | **Live**: Python (77 tests) + registry + storage-inventory gate + string parity incl. the Chromium-baseline mirror + UI externalization gate; Kotlin core (414 tests, 11 modules, cross-module `--deps` support) + authored-source structural gate; weekly upstream watch; benchmark on demand (not in CI) |
-| Build | **Not yet executed** — requires external build infrastructure (blocker B-001) |
+| CI | **Live**: Python (80 tests) + registry + storage-inventory gate + string parity incl. the Chromium-baseline mirror + UI externalization gate; Kotlin core (414 tests, 11 modules, cross-module `--deps` support) + authored-source structural gate; weekly upstream watch; benchmark on demand (not in CI); B-001 Stage-1 hosted-runner workflow (dispatch-only — audit + pinned fetch/verify + boxed build attempt with full evidence artifacts) |
+| Build | **Not yet executed** (blocker B-001) — Stage 1 PROVEN on GitHub-hosted runners: pinned fetch, exact-tag proof, empty-series apply/verify + pristine hash, Android deps, boxed compile reached 18,104/81,578 targets (22%) before the 6-h hosted-job wall; full compile needs chained resumable jobs or larger runners (evidence: `docs/verification/B001-STAGE1-RUN5.md`) |
 | Open defects | None recorded |
 
 Machine-readable, always-current progress: [`PROJECT_STATE.md`](PROJECT_STATE.md)

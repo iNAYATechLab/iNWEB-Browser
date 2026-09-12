@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 48 (Phase 12 authoring complete; Phases 0–11 complete; **AUTHORING PAUSED — awaiting B-001 build host**)
+> Last updated: **2026-09-12** — Step 49 (B-001 Stage 1 EXECUTED on GitHub Actions; authoring active on the hosted-runner path)
 
 ```yaml
 project: iNWEB Browser
@@ -12,25 +12,27 @@ repository: iNAYATechLab/iNWEB-Browser
 phase: 12
 phase_title: Production Hardening
 phase_status: authoring_complete   # all 5 design-order items done; every remaining Phase 12 deliverable is B-001-gated (device matrix)
-step: 48
+step: 49
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
-build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 77 Python + 414 Kotlin tests (local + CI)
-ci_status: authoring-pipeline-live # Python + Kotlin core jobs + 5 gates (registry, strings, externalization, structure, storage inventory); upstream watch live
+build_status: not-built            # no Chromium artifact exists yet (B-001); Stage-1 fetch/tag/B-1/B-2 PROVEN on hosted runners
+test_status: unit-tests-passing    # 80 Python + 414 Kotlin tests (local + CI)
+ci_status: authoring-pipeline-live # Python + Kotlin core jobs + 5 gates (registry, strings, externalization, structure, storage inventory); upstream watch live; B-001 Stage-1 hosted-runner workflow (dispatch-only)
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  AUTHORING PAUSED (clean tree, all gates green). The ball is with
-  the user: provision the build host per docs/BUILD-HOST-RUNBOOK.md
-  §1, run scripts/check_build_host.py (§2) until every mandatory row
-  is green, then scripts/fetch_chromium.sh (§3) and
-  scripts/build_android.sh development (§4) — the first real Chromium
-  artifact closes matrix rows B-1..B-4 and opens the verification log
-  (§5). Results/logs come back to this repository; any defect found
-  is fixed as ordinary commits. Authoring resumes ONLY for build-host
-  defects, an upstream baseline move (weekly watch / re-check), or
-  explicit user direction.
+  Proposed Step 50 — RESUMABLE CHAINED-JOB BUILD on GitHub Actions
+  (no local machine, per the standing directive): extend the Stage-1
+  workflow so each job uploads the out/ build state (and any missing
+  tree bits) as workflow artifacts and the next job downloads and
+  RESUMES autoninja, chaining ~6-hour free hosted jobs until
+  chrome_public_apk completes (~27 h measured need at 22.2% done);
+  honest risks recorded up front: artifact transfer time per hop,
+  retention limits, and possible flakiness — every hop keeps the
+  PASS/FAIL/BLOCKED evidence discipline. Alternatives: (a) the user
+  funds a larger-runner org plan or cloud build capacity (one job,
+  no chaining); (b) record the current evidence as the Stage-1
+  endpoint and pause.
 ```
 
 ## Completed
@@ -1053,10 +1055,34 @@ next_action: >-
     next repository event is B-001 Stage-0 results (or an upstream
     baseline move)
 
+- [x] **Step 49 — B-001 Stage 1 executed on GitHub Actions (user directive: no local machine)** (2026-09-12)
+  - New dispatch-only workflow `.github/workflows/b001-stage1.yml`
+    (audit + attempt jobs, ubuntu-24.04): commit-SHA build-id,
+    runner-fact collection, existing checker run, documented disk
+    reclamation, pinned fetch, authoritative tag proof, empty-series
+    apply/verify/hash, install-build-deps --android, 75-min boxed
+    chrome_public_apk attempt, APK discovery + SHA-256, all logs as
+    artifacts, PASS/FAIL/BLOCKED verdicts per step
+  - 5 dispatched runs, 4 legitimate defects found and FIXED back
+    into the repo (depot_tools bootstrap + single tag sync; checker
+    network semantics — HTTP status = reachable; symlink-aware tree
+    hash; development GN args — is_component_build forbidden on
+    Android); Python tests 77 -> 80, CI 34689818244 green
+  - Run 34691154428 (commit ae247a9) — RECORDED EVIDENCE: B-1 PASS,
+    B-2 PASS (pristine hash d4212cfb…, HEAD == remote
+    refs/tags/154.0.8037.21, chrome/VERSION match), B-3 BLOCKED on
+    hosted resources (gn gen OK; 18,104/81,578 targets in 1h07m44s
+    on 4 vCPU — ~27 h needed vs the 6 h hosted-job cap; larger
+    runners are an org-plan feature unavailable to this User-account
+    repo), B-4 BLOCKED (no artifact); APK: NONE (honest). Appendix B
+    row appended; full per-row evidence in
+    docs/verification/B001-STAGE1-RUN5.md
+  - No WebView fallback, no engine downgrade, no simulated success
+    (§57/§71) — the resource wall is measured, not assumed
+
 ## In progress
 
-- **AUTHORING PAUSED** — awaiting B-001 build-host provisioning and
-  Stage-0 results (all design work done; see next_action)
+- (none — awaiting continuation command for Step 50)
 
 ## Not started
 

@@ -89,5 +89,16 @@ release notes.
   (`scripts/check_build_host.py`, 22 unit tests — verifies every §2 row
   BEFORE the multi-hour fetch) and the operational walkthrough
   ([`docs/BUILD-HOST-RUNBOOK.md`](BUILD-HOST-RUNBOOK.md)).
-- Blocked until B-001 resolution: every BUILD and later stage. **No build or test
-  results exist or are claimed.**
+- Executed in Step 49 (user directive — GitHub-Actions-only path, no
+  local machine): `.github/workflows/b001-stage1.yml` (dispatch-only).
+  On free hosted `ubuntu-24.04` runners: pinned fetch, exact-tag
+  proof, Android deps, and empty-series apply/verify + pristine hash
+  all PASS with uploaded evidence; the compile itself is measured
+  infeasible on 4 vCPU within the 6-hour hosted-job cap
+  (18,104/81,578 targets in 1h07m44s, ~27 h needed) — see
+  `docs/verification/B001-STAGE1-RUN5.md`. Larger hosted runners
+  (16–64 vCPU) satisfy §2 but require a paid organization plan,
+  unavailable to this User-account repository; the §2 spec stands
+  unchanged for full builds.
+- Still blocked until B-001 resolution: the first complete BUILD
+  artifact. **No APK exists or is claimed.**

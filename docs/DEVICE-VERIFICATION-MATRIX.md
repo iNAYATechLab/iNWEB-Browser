@@ -216,4 +216,4 @@ filed results/defects). Empty today.
 
 | Date | Build (tag + versionCode) | Hardware | Rows run | Summary | Defects filed |
 |---|---|---|---|---|---|
-| *(none — no build exists; B-001)* | | | | | |
+| 2026-09-12 | `ae247a9` (no tag/versionCode — release registry empty) | GitHub-hosted `ubuntu-24.04`, 4 vCPU / 16 GiB / 145 GB disk (BELOW §2 spec) | B-1, B-2, B-3 (boxed), B-4 (audit evidence alongside) | B-1 **PASS** (empty series: apply+verify on pristine tag); B-2 **PASS** (pristine hash `d4212cfb…`; HEAD == remote `refs/tags/154.0.8037.21`; `chrome/VERSION` match); B-3 **BLOCKED on hosted resources** — gn gen OK, 18,104/81,578 targets in 1h07m44s on 4 vCPU (~27 h needed vs 6 h job cap); B-4 **BLOCKED** (no artifact). Full per-row evidence: `docs/verification/B001-STAGE1-RUN5.md` + workflow artifacts (run 34691154428) | 4 found & fixed in-run: depot_tools bootstrap; checker network semantics; tree-hash symlink crash; development GN args |
