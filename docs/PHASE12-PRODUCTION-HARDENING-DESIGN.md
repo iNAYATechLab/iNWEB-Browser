@@ -1,11 +1,12 @@
 # Phase 12 — Production Hardening Design
 
-**Status:** authored design; the §2 inventory is live (Step 35) and
-items 1–4 of the order below are implemented (Step 36 threat review,
-Steps 37–38 clear-data core + surface, Step 40 versioning policy,
-Step 41 device-verification matrix — plus the Step 39 §23 settings
-binding from the review's gap register); remaining: performance
-budgets + data-safety draft.
+**Status:** all five order items implemented — Phase 12 authoring
+work is COMPLETE (Step 35 inventory, Step 36 threat review, Steps
+37–38 clear-data core + surface, Step 40 versioning policy, Step 41
+device-verification matrix, Step 42 performance budgets + data-safety
+draft — plus the Step 39 §23 settings binding from the review's gap
+register). Every remaining Phase 12 deliverable is B-001-gated
+(device verification per docs/DEVICE-VERIFICATION-MATRIX.md).
 Phase 12 is defined by MASTER-SPEC §53: security audit, performance
 audit, regression testing, crash testing, release engineering,
 documentation, store readiness.
@@ -68,7 +69,15 @@ documentation, store readiness.
    source designs, release gates per VERSIONING.md, the G-01…G-10
    closure map, and an empty verification log (nothing is verified
    until B-001 — stated, not hidden).
-5. Performance budgets table + store-readiness data-safety draft.
+5. ~~Performance budgets table + store-readiness data-safety draft~~
+   — **done (Step 42)**:
+   [`docs/PERFORMANCE-BUDGETS.md`](PERFORMANCE-BUDGETS.md) (P-1…P-9
+   verification targets incl. §7 APK-size and §21/§52 battery rows,
+   measured-log discipline, vanilla-same-tag comparison rule) and
+   [`docs/DATA-SAFETY-DRAFT.md`](DATA-SAFETY-DRAFT.md) (Play-form
+   answers generated from the 23-surface inventory: no collection, no
+   sharing, in-app deletion story, pending-patch rows stated as
+   pending).
 
 ## 4. Honest boundaries
 
