@@ -42,6 +42,8 @@ jobs:
 
       - name: Validate localized string resources
         run: python3 scripts/validate_strings.py
+      - name: Validate authored-UI string externalization
+        run: python3 scripts/validate_localization.py
 
       - name: Run Python unit tests
         run: python3 -m unittest discover -s tests -t . -v
