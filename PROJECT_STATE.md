@@ -4,32 +4,30 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 38 (Phase 12 in progress; Phases 0–11 complete)
+> Last updated: **2026-09-12** — Step 39 (Phase 12 in progress; Phases 0–11 complete)
 
 ```yaml
 project: iNWEB Browser
 repository: iNAYATechLab/iNWEB-Browser
 phase: 12
 phase_title: Production Hardening
-phase_status: in_progress   # clear-data core + authored surface done; remaining: settings binding, versioning, verification matrix
-step: 38
+phase_status: in_progress   # clear-data core + surface, settings binding done; remaining: versioning, verification matrix
+step: 39
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
 build_status: not-built            # no Chromium artifact exists yet (B-001)
-test_status: unit-tests-passing    # 50 Python + 402 Kotlin tests (local + CI)
+test_status: unit-tests-passing    # 50 Python + 404 Kotlin tests (local + CI)
 ci_status: authoring-pipeline-live # Python + Kotlin core jobs + 5 gates (registry, strings, externalization, structure, storage inventory); upstream watch live
 known_blockers: [B-001]
 open_defects: 0
 next_action: >-
-  Phase 12 / Step 39 — §23 settings-surface binding for the remaining
-  preference cores (src/android-app, B-001-gated compile, §36
-  same-commit en+bn strings): zoom settings surface (default factor +
-  per-site override management, bounds-validated through the core) and
-  download-preferences surface (ask-before-download toggle, default
-  folder via the platform picker when it exists), incl. the
-  SharedPreferencesDownloadPreferencesStore adapter + inventory entry
-  (alternative if directed: the §47 versioning-policy document, or the
-  B-001 device-verification matrix).
+  Phase 12 / Step 40 — §47 versioning policy (docs/VERSIONING.md, per
+  the Phase 12 design order item 3): semantic versioning starting at
+  1.0.0-alpha.1, versionCode/versionName maintenance rules, and tag
+  naming — written BEFORE the first build tag exists (alternative if
+  directed: the B-001 device-verification matrix consolidating the
+  per-phase checklists, or a §49 accessibility audit pass over the
+  authored surfaces).
 ```
 
 ## Completed
@@ -795,10 +793,38 @@ next_action: >-
     Kotlin total 402 (11 modules)
   - Honest boundary: nothing clears on a device until the build
     exists (B-001); the surface is authored source verified by gates
+- [x] **Step 39 — Phase 12: §23 settings-surface binding (zoom + download preferences, bound to the preference cores)** (2026-09-12)
+  - `ZoomPreferences.PRESET_FACTORS` added to the browser-shell core
+    (upstream Chromium's preset zoom steps, ascending — the table the
+    surface AND the future engine-adapter page-zoom control reuse);
+    +2 tests (ascending/unique/in-bounds; spans 25%–500%, contains
+    the 100% default), module 148 → 150
+  - New `ui/ZoomSettingsScreen`: default factor chosen from the core's
+    preset table (bounds-validated through `ZoomSettings`; the surface
+    offers only core-valid steps, Err branch kept defensive); per-site
+    override management lists ONLY what actually exists (creators are
+    the page-zoom control on the engine side, §57 honesty rule) with
+    per-host removal; Settings nav row + screen routing
+  - New `SharedPreferencesDownloadPreferencesStore` adapter (app
+    preferences `inweb_downloads`; wire form = ask flag + folder
+    string, absent folder key = the platform's public Downloads
+    directory; value-level validation/recovery stay in the core,
+    ADR-031/032)
+  - Settings downloads section: ask-before-download Switch + default
+    folder row bound to `DownloadSettings`; the folder row launches
+    the REAL system SAF picker (OpenDocumentTree) and persists the
+    tree URI through the core; a custom folder releases back to the
+    system folder; SettingsScreen column made scrollable
+  - STORAGE-INVENTORY.yaml: 23 surfaces (download adapter + seam
+    location updated); 11 new strings en + bn same commit (§36);
+    parity + externalization (0 hatches) + structural (22 authored
+    files) gates green; Kotlin total 404 (11 modules)
+  - Honest boundary: no preference affects a real download or page
+    until the build exists (B-001); authored source verified by gates
 
 ## In progress
 
-- (none — awaiting continuation command for Step 39)
+- (none — awaiting continuation command for Step 40)
 
 ## Not started
 
