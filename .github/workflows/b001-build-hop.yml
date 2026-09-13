@@ -25,9 +25,13 @@ on:
       build-minutes:
         description: "minutes the build may run before being boxed"
         default: 265
+      resume-run-id:
+        description: "run id that owns the resume-state artifacts (required with resume-from)"
+        default: ""
 
 permissions:
   contents: read
+  actions: read   # cross-run artifact download (resuming a previous hop's state)
 
 concurrency:
   group: b001-build-hop
@@ -104,20 +108,24 @@ jobs:
           sudo bash chromium/src/build/install-build-deps.sh --android --no-arm 2>&1 | tee b001-logs/20-deps.log
 
       # ---- resume: manifest first, then all parts (flat merge) -------------
-      - name: Download previous hop state manifest
+      - name: Download previous hop state manifest (cross-run)
         if: ${{ inputs.resume-from != '' }}
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.resume-from }}-manifest
+          run-id: ${{ inputs.resume-run-id }}
+          github-token: ${{ github.token }}
           path: state-in
 
-      - name: Download previous hop state parts
+      - name: Download previous hop state parts (cross-run)
         if: ${{ inputs.resume-from != '' }}
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           pattern: ${{ inputs.resume-from }}-part-*
+          run-id: ${{ inputs.resume-run-id }}
+          github-token: ${{ github.token }}
           merge-multiple: true
           path: state-in
 
@@ -146,6 +154,7 @@ jobs:
       # ---- the build (resumes autoninja state when present) ----------------
       - name: Boxed build (build_android.sh development)
         id: build
+        if: ${{ inputs.resume-from == '' || steps.resume.outcome == 'success' }}
         timeout-minutes: 340  # safety net; the inner `timeout` does the precise boxing
         continue-on-error: true
         env:
