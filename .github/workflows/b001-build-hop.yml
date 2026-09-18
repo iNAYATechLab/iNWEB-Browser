@@ -74,6 +74,19 @@ jobs:
           sudo docker system prune -af >/dev/null 2>&1 || true
           df -h / | tee b001-logs/05-disk.txt
 
+      # Runner tuning (not project config): the final monolithic links
+      # (libmonochrome et al.) need more memory than the 16 GiB runner has;
+      # a swapfile on the runner disk keeps lld alive at link-speed cost.
+      - name: Add swap headroom for the final links (documented runner tuning)
+        run: |
+          if ! sudo swapon --show | grep -q .; then
+            sudo fallocate -l 14G /swapfile
+            sudo chmod 600 /swapfile
+            sudo mkswap /swapfile >/dev/null
+            sudo swapon /swapfile
+          fi
+          free -h | tee -a b001-logs/00-facts.txt
+
       - name: Fetch pinned Chromium (fetch_chromium.sh)
         id: fetch
         timeout-minutes: 75
