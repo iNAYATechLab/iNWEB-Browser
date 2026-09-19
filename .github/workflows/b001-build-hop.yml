@@ -164,6 +164,34 @@ jobs:
             find chromium/src/out/inweb-development -name '*.o' 2>/dev/null | wc -l
           } 2>&1 | tee b001-logs/25-resume.log
 
+      # ---- mtime discipline: make the resumed state RESUMABLE ---------------
+      # Each hop re-fetches the tree, giving every source a NEW mtime; the
+      # resumed out/ artifacts keep their ORIGINAL (older) build mtimes, so a
+      # mtime/size-based incremental builder (ninja-style restat, which siso
+      # uses for local fs state) sees "every input changed" and re-executes
+      # the whole graph — measured: hops 4/5/6 each re-executed ~30k edges
+      # (~a full box) without advancing the frontier. Normalizing every
+      # source to a FIXED past date (out/ excluded) makes inputs permanently
+      # "not newer" than the artifacts, so siso's input records stay valid
+      # across hops and autoninja resumes genuinely.
+      - name: Normalize source mtimes (fixed epoch; out/ excluded)
+        id: normalize
+        if: ${{ steps.fetch.outcome == 'success' }}
+        timeout-minutes: 15
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          {
+            date -u
+            find chromium -path 'chromium/src/out' -prune -o \
+              -exec touch -h -c -d '2020-01-01 00:00:00 UTC' {} +
+            echo "normalized: all tree mtimes -> 2020-01-01 (out/ excluded)"
+            echo "--- sanity: sources must all be <= 2020-01-01 ---"
+            find chromium -path 'chromium/src/out' -prune -o -newermt '2020-01-02' -print | head -5
+            echo "--- sanity: out artifacts (sample) are newer ---"
+            find chromium/src/out/inweb-development -type f -newermt '2020-01-02' 2>/dev/null | head -3
+          } 2>&1 | tee b001-logs/26-normalize.log
+
       # ---- the build (resumes autoninja state when present) ----------------
       - name: Boxed build (build_android.sh development)
         id: build
