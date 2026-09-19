@@ -57,7 +57,31 @@ gn gen "$OUT_DIR" --args="$(cat "$ARGS_FILE")"
   echo "built_at_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 } > "$OUT_DIR/iweb_build_metadata.txt"
 
-autoninja -C "$OUT_DIR" chrome_public_apk
+# Build executor (measured, Step 50): autoninja dispatches to siso, whose
+# incremental state (action/deps records) does not survive the chained-hop
+# cross-runner out/ transfer — hops 4-6 each re-executed the whole reachable
+# graph (~30k edges per box, out/ frozen at 24,545 .o). Plain ninja rests on
+# mtime/size restat, which the transferred state satisfies (tree mtimes
+# normalized to a fixed epoch by the hop workflow; out/ artifact mtimes
+# preserved by tar), so the CI chain hops set INWEB_BUILD_TOOL=ninja.
+# Default remains autoninja for normal build hosts. INWEB_BUILD_DRYRUN=1
+# makes the ninja path plan only (-n) and report the would-build count.
+INWEB_BUILD_TOOL="${INWEB_BUILD_TOOL:-autoninja}"
+INWEB_BUILD_DRYRUN="${INWEB_BUILD_DRYRUN:-false}"
+if [ "$INWEB_BUILD_TOOL" = "ninja" ]; then
+  if [ "$INWEB_BUILD_DRYRUN" = "true" ] || [ "$INWEB_BUILD_DRYRUN" = "1" ]; then
+    ninja -C "$OUT_DIR" -n chrome_public_apk > "$OUT_DIR/ninja_dryrun.txt"
+    echo "ninja dry-run: $(wc -l < "$OUT_DIR/ninja_dryrun.txt") commands would run"
+    echo "--- first 20 planned commands ---"
+    head -20 "$OUT_DIR/ninja_dryrun.txt"
+    echo "--- why dirty (explain, first 40) ---"
+    ninja -C "$OUT_DIR" -n -d explain chrome_public_apk 2>&1 | head -40
+  else
+    ninja -C "$OUT_DIR" -j "${INWEB_NINJA_JOBS:-6}" chrome_public_apk
+  fi
+else
+  autoninja -C "$OUT_DIR" chrome_public_apk
+fi
 
 echo "Build complete."
 echo "  output dir : $OUT_DIR"

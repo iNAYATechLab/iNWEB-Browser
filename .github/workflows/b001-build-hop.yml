@@ -28,6 +28,13 @@ on:
       resume-run-id:
         description: "run id that owns the resume-state artifacts (required with resume-from)"
         default: ""
+      build-tool:
+        description: "build executor for scripts/build_android.sh (empty = autoninja/siso; 'ninja' = mtime-restat resume for chained hops)"
+        default: ""
+      probe-dryrun:
+        description: "true = run the build tool in plan-only mode and report the would-build count (no compile, no state repackage)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -200,6 +207,8 @@ jobs:
         continue-on-error: true
         env:
           HOP_BUILD_MINUTES: ${{ inputs.build-minutes }}
+          INWEB_BUILD_TOOL: ${{ inputs.build-tool }}
+          INWEB_BUILD_DRYRUN: ${{ inputs.probe-dryrun }}
         run: |
           set -o pipefail
           timeout "${HOP_BUILD_MINUTES}m" bash scripts/build_android.sh development 2>&1 | tee b001-logs/30-build.log
@@ -224,6 +233,12 @@ jobs:
             find "$OUT" -name '*.o' 2>/dev/null | wc -l
             df -h /
           } | tee b001-logs/40-postbuild.txt
+          if [ "${{ inputs.probe-dryrun }}" = "true" ]; then
+            echo "PROBE hop — dry-run counts are in 30-build.log; state not repackaged" | tee b001-logs/45-verdict.txt
+            echo "done=false" >> "$GITHUB_OUTPUT"
+            echo "state=none" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           APKS=$(find "$OUT/apks" -name '*.apk' -type f 2>/dev/null || true)
           if [ -n "$APKS" ]; then
             echo "APK: FOUND" | tee b001-logs/45-verdict.txt
