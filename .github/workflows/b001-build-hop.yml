@@ -31,6 +31,9 @@ on:
       build-tool:
         description: "build executor for scripts/build_android.sh (empty = autoninja/siso; 'ninja' = mtime-restat resume for chained hops)"
         default: ""
+      ninja-jobs:
+        description: "ninja -j parallelism for the ninja executor (default 6; 4-vCPU/16-GB runner — higher values risk compile OOM)"
+        default: 6
       probe-dryrun:
         description: "true = run the build tool in plan-only mode and report the would-build count (no compile, no state repackage)"
         type: boolean

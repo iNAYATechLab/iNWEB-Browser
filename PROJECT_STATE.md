@@ -1084,7 +1084,17 @@ next_action: >-
 
 ## In progress
 
-- (none — awaiting continuation command for Step 50)
+- Step 50 — chained resumable build (b001-build-hop.yml). Chain at **state-10**
+  (run 35447512278; ninja resume math exact: plan 31,456 = hop-9 remainder;
+  6,630 done in-box at ~25 edges/min in the blink CXX region; **24,826 edges
+  remain ≈ 4–5 hops**). 2026-09-22 audit per author directive: hop 11
+  cancelled mid-box; all 11 runs audited — ≈24 h of the ≈39 h spent were
+  defect-attributable (resume-download bug, siso restat, executor restart),
+  all root causes fixed and verified by hop-10's exact-resume; verification
+  separated from compilation (new b001-verify.yml, no-compile, push-triggered);
+  depot_tools cached on its pinned rev; ninja-jobs input added. Full ledger +
+  accounting: docs/verification/B001-BUILD-CHAIN.md. Next: hop 12
+  (resume state-10, ninja, -j6).
 
 ## Not started
 

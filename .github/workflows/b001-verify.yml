@@ -1,0 +1,172 @@
+name: B-001 verify (no compile)
+
+# =============================================================================
+# B-001 audit outcome (2026-09-22) — SEPARATION OF CONCERNS.
+#
+# Repo-side changes (patch series, Chromium pin, fetch/patch tooling) must be
+# verifiable WITHOUT compiling Chromium (~4.5 h per box on a free runner).
+# This workflow runs exactly the cheap verification stages:
+#
+#   fetch pinned tree (~10-15 min) -> tag verify -> [pristine tree hash]
+#   -> patch-series apply/verify -> patched-tree hash -> verdict
+#
+# Total ~35-60 min, no out/ state, no APK, no compile. It never dispatches a
+# build and its PASS says nothing about B-3/B-4 (the compile chain remains
+# the only evidence source for those — no PASS-by-inheritance, §57).
+#
+# Modes:
+#   patches       apply+verify the registered series and hash the result
+#                 (today the series is EMPTY — B-001 gate — so this mode
+#                 validates tag + tooling and becomes the Stage-2 patch
+#                 gate automatically once patches are registered)
+#   pristine-hash hash the pristine tree and compare to the recorded B-2
+#                 baseline digest (order: hash BEFORE any patch application)
+#   both          pristine hash first, then the patches stage
+#
+# The expensive chain (b001-build-hop.yml) is dispatched ONLY deliberately,
+# as the continuation of the single resumable build — never by repo pushes.
+# =============================================================================
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "patches | pristine-hash | both"
+        default: "patches"
+        type: choice
+        options:
+          - patches
+          - pristine-hash
+          - both
+  push:
+    branches: [main]
+    paths:
+      - "iNWEB_PATCHES/**"
+      - "scripts/apply_patches.py"
+      - "scripts/fetch_chromium.sh"
+      - "config/chromium/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: b001-verify
+  cancel-in-progress: true   # cheap job — latest commit wins
+
+jobs:
+  verify:
+    name: "verify (${{ inputs.mode || 'patches' }})"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Record facts
+        run: |
+          mkdir -p b001-logs
+          {
+            echo "commit_sha=$(git rev-parse HEAD)"
+            echo "run_id=${GITHUB_RUN_ID} run_number=${GITHUB_RUN_NUMBER}"
+            echo "date_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "mode=${{ inputs.mode || 'patches' }}"
+            echo "event=${GITHUB_EVENT_NAME}"
+          } | tee b001-logs/00-facts.txt
+
+      - name: Free preinstalled toolchain space (documented)
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+            /usr/local/.ghcup /usr/local/share/boost /opt/hostedtoolcache/CodeQL \
+            /usr/lib/jvm /usr/local/share/chromium 2>/dev/null || true
+          sudo docker system prune -af >/dev/null 2>&1 || true
+          df -h / | tee b001-logs/05-disk.txt
+
+      # Same pinned-rev cache discipline as the build chain (audit item):
+      # depot_tools is the only chain input under the 10 GB cache cap.
+      - name: Cache depot_tools (pinned rev)
+        uses: actions/cache@v6
+        with:
+          path: chromium/depot_tools
+          key: depot-tools-v1-73fc5a4d
+          restore-keys: depot-tools-v1-
+
+      - name: Fetch pinned Chromium (fetch_chromium.sh)
+        id: fetch
+        timeout-minutes: 75
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          bash scripts/fetch_chromium.sh 2>&1 | tee b001-logs/10-fetch.log
+
+      - name: Verify pinned tag (compact)
+        id: tag
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          WS="$PWD/chromium"
+          EXPECTED=$(sed -n 's/^CHROMIUM_TAG=//p' config/chromium/BASELINE | tr -d '[:space:]')
+          HEAD_SHA=$(git -C "$WS/src" rev-parse HEAD 2>/dev/null || echo none)
+          REMOTE_SHA=$(git -C "$WS/src" ls-remote origin "refs/tags/$EXPECTED^{}" "refs/tags/$EXPECTED" 2>/dev/null | grep -v '\^{}' | head -1 | cut -f1 || true)
+          VERSION=$(sed -n 's/^MAJOR=//p;s/^MINOR=//p;s/^BUILD=//p;s/^PATCH=//p' "$WS/src/chrome/VERSION" 2>/dev/null | paste -sd. || true)
+          echo "expected=$EXPECTED head=$HEAD_SHA remote_tag=$REMOTE_SHA chrome_version=$VERSION" | tee b001-logs/15-tag.txt
+          if [ "$HEAD_SHA" = "none" ] || [ -z "$REMOTE_SHA" ] || [ "$HEAD_SHA" != "$REMOTE_SHA" ] || [ "$VERSION" != "$EXPECTED" ]; then
+            echo "TAG: FAIL/BLOCKED (see above line)" | tee -a b001-logs/15-tag.txt
+            exit 1
+          fi
+          echo "TAG: PASS" | tee -a b001-logs/15-tag.txt
+
+      # ---- stage: pristine tree hash (BEFORE any patch application) -------
+      - name: Pristine tree hash (compare to B-2 baseline digest)
+        id: pristine
+        if: ${{ always() && steps.fetch.outcome == 'success' && (inputs.mode == 'pristine-hash' || inputs.mode == 'both') }}
+        timeout-minutes: 40
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          EXPECTED_HASH="d4212cfb45d955aa5311c5ab35439b896f8f54ae3b616d546433f38005cabe1e"
+          {
+            echo "--- pristine tree digest (apply_patches.py hash) ---"
+            GOT=$(python3 scripts/apply_patches.py hash chromium/src | tee /dev/stderr | tail -1)
+            echo "expected=$EXPECTED_HASH"
+            echo "got=$GOT"
+            if [ "$GOT" = "$EXPECTED_HASH" ]; then
+              echo "PRISTINE-HASH: PASS"
+            else
+              echo "PRISTINE-HASH: FAIL (tree content differs from the B-2 baseline)"
+            fi
+          } 2>&1 | tee b001-logs/30-pristine-hash.txt
+
+      # ---- stage: patch series apply + verify + patched digest ------------
+      - name: Patch series apply + verify + hash
+        id: patches
+        if: ${{ always() && steps.fetch.outcome == 'success' && steps.tag.outcome == 'success' && (inputs.mode == 'patches' || inputs.mode == 'both') }}
+        timeout-minutes: 40
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          {
+            echo "--- apply (converge: peel + forward) ---"
+            python3 scripts/apply_patches.py apply chromium/src
+            echo "--- verify (idempotence check) ---"
+            python3 scripts/apply_patches.py verify chromium/src
+            echo "--- patched tree digest ---"
+            python3 scripts/apply_patches.py hash chromium/src
+            echo "PATCHES: PASS"
+          } 2>&1 | tee b001-logs/40-patches.txt
+
+      - name: Verdict
+        if: ${{ always() }}
+        run: |
+          {
+            echo "event=${GITHUB_EVENT_NAME} mode=${{ inputs.mode || 'patches' }}"
+            grep -h "TAG:\|PRISTINE-HASH:\|PATCHES:" b001-logs/*.txt 2>/dev/null || echo "(no stage verdicts)"
+            echo "COMPILE: NONE (this job never compiles — B-3/B-4 evidence lives in the b001-build-hop chain only)"
+          } | tee b001-logs/99-verdict.txt
+
+      - name: Upload verification logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: b001-verify-${{ github.run_number }}-logs
+          path: b001-logs/
+          if-no-files-found: error
