@@ -1238,11 +1238,12 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   the 14-run resumable B-001 chain (hop 14 = run 35715711786; full ledger:
   `docs/verification/B001-BUILD-CHAIN.md`). B-3 (real build completes) and
   B-4 (real verified artifact) evidence recorded.
-- **Stage 2 in progress** — iNWEB patch series: 0001–0004 authored; the
-  series applied cleanly on the real pinned tree in b001-verify run
-  35739593282 (`PATCHES: PASS`, 0001–0003 content at that commit); patch
-  0003 reworked to the user-selected v1 logo and 0004 (monochrome themed
-  icon) added — both locally validated and riding the next batch verify. The
+- **Stage 2 in progress** — iNWEB patch series: 0001–0004 authored AND
+  CI-verified on the real pinned tree: b001-verify run 35749687902 on
+  commit 75c71fa (`TAG: PASS`, `PATCHES: PASS` — the 0003 v1-logo rework
+  and the 0004 monochrome themed icon included); ci-authoring green on
+  the same head (35749687907) and on the adblock authoring commit 0f9d368
+  (35751502661). Next: patch 0005 (native ad-block engine, ADR-040). The
   Android UI sources compile inside the Chromium build once the
   integration patches land (see `docs/phases/PHASE2-INTEGRATION-PLAN.md`).
 - **Next build:** incremental resume from cached state-13 → first

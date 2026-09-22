@@ -116,10 +116,9 @@ patches:
       Exact upstream dimensions and PNG modes reproduced per density; git
       apply/--reverse binary round-trip with byte-identical applied files;
       apply_patches.py E2E (apply, verify, PEEL-idempotence, 3-patch
-      series); lint_manifest.py. b001-verify (patches mode) on a real
-      fetched tree pending for this reworked content - the previous globe
-      design passed run 35739593282; visual acceptance at first iNWEB
-      APK install.
+      series); lint_manifest.py; b001-verify (patches mode) PASS on the
+      real fetched tree (run 35749687902, commit 75c71fa) for this
+      reworked content; visual acceptance at first iNWEB APK install.
     rebase_notes: >-
       Binary patch - on rebase, regenerate assets from the master
       (assets/logo/inweb_logo_master.png, user-provided v1 logo)
@@ -148,7 +147,7 @@ patches:
       themed-icon-silhouette-preview.png for author visual acceptance;
       git apply/--reverse round-trip byte-identical; apply_patches.py E2E
       (4-patch series, PEEL idempotence); lint_manifest.py; b001-verify
-      on the real tree rides the batch push.
+      PASS on the real tree (run 35749687902, commit 75c71fa).
     rebase_notes: >-
       Small text patch on a rarely-touched vector XML; on logo change,
       re-trace the silhouette from the master with the documented
