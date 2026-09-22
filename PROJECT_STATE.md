@@ -1084,23 +1084,20 @@ next_action: >-
 
 ## In progress
 
-- Step 50 — chained resumable build (b001-build-hop.yml). Chain at **state-13**
-  (run 35694777976: resumed state-12 exactly — plan 11,841; stopped at
-  [10393/11841] on the chain's first genuine build error:
-  android_static_analysis=build_server steps require AUTONINJA_BUILD_ID,
-  absent under the plain-ninja executor. Fixed in build_android.sh — export
-  the ID; verified against the pinned tag's server_utils.py that this enables
-  normal local execution, no build server needed. out = 3.4 GB state-13.)
-  **~1,451 edges remain (Java/ACTION + final links + packaging) — APK
-  expected on hop 14.** 2026-09-22 audit per author directive: hop 11
-  cancelled mid-box; all runs audited — ≈24 h of the ≈47 h spent were
-  defect-attributable (resume-download bug, siso restat, executor restart),
-  all root causes fixed and verified by exact-remainder resumes (hops 10, 12,
-  13); verification separated from compilation (b001-verify.yml, no-compile,
-  push-triggered); depot_tools cached on its pinned rev (hit on hop-13);
-  ninja-jobs input added. Full ledger + accounting:
-  docs/verification/B001-BUILD-CHAIN.md. Next: hop 14
-  (resume state-13, ninja, -j6, AUTONINJA_BUILD_ID fix active).
+- Step 50 — **COMPLETE (2026-09-22T11:28Z): `chrome_public_apk` BUILT on
+  GitHub-hosted runners** (hop 14, run 35715711786, 65 min, commit 85b2ccf).
+  Evidence: APK: FOUND; build_exit=0; ChromePublic.apk 689 MB, sha256
+  098fff9c37b9d940d036be276924c651655d4a5e1b82f9c1e213bcc381c9799b
+  (runner-computed == downloaded-artifact-computed); inspection: 11 classes.dex,
+  lib/arm64-v8a/libchrome.so 468.5 MB (real engine, not WebView), bn.pak+en.pak
+  locales. **B-3 evidence: the real Chromium build completes; B-4 evidence:
+  real verified artifact** (verdict updates in the B-001 verification docs).
+  This APK is the PRISTINE baseline (no iNWEB patches — B-001 gate); Stage 2
+  resumes from state-13 (3.4 GB) for the patched iNWEB APK. Full chain ledger,
+  audit and result: docs/verification/B001-BUILD-CHAIN.md. Chain history: 14
+  runs / ~45 h; ~24 h defect-attributable, all root causes fixed and proven by
+  exact-remainder resumes (hops 10, 12, 13); verification separated from
+  compilation (b001-verify.yml); depot_tools cached on its pinned rev.
 
 ## Not started
 

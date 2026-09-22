@@ -42,8 +42,9 @@ The chain exists because the *whole* build (~60k–78k edges depending on execut
 | 35641788135 | 11 | 09-21 | 1h37m | state-10 | ninja | cancelled mid-box **by author order** (this audit) | ~1.3 h compile discarded; state-10 intact |
 | 35652613459 | 12 | 09-21 | 4h46m | state-10 | ninja | plan `24826` = exact audit remainder; `12985` done (~49/min, content/browser region); state-12 = 2.6 GB / 37,523 objects | **real advance ✓** first hop on the audited workflow (4711311); depot_tools cache saved on first use |
 | 35694777976 | 13 | 09-22 | 3h33m | state-12 | ninja | RESUME PASS; plan `11841` exact; stopped at `[10393/11841]` — first genuine build error: `AUTONINJA_BUILD_ID is not set` (build_server steps); state-13 = 3.4 GB | ~10,390 done ✓; **~1,451 edges remain**; fixed in build_android.sh (set AUTONINJA_BUILD_ID → verified local-execution fallback) |
+| 35715711786 | 14 | 09-22 | **65m** | state-13 | ninja | RESUME PASS; **build_exit=0 — full graph complete; APK: FOUND** | **CHAIN COMPLETE ✓** ChromePublic.apk 689 MB, sha256 `098fff9c…c9799b` (verified against the downloaded artifact); AUTONINJA_BUILD_ID fix worked first try |
 
-**Totals:** ≈44 h of hosted-runner time over 12 runs; ≈24 h attributable to the defects/restart below; ≈20 h of genuine compile progress (hops 2, 9, 10, and 12).
+**Totals:** ≈45 h of hosted-runner time over 14 runs; ≈24 h attributable to the defects/restart below; ≈21 h of genuine compile progress (hops 2, 9, 10, 12, 13, 14). **Chain finished 2026-09-22T11:28Z — `chrome_public_apk` complete.**
 
 ## 3. Root causes of the waste — and their (already-landed) fixes
 
