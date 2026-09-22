@@ -1,5 +1,5 @@
 diff --git a/chrome/android/java/res_chromium_base/values/channel_constants.xml b/chrome/android/java/res_chromium_base/values/channel_constants.xml
-index cc1f2a3..d746c6c 100644
+index cc1f2a3..fd34e92 100644
 --- a/chrome/android/java/res_chromium_base/values/channel_constants.xml
 +++ b/chrome/android/java/res_chromium_base/values/channel_constants.xml
 @@ -7,8 +7,8 @@ found in the LICENSE file.
@@ -10,7 +10,7 @@ index cc1f2a3..d746c6c 100644
 -    <string name="bookmark_widget_title" translatable="false">Chromium bookmarks</string>
 -    <string name="search_widget_title" translatable="false">Chromium search</string>
 -    <string name="quick_action_search_widget_title" translatable="false">Chromium quick action search</string>
-+    <string name="app_name" translatable="false">iNWEB Browser</string>
++    <string name="app_name" translatable="false">iNWEB</string>
 +    <string name="bookmark_widget_title" translatable="false">iNWEB bookmarks</string>
 +    <string name="search_widget_title" translatable="false">iNWEB search</string>
 +    <string name="quick_action_search_widget_title" translatable="false">iNWEB quick action search</string>

@@ -21,3 +21,9 @@ symbol_level = 1
 
 # Distribution outside Play Store during development.
 android_channel = "default"
+
+# iNWEB application identity (ADR-038): Chromium's supported rebranding
+# argument (declare_args in chrome/android/chrome_public_apk_tmpl.gni).
+# android_channel = "default" appends no suffix, so the id stays exactly
+# com.inweb.android. Permanent once released (updates require same id).
+chrome_public_manifest_package = "com.inweb.android"

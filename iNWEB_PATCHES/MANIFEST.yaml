@@ -41,8 +41,9 @@ patches:
     area: ui
     description: >-
       Application identity: user-visible launcher and widget names rebranded
-      from Chromium to iNWEB Browser (app_name, bookmark/search/quick-action
-      widget titles) per master prompt #1 (Product Identity).
+      from Chromium to iNWEB (app_name, bookmark/search/quick-action widget
+      titles) per ADR-038 (launcher name "iNWEB"; full product name
+      "iNWEB Browser" per master prompt #1).
     upstream_files:
       - chrome/android/java/res_chromium_base/values/channel_constants.xml
     risk: low
