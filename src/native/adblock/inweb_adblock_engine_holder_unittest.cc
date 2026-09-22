@@ -25,13 +25,21 @@ RequestContext Request(const std::string& url) {
 
 }  // namespace
 
-TEST(InwebAdblockEngineHolderTest, EmptyByDefaultPassesEverything) {
+TEST(InwebAdblockEngineHolderTest, LoadsDefaultListAtConstruction) {
+  // Patch 0007: the embedded starter list is active from construction —
+  // no network, no subscriptions.
   InwebAdblockEngineHolder holder;
   EXPECT_TRUE(holder.IsEnabled());
-  const FilterDecision decision =
+  const FilterDecision blocked =
+      holder.Decide(Request("https://adblock-fixture.invalid/ad.png"));
+  EXPECT_EQ(FilterAction::kBlock, blocked.action);
+  const FilterDecision allowed =
+      holder.Decide(Request("https://allowed-fixture.invalid/x"));
+  EXPECT_EQ(FilterAction::kAllow, allowed.action);
+  const FilterDecision clean =
       holder.Decide(Request("https://ads.example.com/pixel.gif"));
-  EXPECT_EQ(FilterAction::kPass, decision.action);
-  EXPECT_EQ(nullptr, decision.matched_rule);
+  EXPECT_EQ(FilterAction::kPass, clean.action);
+  EXPECT_EQ(nullptr, clean.matched_rule);
 }
 
 TEST(InwebAdblockEngineHolderTest, SetFilterListsActivatesBlocking) {

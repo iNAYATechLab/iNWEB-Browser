@@ -71,6 +71,15 @@ class TrackingProtectionSettings {
   std::set<std::string> allowlisted_sites_;
 };
 
+// Copyable snapshot of decision counters for reporting (Security Center
+// read path, patch 0007). Produced by EngineStatistics::Snapshot().
+struct EngineStatisticsSnapshot {
+  int block_count = 0;
+  int allow_count = 0;
+  int pass_count = 0;
+  std::map<std::string, int> blocked_by_domain;
+};
+
 // Real decision counters, backing Security Center statistics (§24).
 // Thread-safe: decisions run on worker-pool threads.
 class EngineStatistics {
@@ -79,6 +88,9 @@ class EngineStatistics {
   int allow_count() const;
   int pass_count() const;
   std::map<std::string, int> blocked_by_domain() const;
+
+  // Thread-safe snapshot for the Security Center read path.
+  EngineStatisticsSnapshot Snapshot() const;
 
   void RecordBlock(const std::string& request_host) const;
   void RecordAllow() const;

@@ -222,3 +222,46 @@ patches:
       Throttles return). Sources re-sync from src/native/adblock/
       (cumulative for the series; this patch is the delta over the
       0005-applied state).
+  - id: 0007-adblock-provisioning
+    file: adblock/0007-adblock-provisioning.patch
+    area: adblock
+    description: >-
+      Filter-list provisioning + Security Center read path (ADR-040/041):
+      ports the Kotlin lists/ stack — FilterListSource (validation +
+      EasyList/EasyPrivacy defaults), header Version/Last-modified
+      parsing, UpdatePolicy decision model, G-07 SHA-256 integrity
+      pinning (crypto::SHA256HashString, ADR-025), wire-compatible
+      metadata cache (file-backed with atomic writes + in-memory),
+      FilterListFetcher interface with fetch/304/failure decision logic,
+      and the FilterListManager orchestrator (startup cache-first,
+      conditional refresh, graceful degradation, tampered copies never
+      served). Ships an embedded conservative starter list (host-anchored
+      well-known ad/tracker hosts + RFC-2606 .invalid device-test fixture
+      with block/type-constrained-block/exception paths) loaded through
+      the verified manager path at engine-holder construction — real
+      blocking from the first request, no network dependency. Engine
+      gains EngineStatistics::Snapshot; holder gains
+      BuildSecurityCenterModel (§24 real numbers only). ZERO upstream
+      hunks: all files live under chrome/android/inweb/adblock/ (our
+      BUILD.gn gains //crypto).
+    upstream_files: []
+    risk: medium
+    validation: >-
+      Host harness (scripts/native_harness): 73/73 tests pass (36 engine +
+      5 destination map + 4 throttle + 5 holder + 23 provisioning/security
+      — including G-07 tampered-cache, 304 revalidation, failure-keeps-
+      cache, null-fetcher honesty, default-list fixture blocking, top-
+      domain ordering). The harness caught a real ownership defect
+      (move-only ParsedFilterList copied through optional/parsed_lists)
+      fixed via TakeParsedLists() before any build attempt. apply_patches
+      E2E on the 7-patch series with byte-identical applied files and
+      PEEL idempotence; lint_manifest.py. Compile + unit tests run in the
+      b001-build-hop chain.
+    rebase_notes: >-
+      No upstream files touched — the whole patch is new/modified files
+      under chrome/android/inweb/adblock/. Sources re-sync from
+      src/native/adblock/ (cumulative; this patch is the delta over the
+      0006-applied state). Deviations documented in-code (ADR-041):
+      download_url optional for embedded lists; SimpleURLLoader
+      subscription transport deferred (interface + decision logic ported);
+      parsed_lists() replaced by move-semantics TakeParsedLists().

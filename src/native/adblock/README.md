@@ -81,3 +81,19 @@ over 0005-applied, not over pristine). Added for 0006:
   (caller-synchronized).
 - Unit tests: destination map (5), throttle defer/cancel/resume/redirect
   (4), engine holder (4). Host harness total: 49/49 green.
+
+## Patch 0007 additions (provisioning + Security Center)
+
+Added the full lists/ stack port (ADR-041): `inweb_filter_list_source`,
+`inweb_filter_list_version`, `inweb_update_policy`,
+`inweb_filter_list_checksum` (crypto::SHA256), `inweb_filter_list_cache`
+(metadata + file/memory backends, Kotlin-wire-compatible),
+`inweb_filter_list_fetcher` (interface + decision logic; the
+SimpleURLLoader subscription transport is deferred),
+`inweb_filter_list_manager` (startup/refresh orchestration, G-07
+integrity pinning), `inweb_default_filter_list` (embedded conservative
+starter list + RFC-2606 `.invalid` device-test fixture), and
+`inweb_security_center` (§24 model + builder). The engine gained
+`EngineStatistics::Snapshot()`; the holder loads the default list at
+construction and exposes `BuildSecurityCenterModel()`. Host harness
+total after 0007: 73/73.

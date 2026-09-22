@@ -158,6 +158,16 @@ FilterDecision TrackingProtectionEngine::Decide(
                         .matched_rule = block_match};
 }
 
+EngineStatisticsSnapshot EngineStatistics::Snapshot() const {
+  base::AutoLock lock(lock_);
+  EngineStatisticsSnapshot snapshot;
+  snapshot.block_count = block_count_;
+  snapshot.allow_count = allow_count_;
+  snapshot.pass_count = pass_count_;
+  snapshot.blocked_by_domain = blocked_by_domain_;
+  return snapshot;
+}
+
 void TrackingProtectionEngine::UpdateSettings(
     TrackingProtectionSettings settings) {
   settings_ = std::move(settings);

@@ -6,10 +6,23 @@
 
 source_set("inweb_adblock_engine") {
   sources = [
+    "inweb_default_filter_list.cc",
+    "inweb_default_filter_list.h",
     "inweb_domain_classifier.cc",
     "inweb_domain_classifier.h",
+    "inweb_filter_list_cache.cc",
+    "inweb_filter_list_cache.h",
+    "inweb_filter_list_checksum.cc",
+    "inweb_filter_list_checksum.h",
+    "inweb_filter_list_fetcher.h",
+    "inweb_filter_list_manager.cc",
+    "inweb_filter_list_manager.h",
     "inweb_filter_list_parser.cc",
     "inweb_filter_list_parser.h",
+    "inweb_filter_list_source.cc",
+    "inweb_filter_list_source.h",
+    "inweb_filter_list_version.cc",
+    "inweb_filter_list_version.h",
     "inweb_filter_rule.h",
     "inweb_pattern_compiler.cc",
     "inweb_pattern_compiler.h",
@@ -17,12 +30,16 @@ source_set("inweb_adblock_engine") {
     "inweb_resource_type.h",
     "inweb_rule_matcher.cc",
     "inweb_rule_matcher.h",
+    "inweb_security_center.cc",
+    "inweb_security_center.h",
     "inweb_tracking_protection_engine.cc",
     "inweb_tracking_protection_engine.h",
+    "inweb_update_policy.h",
   ]
 
   deps = [
     "//base",
+    "//crypto",
     "//net",
     "//third_party/re2",
     "//url",
@@ -57,9 +74,13 @@ source_set("unittests") {
     "inweb_adblock_engine_holder_unittest.cc",
     "inweb_adblock_url_loader_throttle_unittest.cc",
     "inweb_domain_classifier_unittest.cc",
+    "inweb_filter_list_cache_unittest.cc",
+    "inweb_filter_list_manager_unittest.cc",
     "inweb_filter_list_parser_unittest.cc",
+    "inweb_filter_list_stack_unittest.cc",
     "inweb_request_destination_map_unittest.cc",
     "inweb_rule_matcher_unittest.cc",
+    "inweb_security_center_unittest.cc",
     "inweb_tracking_protection_engine_unittest.cc",
   ]
 

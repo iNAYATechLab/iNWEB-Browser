@@ -1,0 +1,2303 @@
+diff --git a/chrome/android/inweb/adblock/BUILD.gn b/chrome/android/inweb/adblock/BUILD.gn
+index 4fe9f6a..112e9b0 100644
+--- a/chrome/android/inweb/adblock/BUILD.gn
++++ b/chrome/android/inweb/adblock/BUILD.gn
+@@ -6,10 +6,23 @@
+ 
+ source_set("inweb_adblock_engine") {
+   sources = [
++    "inweb_default_filter_list.cc",
++    "inweb_default_filter_list.h",
+     "inweb_domain_classifier.cc",
+     "inweb_domain_classifier.h",
++    "inweb_filter_list_cache.cc",
++    "inweb_filter_list_cache.h",
++    "inweb_filter_list_checksum.cc",
++    "inweb_filter_list_checksum.h",
++    "inweb_filter_list_fetcher.h",
++    "inweb_filter_list_manager.cc",
++    "inweb_filter_list_manager.h",
+     "inweb_filter_list_parser.cc",
+     "inweb_filter_list_parser.h",
++    "inweb_filter_list_source.cc",
++    "inweb_filter_list_source.h",
++    "inweb_filter_list_version.cc",
++    "inweb_filter_list_version.h",
+     "inweb_filter_rule.h",
+     "inweb_pattern_compiler.cc",
+     "inweb_pattern_compiler.h",
+@@ -17,12 +30,16 @@ source_set("inweb_adblock_engine") {
+     "inweb_resource_type.h",
+     "inweb_rule_matcher.cc",
+     "inweb_rule_matcher.h",
++    "inweb_security_center.cc",
++    "inweb_security_center.h",
+     "inweb_tracking_protection_engine.cc",
+     "inweb_tracking_protection_engine.h",
++    "inweb_update_policy.h",
+   ]
+ 
+   deps = [
+     "//base",
++    "//crypto",
+     "//net",
+     "//third_party/re2",
+     "//url",
+@@ -57,9 +74,13 @@ source_set("unittests") {
+     "inweb_adblock_engine_holder_unittest.cc",
+     "inweb_adblock_url_loader_throttle_unittest.cc",
+     "inweb_domain_classifier_unittest.cc",
++    "inweb_filter_list_cache_unittest.cc",
++    "inweb_filter_list_manager_unittest.cc",
+     "inweb_filter_list_parser_unittest.cc",
++    "inweb_filter_list_stack_unittest.cc",
+     "inweb_request_destination_map_unittest.cc",
+     "inweb_rule_matcher_unittest.cc",
++    "inweb_security_center_unittest.cc",
+     "inweb_tracking_protection_engine_unittest.cc",
+   ]
+ 
+diff --git a/chrome/android/inweb/adblock/inweb_adblock_engine_holder.cc b/chrome/android/inweb/adblock/inweb_adblock_engine_holder.cc
+index 360b6ab..d05e399 100644
+--- a/chrome/android/inweb/adblock/inweb_adblock_engine_holder.cc
++++ b/chrome/android/inweb/adblock/inweb_adblock_engine_holder.cc
+@@ -3,9 +3,14 @@
+ // file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ 
+ #include "chrome/android/inweb/adblock/inweb_adblock_engine_holder.h"
++#include "chrome/android/inweb/adblock/inweb_default_filter_list.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_checksum.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_parser.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_version.h"
+ 
+ #include <memory>
+ #include <utility>
++#include <vector>
+ 
+ namespace inweb::adblock {
+ 
+@@ -15,10 +20,33 @@ InwebAdblockEngineHolder* InwebAdblockEngineHolder::GetInstance() {
+ }
+ 
+ InwebAdblockEngineHolder::InwebAdblockEngineHolder()
+-    : settings_(TrackingProtectionSettings()),
+-      engine_(std::make_unique<TrackingProtectionEngine>(
+-          std::vector<ParsedFilterList>(),
+-          TrackingProtectionSettings())) {}
++    : settings_(TrackingProtectionSettings()) {
++  // Provisioning (patch 0007, ADR-041): the embedded starter list is
++  // seeded into an in-memory cache with pinned integrity metadata (G-07)
++  // and loaded through the standard FilterListManager startup path — the
++  // same verified path cached subscriptions will use once the download
++  // transport lands. Blocking is therefore active from the first request,
++  // with no network dependency.
++  const FilterListSource source = FilterListSource::DefaultList();
++  ParsedFilterList parsed =
++      FilterListParser::Parse(kInwebDefaultFilterList, source.id);
++  FilterListMetadata metadata;
++  metadata.source_id = source.id;
++  metadata.downloaded_at_ms = 0;
++  metadata.version = ParseFilterListVersion(kInwebDefaultFilterList).version;
++  metadata.rule_count = static_cast<int>(parsed.network_rules.size());
++  metadata.content_sha256 = Sha256Hex(kInwebDefaultFilterList);
++
++  cache_ = std::make_unique<MemoryFilterListCache>();
++  cache_->Store(source, kInwebDefaultFilterList, metadata);
++  manager_ = std::make_unique<FilterListManager>(
++      std::vector<FilterListSource>{source},
++      /*fetcher=*/nullptr, cache_.get());
++  manager_->Startup(/*now_ms=*/0);
++
++  engine_ = std::make_unique<TrackingProtectionEngine>(
++      manager_->TakeParsedLists(), settings_);
++}
+ 
+ InwebAdblockEngineHolder::~InwebAdblockEngineHolder() = default;
+ 
+@@ -40,6 +68,13 @@ void InwebAdblockEngineHolder::SetFilterLists(
+                                                        settings_);
+ }
+ 
++SecurityCenterModel InwebAdblockEngineHolder::BuildSecurityCenterModel(
++    bool enforcement_active) const {
++  base::AutoLock lock(lock_);
++  return SecurityCenter::Build(settings_, engine_->statistics().Snapshot(),
++                               *manager_, enforcement_active);
++}
++
+ void InwebAdblockEngineHolder::UpdateSettings(
+     TrackingProtectionSettings settings) {
+   base::AutoLock lock(lock_);
+diff --git a/chrome/android/inweb/adblock/inweb_adblock_engine_holder.h b/chrome/android/inweb/adblock/inweb_adblock_engine_holder.h
+index af6f2a8..a148999 100644
+--- a/chrome/android/inweb/adblock/inweb_adblock_engine_holder.h
++++ b/chrome/android/inweb/adblock/inweb_adblock_engine_holder.h
+@@ -5,6 +5,7 @@
+ #ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_ADBLOCK_ENGINE_HOLDER_H_
+ #define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_ADBLOCK_ENGINE_HOLDER_H_
+ 
++#include <memory>
+ #include <vector>
+ 
+ #include "base/no_destructor.h"
+@@ -12,6 +13,9 @@
+ #include "base/thread_annotations.h"
+ #include "chrome/android/inweb/adblock/inweb_filter_rule.h"
+ #include "chrome/android/inweb/adblock/inweb_request_context.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_cache.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_manager.h"
++#include "chrome/android/inweb/adblock/inweb_security_center.h"
+ #include "chrome/android/inweb/adblock/inweb_tracking_protection_engine.h"
+ 
+ namespace inweb::adblock {
+@@ -39,6 +43,10 @@ class InwebAdblockEngineHolder {
+   // Replaces settings, keeping current rule lists.
+   void UpdateSettings(TrackingProtectionSettings settings);
+ 
++  // Security Center read path (§24): builds the dashboard model from the
++  // real settings, the real engine statistics, and the real list state.
++  SecurityCenterModel BuildSecurityCenterModel(bool enforcement_active) const;
++
+  private:
+   friend class base::NoDestructor<InwebAdblockEngineHolder>;
+ 
+@@ -50,6 +58,8 @@ class InwebAdblockEngineHolder {
+ 
+   mutable base::Lock lock_;
+   TrackingProtectionSettings settings_ GUARDED_BY(lock_);
++  std::unique_ptr<MemoryFilterListCache> cache_ GUARDED_BY(lock_);
++  std::unique_ptr<FilterListManager> manager_ GUARDED_BY(lock_);
+   std::unique_ptr<TrackingProtectionEngine> engine_ GUARDED_BY(lock_);
+ };
+ 
+diff --git a/chrome/android/inweb/adblock/inweb_adblock_engine_holder_unittest.cc b/chrome/android/inweb/adblock/inweb_adblock_engine_holder_unittest.cc
+index 2eb38d1..7d54a08 100644
+--- a/chrome/android/inweb/adblock/inweb_adblock_engine_holder_unittest.cc
++++ b/chrome/android/inweb/adblock/inweb_adblock_engine_holder_unittest.cc
+@@ -25,13 +25,21 @@ RequestContext Request(const std::string& url) {
+ 
+ }  // namespace
+ 
+-TEST(InwebAdblockEngineHolderTest, EmptyByDefaultPassesEverything) {
++TEST(InwebAdblockEngineHolderTest, LoadsDefaultListAtConstruction) {
++  // Patch 0007: the embedded starter list is active from construction —
++  // no network, no subscriptions.
+   InwebAdblockEngineHolder holder;
+   EXPECT_TRUE(holder.IsEnabled());
+-  const FilterDecision decision =
++  const FilterDecision blocked =
++      holder.Decide(Request("https://adblock-fixture.invalid/ad.png"));
++  EXPECT_EQ(FilterAction::kBlock, blocked.action);
++  const FilterDecision allowed =
++      holder.Decide(Request("https://allowed-fixture.invalid/x"));
++  EXPECT_EQ(FilterAction::kAllow, allowed.action);
++  const FilterDecision clean =
+       holder.Decide(Request("https://ads.example.com/pixel.gif"));
+-  EXPECT_EQ(FilterAction::kPass, decision.action);
+-  EXPECT_EQ(nullptr, decision.matched_rule);
++  EXPECT_EQ(FilterAction::kPass, clean.action);
++  EXPECT_EQ(nullptr, clean.matched_rule);
+ }
+ 
+ TEST(InwebAdblockEngineHolderTest, SetFilterListsActivatesBlocking) {
+diff --git a/chrome/android/inweb/adblock/inweb_default_filter_list.cc b/chrome/android/inweb/adblock/inweb_default_filter_list.cc
+new file mode 100644
+index 0000000..6f93d8a
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_default_filter_list.cc
+@@ -0,0 +1,64 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/adblock/inweb_default_filter_list.h"
++
++namespace inweb::adblock {
++
++const char kInwebDefaultFilterList[] =
++    R"INWEB_LIST([Adblock Plus 2.0]
++! iNWEB Browser — embedded starter tracking-protection list.
++! Version: iNWEB-1.0
++! Last modified: 2026-09-22
++! Conservative, host-anchored rules for well-known advertising and
++! tracking hosts (see header for the curation policy).
++||doubleclick.net^
++||googlesyndication.com^
++||googleadservices.com^
++||google-analytics.com^
++||adservice.google.com^
++||adnxs.com^
++||criteo.com^
++||criteo.net^
++||taboola.com^
++||outbrain.com^
++||scorecardresearch.com^
++||quantserve.com^
++||quantcount.com^
++||moatads.com^
++||amazon-adsystem.com^
++||adsrvr.org^
++||doubleverify.com^
++||adsafeprotected.com^
++||graph.facebook.com^
++||analytics.tiktok.com^
++||ads-twitter.com^
++||static.ads-twitter.com^
++||ads.linkedin.com^
++||bat.bing.com^
++||clarity.ms^
++||hotjar.com^
++||mouseflow.com^
++||fullstory.com^
++||mixpanel.com^
++||amplitude.com^
++||heapanalytics.com^
++||kissmetrics.com^
++||chartbeat.com^
++||parsely.com^
++||matomo.cloud^
++||adcolony.com^
++||applovin.com^
++||chartboost.com^
++||inmobi.com^
++||vungle.com^
++!
++! Device-test fixture (.invalid TLD — RFC 2606, never routable):
++! one plain block, one type-constrained block, one exception.
++||adblock-fixture.invalid^
++||tracker-fixture.invalid^$script,image
++@@||allowed-fixture.invalid^
++)INWEB_LIST";
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_default_filter_list.h b/chrome/android/inweb/adblock/inweb_default_filter_list.h
+new file mode 100644
+index 0000000..5692ca6
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_default_filter_list.h
+@@ -0,0 +1,30 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_DEFAULT_FILTER_LIST_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_DEFAULT_FILTER_LIST_H_
++
++namespace inweb::adblock {
++
++// The embedded iNWEB starter tracking-protection list (patch 0007,
++// ADR-041). Loaded by InwebAdblockEngineHolder at first use, so v1 blocks
++// well-known advertising/tracking hosts out of the box — no network, no
++// subscription, deterministic on every device.
++//
++// Curation policy (conservative by design):
++// - Host-anchored rules (`||host^`) only: no generic URL patterns that
++//   could false-positive on first-party content.
++// - Only long-established, stable ad/tracker hosts from the EasyList /
++//   EasyPrivacy families. If a host also serves functional traffic for
++//   common logins (e.g. connect.facebook.net), it is excluded.
++// - The final section is the device-test fixture (MASTER-SPEC device
++//   matrix B-5..B-8): `.invalid` TLD hosts (RFC 2606 — guaranteed
++//   non-routable), so on-device blocking verification never depends on
++//   third-party servers. It includes one block, one type-constrained
++//   block, and one exception, exercising all three decision paths.
++extern const char kInwebDefaultFilterList[];
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_DEFAULT_FILTER_LIST_H_
+diff --git a/chrome/android/inweb/adblock/inweb_filter_list_cache.cc b/chrome/android/inweb/adblock/inweb_filter_list_cache.cc
+new file mode 100644
+index 0000000..fc50069
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_filter_list_cache.cc
+@@ -0,0 +1,208 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/adblock/inweb_filter_list_cache.h"
++
++#include <cstdio>
++#include <utility>
++
++#include "base/files/file_enumerator.h"
++#include "base/files/file_util.h"
++#include "base/strings/string_number_conversions.h"
++#include "base/strings/string_split.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_source.h"
++
++namespace inweb::adblock {
++
++namespace {
++
++constexpr char kMetaHeader[] = "iNWEB-FILTERLIST-META v=1";
++
++void AppendField(std::string* out, const char* key, const std::string& value) {
++  out->append(key);
++  out->push_back('\t');
++  out->append(value);
++  out->push_back('\n');
++}
++
++void AppendField(std::string* out, const char* key,
++                 const std::optional<std::string>& value) {
++  if (value) {
++    AppendField(out, key, *value);
++  }
++}
++
++}  // namespace
++
++std::string FilterListMetadata::Serialize() const {
++  std::string out;
++  out.append(kMetaHeader).push_back('\n');
++  AppendField(&out, "sourceId", source_id);
++  AppendField(&out, "downloadedAt", base::NumberToString(downloaded_at_ms));
++  AppendField(&out, "etag", etag);
++  AppendField(&out, "lastModified", last_modified);
++  AppendField(&out, "version", version);
++  AppendField(&out, "ruleCount", base::NumberToString(rule_count));
++  AppendField(&out, "contentSha256", content_sha256);
++  return out;
++}
++
++// static
++std::optional<FilterListMetadata> FilterListMetadata::Deserialize(
++    const std::string& text) {
++  const std::vector<std::string> lines =
++      base::SplitString(text, "\n", base::KEEP_WHITESPACE,
++                        base::SPLIT_WANT_ALL);
++  if (lines.empty() || lines[0] != kMetaHeader) {
++    return std::nullopt;
++  }
++  std::map<std::string, std::string> fields;
++  for (size_t i = 1; i < lines.size(); ++i) {
++    const std::string& line = lines[i];
++    if (line.empty()) {
++      continue;
++    }
++    const size_t separator = line.find('\t');
++    if (separator == std::string::npos || separator == 0) {
++      return std::nullopt;
++    }
++    fields[line.substr(0, separator)] = line.substr(separator + 1);
++  }
++  FilterListMetadata metadata;
++  const auto source_id = fields.find("sourceId");
++  if (source_id == fields.end() || source_id->second.empty()) {
++    return std::nullopt;
++  }
++  metadata.source_id = source_id->second;
++  const auto downloaded_at = fields.find("downloadedAt");
++  int64_t downloaded_at_ms = 0;
++  if (downloaded_at == fields.end() ||
++      !base::StringToInt64(downloaded_at->second, &downloaded_at_ms)) {
++    return std::nullopt;
++  }
++  metadata.downloaded_at_ms = downloaded_at_ms;
++  const auto read_optional = [&fields](const char* key,
++                                       std::optional<std::string>* out) {
++    const auto it = fields.find(key);
++    if (it != fields.end()) {
++      *out = it->second;
++    }
++  };
++  read_optional("etag", &metadata.etag);
++  read_optional("lastModified", &metadata.last_modified);
++  read_optional("version", &metadata.version);
++  read_optional("contentSha256", &metadata.content_sha256);
++  const auto rule_count = fields.find("ruleCount");
++  int rule_count_value = 0;
++  if (rule_count != fields.end()) {
++    if (!base::StringToInt(rule_count->second, &rule_count_value)) {
++      rule_count_value = 0;
++    }
++  }
++  metadata.rule_count = rule_count_value;
++  return metadata;
++}
++
++void MemoryFilterListCache::Store(const FilterListSource& source,
++                                  const std::string& body,
++                                  const FilterListMetadata& metadata) {
++  bodies_[source.id] = body;
++  metadata_[source.id] = metadata;
++}
++
++std::optional<std::string> MemoryFilterListCache::LoadBody(
++    const FilterListSource& source) {
++  const auto it = bodies_.find(source.id);
++  if (it == bodies_.end()) {
++    return std::nullopt;
++  }
++  return it->second;
++}
++
++std::optional<FilterListMetadata> MemoryFilterListCache::LoadMetadata(
++    const FilterListSource& source) {
++  const auto it = metadata_.find(source.id);
++  if (it == metadata_.end()) {
++    return std::nullopt;
++  }
++  return it->second;
++}
++
++void MemoryFilterListCache::Remove(const FilterListSource& source) {
++  bodies_.erase(source.id);
++  metadata_.erase(source.id);
++}
++
++void MemoryFilterListCache::Clear() {
++  bodies_.clear();
++  metadata_.clear();
++}
++
++FileFilterListCache::FileFilterListCache(base::FilePath directory)
++    : directory_(std::move(directory)) {
++  base::CreateDirectory(directory_);
++}
++
++base::FilePath FileFilterListCache::BodyPath(const std::string& id) const {
++  return directory_.Append(id + ".txt");
++}
++
++base::FilePath FileFilterListCache::MetaPath(const std::string& id) const {
++  return directory_.Append(id + ".meta");
++}
++
++void FileFilterListCache::Store(const FilterListSource& source,
++                                const std::string& body,
++                                const FilterListMetadata& metadata) {
++  WriteAtomically(BodyPath(source.id), body);
++  WriteAtomically(MetaPath(source.id), metadata.Serialize());
++}
++
++std::optional<std::string> FileFilterListCache::LoadBody(
++    const FilterListSource& source) {
++  std::string body;
++  if (!base::ReadFileToString(BodyPath(source.id), &body)) {
++    return std::nullopt;
++  }
++  return body;
++}
++
++std::optional<FilterListMetadata> FileFilterListCache::LoadMetadata(
++    const FilterListSource& source) {
++  std::string text;
++  if (!base::ReadFileToString(MetaPath(source.id), &text)) {
++    return std::nullopt;
++  }
++  return FilterListMetadata::Deserialize(text);
++}
++
++void FileFilterListCache::Remove(const FilterListSource& source) {
++  base::DeleteFile(BodyPath(source.id));
++  base::DeleteFile(MetaPath(source.id));
++}
++
++void FileFilterListCache::Clear() {
++  base::FileEnumerator entries(directory_, /*recursive=*/false,
++                                base::FileEnumerator::FILES);
++  for (base::FilePath entry = entries.Next(); !entry.empty();
++       entry = entries.Next()) {
++    base::DeleteFile(entry);
++  }
++}
++
++// static
++void FileFilterListCache::WriteAtomically(const base::FilePath& target,
++                                          const std::string& content) {
++  const base::FilePath temp =
++      target.InsertBeforeExtension(FILE_PATH_LITERAL(".tmp"));
++  if (!base::WriteFile(temp, content)) {
++    return;
++  }
++  if (base::PathExists(target)) {
++    base::DeleteFile(target);
++  }
++  base::ReplaceFile(temp, target, /*error=*/nullptr);
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_filter_list_cache.h b/chrome/android/inweb/adblock/inweb_filter_list_cache.h
+new file mode 100644
+index 0000000..3766a9f
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_filter_list_cache.h
+@@ -0,0 +1,110 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_CACHE_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_CACHE_H_
++
++#include <map>
++#include <optional>
++#include <string>
++
++#include "base/files/file_path.h"
++
++namespace inweb::adblock {
++
++struct FilterListSource;
++
++// Cache metadata persisted beside each cached list body. Ported from the
++// Kotlin reference (lists/FilterListCache.kt).
++struct FilterListMetadata {
++  std::string source_id;
++  // When this content was last successfully downloaded or confirmed (304).
++  int64_t downloaded_at_ms = 0;
++  std::optional<std::string> etag;
++  std::optional<std::string> last_modified;
++  // `! Version:` header parsed from the list text, if present.
++  std::optional<std::string> version;
++  // Network rules parsed from the stored body at store time.
++  int rule_count = 0;
++  // SHA-256 of the stored body, pinned at download time (G-07). A cached
++  // copy whose body no longer matches is never served. Null = stored
++  // before pinning existed (legacy copy) — verified as-is.
++  std::optional<std::string> content_sha256;
++
++  // Wire format (tab-separated, "iNWEB-FILTERLIST-META v=1" header) —
++  // byte-compatible with the Kotlin reference implementation.
++  std::string Serialize() const;
++  // Returns nullopt for anything not matching the exact format (corrupt).
++  static std::optional<FilterListMetadata> Deserialize(
++      const std::string& text);
++};
++
++// Port: raw filter-list cache keyed by source id.
++class FilterListCache {
++ public:
++  virtual ~FilterListCache() = default;
++
++  virtual void Store(const FilterListSource& source,
++                     const std::string& body,
++                     const FilterListMetadata& metadata) = 0;
++  virtual std::optional<std::string> LoadBody(
++      const FilterListSource& source) = 0;
++  virtual std::optional<FilterListMetadata> LoadMetadata(
++      const FilterListSource& source) = 0;
++  virtual void Remove(const FilterListSource& source) = 0;
++  virtual void Clear() = 0;
++};
++
++// In-memory cache for tests and engine-less previews (no file system).
++class MemoryFilterListCache : public FilterListCache {
++ public:
++  MemoryFilterListCache() = default;
++
++  void Store(const FilterListSource& source,
++             const std::string& body,
++             const FilterListMetadata& metadata) override;
++  std::optional<std::string> LoadBody(
++      const FilterListSource& source) override;
++  std::optional<FilterListMetadata> LoadMetadata(
++      const FilterListSource& source) override;
++  void Remove(const FilterListSource& source) override;
++  void Clear() override;
++
++ private:
++  std::map<std::string, std::string> bodies_;
++  std::map<std::string, FilterListMetadata> metadata_;
++};
++
++// Real file-backed cache: one directory, two files per source
++// (`<id>.txt` body + `<id>.meta` metadata). Writes are atomic (temp file +
++// rename), mirroring the session-persistence strategy (ADR-011). A
++// corrupt metadata file is reported as missing — the body stays usable;
++// the manager re-downloads on the next refresh. Ported from the Kotlin
++// reference (lists/FileFilterListCache.kt).
++class FileFilterListCache : public FilterListCache {
++ public:
++  explicit FileFilterListCache(base::FilePath directory);
++
++  void Store(const FilterListSource& source,
++             const std::string& body,
++             const FilterListMetadata& metadata) override;
++  std::optional<std::string> LoadBody(
++      const FilterListSource& source) override;
++  std::optional<FilterListMetadata> LoadMetadata(
++      const FilterListSource& source) override;
++  void Remove(const FilterListSource& source) override;
++  void Clear() override;
++
++ private:
++  base::FilePath BodyPath(const std::string& id) const;
++  base::FilePath MetaPath(const std::string& id) const;
++  static void WriteAtomically(const base::FilePath& target,
++                              const std::string& content);
++
++  base::FilePath directory_;
++};
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_CACHE_H_
+diff --git a/chrome/android/inweb/adblock/inweb_filter_list_cache_unittest.cc b/chrome/android/inweb/adblock/inweb_filter_list_cache_unittest.cc
+new file mode 100644
+index 0000000..d3ed2aa
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_filter_list_cache_unittest.cc
+@@ -0,0 +1,115 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — filter-list cache unit tests: metadata wire format and
++// the file-backed cache. Ported from the Kotlin reference
++// (FileFilterListCacheTest / InMemoryFilterListCacheTest).
++
++#include "chrome/android/inweb/adblock/inweb_filter_list_cache.h"
++
++#include <optional>
++#include <string>
++
++#include "base/files/scoped_temp_dir.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_source.h"
++#include "testing/gtest/include/gtest/gtest.h"
++
++namespace inweb::adblock {
++
++namespace {
++
++FilterListSource TestSource() {
++  return *FilterListSource::Create("test-list", "Test List",
++                                   std::string("https://example.com/l.txt"));
++}
++
++FilterListMetadata SampleMetadata() {
++  FilterListMetadata metadata;
++  metadata.source_id = "test-list";
++  metadata.downloaded_at_ms = 1234567890;
++  metadata.etag = "\"v1\"";
++  metadata.last_modified = "Mon, 21 Sep 2026 10:00:00 GMT";
++  metadata.version = "1.2.3";
++  metadata.rule_count = 42;
++  metadata.content_sha256 = std::string(64, 'a');
++  return metadata;
++}
++
++}  // namespace
++
++TEST(InwebFilterListMetadataTest, SerializeDeserializeRoundTrip) {
++  const FilterListMetadata original = SampleMetadata();
++  const std::optional<FilterListMetadata> parsed =
++      FilterListMetadata::Deserialize(original.Serialize());
++  ASSERT_TRUE(parsed.has_value());
++  EXPECT_EQ(original.source_id, parsed->source_id);
++  EXPECT_EQ(original.downloaded_at_ms, parsed->downloaded_at_ms);
++  EXPECT_EQ(original.etag, parsed->etag);
++  EXPECT_EQ(original.last_modified, parsed->last_modified);
++  EXPECT_EQ(original.version, parsed->version);
++  EXPECT_EQ(original.rule_count, parsed->rule_count);
++  EXPECT_EQ(original.content_sha256, parsed->content_sha256);
++}
++
++TEST(InwebFilterListMetadataTest, MinimalFieldsRoundTrip) {
++  FilterListMetadata minimal;
++  minimal.source_id = "x";
++  minimal.downloaded_at_ms = 7;
++  const std::optional<FilterListMetadata> parsed =
++      FilterListMetadata::Deserialize(minimal.Serialize());
++  ASSERT_TRUE(parsed.has_value());
++  EXPECT_FALSE(parsed->etag.has_value());
++  EXPECT_EQ(0, parsed->rule_count);
++}
++
++TEST(InwebFilterListMetadataTest, CorruptionYieldsNullopt) {
++  EXPECT_FALSE(FilterListMetadata::Deserialize("random text\n"));
++  EXPECT_FALSE(FilterListMetadata::Deserialize(""));
++  EXPECT_FALSE(FilterListMetadata::Deserialize(
++      "iNWEB-FILTERLIST-META v=1\nsourceId\t\n"));
++  EXPECT_FALSE(FilterListMetadata::Deserialize(
++      "iNWEB-FILTERLIST-META v=1\nsourceId\tid\n"));
++  EXPECT_FALSE(FilterListMetadata::Deserialize(
++      "iNWEB-FILTERLIST-META v=1\nsourceId\tid\ndownloadedAt\tnot-a-number\n"));
++}
++
++TEST(InwebFileFilterListCacheTest, StoreLoadRemoveRoundTrip) {
++  base::ScopedTempDir dir;
++  ASSERT_TRUE(dir.CreateUniqueTempDir());
++  FileFilterListCache cache(dir.GetPath());
++
++  const FilterListSource source = TestSource();
++  const std::string body = "! v\n||ads.example.com^\n";
++  cache.Store(source, body, SampleMetadata());
++
++  const std::optional<std::string> loaded_body = cache.LoadBody(source);
++  ASSERT_TRUE(loaded_body.has_value());
++  EXPECT_EQ(body, *loaded_body);
++
++  const std::optional<FilterListMetadata> loaded = cache.LoadMetadata(source);
++  ASSERT_TRUE(loaded.has_value());
++  EXPECT_EQ(1234567890, loaded->downloaded_at_ms);
++  EXPECT_EQ(42, loaded->rule_count);
++
++  // Corrupt metadata is reported as missing; the body stays usable.
++  const std::optional<FilterListMetadata> missing =
++      FilterListMetadata::Deserialize("corrupt");
++  EXPECT_FALSE(missing.has_value());
++
++  cache.Remove(source);
++  EXPECT_FALSE(cache.LoadBody(source).has_value());
++  EXPECT_FALSE(cache.LoadMetadata(source).has_value());
++}
++
++TEST(InwebMemoryFilterListCacheTest, StoreAndClear) {
++  MemoryFilterListCache cache;
++  const FilterListSource source = TestSource();
++  cache.Store(source, "body", SampleMetadata());
++  EXPECT_EQ("body", cache.LoadBody(source).value_or(""));
++  cache.Clear();
++  EXPECT_FALSE(cache.LoadBody(source).has_value());
++  EXPECT_FALSE(cache.LoadMetadata(source).has_value());
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_filter_list_checksum.cc b/chrome/android/inweb/adblock/inweb_filter_list_checksum.cc
+new file mode 100644
+index 0000000..de23354
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_filter_list_checksum.cc
+@@ -0,0 +1,25 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/adblock/inweb_filter_list_checksum.h"
++
++#include <string>
++
++#include "crypto/sha2.h"
++
++namespace inweb::adblock {
++
++std::string Sha256Hex(const std::string& body) {
++  const std::string digest = crypto::SHA256HashString(body);
++  static const char kHex[] = "0123456789abcdef";
++  std::string hex;
++  hex.reserve(digest.size() * 2);
++  for (const unsigned char byte : digest) {
++    hex.push_back(kHex[byte >> 4]);
++    hex.push_back(kHex[byte & 0x0f]);
++  }
++  return hex;
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_filter_list_checksum.h b/chrome/android/inweb/adblock/inweb_filter_list_checksum.h
+new file mode 100644
+index 0000000..5b5f97a
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_filter_list_checksum.h
+@@ -0,0 +1,22 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_CHECKSUM_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_CHECKSUM_H_
++
++#include <string>
++
++namespace inweb::adblock {
++
++// Lowercase-hex SHA-256 of the body's bytes. Content-integrity pinning for
++// cached filter lists (G-07): computed when a body is downloaded and
++// re-verified whenever the cached copy is loaded. This is integrity
++// pinning, NOT a publisher signature (§57). Platform crypto only —
++// crypto::SHA256HashString (ADR-025: no custom cryptography). Ported from
++// the Kotlin reference (lists/FilterListChecksum.kt).
++std::string Sha256Hex(const std::string& body);
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_CHECKSUM_H_
+diff --git a/chrome/android/inweb/adblock/inweb_filter_list_fetcher.h b/chrome/android/inweb/adblock/inweb_filter_list_fetcher.h
+new file mode 100644
+index 0000000..60aaaf0
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_filter_list_fetcher.h
+@@ -0,0 +1,83 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_FETCHER_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_FETCHER_H_
++
++#include <optional>
++#include <string>
++#include <utility>
++
++namespace inweb::adblock {
++
++// Outcome of one filter-list download attempt. Ported from the Kotlin
++// reference (lists/FilterListFetcher.kt).
++struct FetchResult {
++  enum class Kind {
++    // 200 OK — full body plus revalidation validators (may be null).
++    kSuccess,
++    // 304 Not Modified — cached content is still current.
++    kNotModified,
++    // Transport or HTTP failure — the caller keeps serving cached content.
++    kFailure,
++  };
++
++  static FetchResult Success(std::string body,
++                             std::optional<std::string> etag,
++                             std::optional<std::string> last_modified) {
++    FetchResult result;
++    result.kind = Kind::kSuccess;
++    result.body = std::move(body);
++    result.etag = std::move(etag);
++    result.last_modified = std::move(last_modified);
++    return result;
++  }
++  static FetchResult NotModified(std::optional<std::string> etag,
++                                 std::optional<std::string> last_modified) {
++    FetchResult result;
++    result.kind = Kind::kNotModified;
++    result.etag = std::move(etag);
++    result.last_modified = std::move(last_modified);
++    return result;
++  }
++  static FetchResult Failure(std::string reason) {
++    FetchResult result;
++    result.kind = Kind::kFailure;
++    result.reason = std::move(reason);
++    return result;
++  }
++
++  Kind kind = Kind::kFailure;
++  std::string body;  // kSuccess only
++  std::optional<std::string> etag;
++  std::optional<std::string> last_modified;
++  std::string reason;  // kFailure only
++};
++
++// Port: how filter lists are downloaded. The Kotlin reference ships a
++// pure-JVM HttpURLConnection implementation; the Chromium-side production
++// transport is a SimpleURLLoader adapter that needs profile/
++// storage-partition wiring and async threading through the manager.
++//
++// That adapter is deliberately NOT part of patch 0007 (ADR-041): v1 ships
++// the embedded default list plus this interface and the full
++// fetch/refresh decision logic, so the subscription transport can land as
++// a follow-up without touching the engine. Tests provide scriptable
++// fetchers.
++class FilterListFetcher {
++ public:
++  virtual ~FilterListFetcher() = default;
++
++  // Fetches `url`. When |etag| / |last_modified| are supplied they are
++  // sent as conditional validators (If-None-Match / If-Modified-Since) so
++  // an unchanged list costs one cheap 304 round-trip.
++  virtual FetchResult Fetch(
++      const std::string& url,
++      const std::optional<std::string>& etag,
++      const std::optional<std::string>& last_modified) = 0;
++};
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_FETCHER_H_
+diff --git a/chrome/android/inweb/adblock/inweb_filter_list_manager.cc b/chrome/android/inweb/adblock/inweb_filter_list_manager.cc
+new file mode 100644
+index 0000000..df43414
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_filter_list_manager.cc
+@@ -0,0 +1,268 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/adblock/inweb_filter_list_manager.h"
++
++#include <utility>
++
++#include "chrome/android/inweb/adblock/inweb_filter_list_checksum.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_parser.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_version.h"
++
++namespace inweb::adblock {
++
++namespace {
++
++ListUpdateStatus Skipped(const std::string& reason) {
++  ListUpdateStatus status;
++  status.kind = ListUpdateKind::kSkipped;
++  status.reason = reason;
++  return status;
++}
++
++ListUpdateStatus Failed(const std::string& reason, bool served_from_cache) {
++  ListUpdateStatus status;
++  status.kind = ListUpdateKind::kFailed;
++  status.reason = reason;
++  status.served_from_cache = served_from_cache;
++  return status;
++}
++
++ListUpdateStatus LoadedFromCache() {
++  ListUpdateStatus status;
++  status.kind = ListUpdateKind::kLoadedFromCache;
++  return status;
++}
++
++}  // namespace
++
++FilterListManager::FilterListManager(std::vector<FilterListSource> sources,
++                                     FilterListFetcher* fetcher,
++                                     FilterListCache* cache,
++                                     UpdatePolicy policy)
++    : sources_(std::move(sources)),
++      fetcher_(fetcher),
++      cache_(cache),
++      policy_(policy) {}
++
++FetchResult FilterListManager::FetchOrNull(
++    const FilterListSource& source,
++    const std::optional<FilterListMetadata>& metadata) {
++  if (fetcher_ == nullptr || !source.download_url) {
++    return FetchResult::Failure("no fetcher configured");
++  }
++  return fetcher_->Fetch(*source.download_url, metadata ? metadata->etag
++                                                        : std::nullopt,
++                         metadata ? metadata->last_modified : std::nullopt);
++}
++
++std::map<std::string, ListUpdateStatus> FilterListManager::Startup(
++    int64_t now_ms) {
++  last_status_.clear();
++  for (const FilterListSource& source : sources_) {
++    if (!source.enabled) {
++      Record(source.id, Skipped("disabled"));
++      continue;
++    }
++    std::optional<std::string> cached_body = cache_->LoadBody(source);
++    if (cached_body) {
++      FilterListMetadata metadata = cache_->LoadMetadata(source)
++                                         .value_or(FilterListMetadata{
++                                             source.id, /*downloaded_at_ms=*/0});
++      metadata.source_id = source.id;
++      if (VerifiedCachedCopy(*cached_body, metadata)) {
++        Put(source, *cached_body, metadata);
++        Record(source.id, LoadedFromCache());
++      } else if (policy_.fetch_on_startup) {
++        // G-07: the cached copy failed integrity verification — it is
++        // never served; download a fresh one instead.
++        const FetchResult result = FetchOrNull(source, std::nullopt);
++        if (result.kind == FetchResult::Kind::kSuccess) {
++          StoreAndRecord(source, result, now_ms);
++        } else if (result.kind == FetchResult::Kind::kNotModified) {
++          Record(source.id, Failed("not-modified without a verifiable "
++                                   "cached copy",
++                                   /*served_from_cache=*/false));
++        } else {
++          Record(source.id,
++                 Failed("cached copy failed content verification; " +
++                            result.reason,
++                        /*served_from_cache=*/false));
++        }
++      } else {
++        Record(source.id,
++               Failed("cached copy failed content checksum verification",
++                      /*served_from_cache=*/false));
++      }
++    } else if (policy_.fetch_on_startup) {
++      const FetchResult result = FetchOrNull(source, std::nullopt);
++      if (result.kind == FetchResult::Kind::kSuccess) {
++        StoreAndRecord(source, result, now_ms);
++      } else if (result.kind == FetchResult::Kind::kNotModified) {
++        Record(source.id, Failed("not-modified without a cached copy",
++                                 /*served_from_cache=*/false));
++      } else {
++        Record(source.id, Failed(result.reason, /*served_from_cache=*/false));
++      }
++    } else {
++      Record(source.id, Skipped("no cached copy; startup fetch disabled"));
++    }
++  }
++  return last_status_;
++}
++
++std::map<std::string, ListUpdateStatus> FilterListManager::Refresh(
++    int64_t now_ms) {
++  last_status_.clear();
++  for (const FilterListSource& source : sources_) {
++    if (!source.enabled) {
++      Record(source.id, Skipped("disabled"));
++      continue;
++    }
++    std::optional<FilterListMetadata> current_metadata;
++    if (const auto it = lists_.find(source.id); it != lists_.end()) {
++      current_metadata = it->second.metadata;
++    } else {
++      current_metadata = LoadFromCache(source);
++    }
++    if (!policy_.IsRefreshDue(current_metadata, now_ms)) {
++      Record(source.id, Skipped("not due"));
++      continue;
++    }
++    const FetchResult result = FetchOrNull(source, current_metadata);
++    if (result.kind == FetchResult::Kind::kSuccess) {
++      StoreAndRecord(source, result, now_ms);
++    } else if (result.kind == FetchResult::Kind::kNotModified) {
++      const auto it = lists_.find(source.id);
++      if (it == lists_.end()) {
++        Record(source.id, Failed("not-modified but no cached copy",
++                                 /*served_from_cache=*/false));
++      } else {
++        ManagedList& cached = it->second;
++        cached.metadata.downloaded_at_ms = now_ms;
++        if (result.etag) {
++          cached.metadata.etag = result.etag;
++        }
++        if (result.last_modified) {
++          cached.metadata.last_modified = result.last_modified;
++        }
++        cache_->Store(cached.source, cached.body, cached.metadata);
++        ListUpdateStatus status;
++        status.kind = ListUpdateKind::kNotModified;
++        status.version = cached.metadata.version;
++        Record(source.id, std::move(status));
++      }
++    } else {
++      const bool served = lists_.count(source.id) > 0 ||
++                          cache_->LoadBody(source).has_value();
++      Record(source.id, Failed(result.reason, served));
++    }
++  }
++  return last_status_;
++}
++
++std::vector<ParsedFilterList> FilterListManager::TakeParsedLists() {
++  std::vector<ParsedFilterList> lists;
++  lists.reserve(lists_.size());
++  for (auto& [id, managed] : lists_) {
++    lists.push_back(std::move(managed.parsed));
++  }
++  return lists;
++}
++
++std::vector<FilterListManager::FilterListReport>
++FilterListManager::list_reports() const {
++  std::vector<FilterListReport> reports;
++  reports.reserve(lists_.size());
++  for (const auto& [id, managed] : lists_) {
++    FilterListReport report;
++    report.id = managed.source.id;
++    report.rule_count = managed.rule_count;
++    report.version = managed.metadata.version;
++    report.last_checked_at_ms = managed.metadata.downloaded_at_ms;
++    reports.push_back(std::move(report));
++  }
++  return reports;
++}
++
++int FilterListManager::total_network_rules() const {
++  int total = 0;
++  for (const auto& [id, managed] : lists_) {
++    total += managed.rule_count;
++  }
++  return total;
++}
++
++std::optional<FilterListMetadata> FilterListManager::metadata_of(
++    const std::string& source_id) const {
++  const auto it = lists_.find(source_id);
++  if (it == lists_.end()) {
++    return std::nullopt;
++  }
++  return it->second.metadata;
++}
++
++void FilterListManager::StoreAndRecord(const FilterListSource& source,
++                                       const FetchResult& result,
++                                       int64_t now_ms) {
++  ParsedFilterList parsed = FilterListParser::Parse(result.body, source.id);
++  FilterListMetadata metadata;
++  metadata.source_id = source.id;
++  metadata.downloaded_at_ms = now_ms;
++  metadata.etag = result.etag;
++  metadata.last_modified = result.last_modified;
++  metadata.version = ParseFilterListVersion(result.body).version;
++  metadata.rule_count = static_cast<int>(parsed.network_rules.size());
++  metadata.content_sha256 = Sha256Hex(result.body);
++  cache_->Store(source, result.body, metadata);
++  Put(source, result.body, metadata);
++  ListUpdateStatus status;
++  status.kind = ListUpdateKind::kUpdated;
++  status.version = metadata.version;
++  status.rule_count = metadata.rule_count;
++  Record(source.id, std::move(status));
++}
++
++void FilterListManager::Put(const FilterListSource& source,
++                            const std::string& body,
++                            const FilterListMetadata& metadata) {
++  ManagedList managed;
++  managed.source = source;
++  managed.body = body;
++  managed.metadata = metadata;
++  managed.parsed = FilterListParser::Parse(body, source.id);
++  managed.rule_count = static_cast<int>(managed.parsed.network_rules.size());
++  lists_[source.id] = std::move(managed);
++}
++
++std::optional<FilterListMetadata> FilterListManager::LoadFromCache(
++    const FilterListSource& source) {
++  std::optional<std::string> body = cache_->LoadBody(source);
++  if (!body) {
++    return std::nullopt;
++  }
++  FilterListMetadata metadata = cache_->LoadMetadata(source)
++                                     .value_or(FilterListMetadata{
++                                         source.id, /*downloaded_at_ms=*/0});
++  metadata.source_id = source.id;
++  if (!VerifiedCachedCopy(*body, metadata)) {
++    return std::nullopt;
++  }
++  Put(source, *body, metadata);
++  return metadata;
++}
++
++bool FilterListManager::VerifiedCachedCopy(
++    const std::string& body,
++    const FilterListMetadata& metadata) const {
++  return !metadata.content_sha256 ||
++         Sha256Hex(body) == *metadata.content_sha256;
++}
++
++void FilterListManager::Record(const std::string& source_id,
++                               ListUpdateStatus status) {
++  last_status_[source_id] = std::move(status);
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_filter_list_manager.h b/chrome/android/inweb/adblock/inweb_filter_list_manager.h
+new file mode 100644
+index 0000000..a06faab
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_filter_list_manager.h
+@@ -0,0 +1,133 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_MANAGER_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_MANAGER_H_
++
++#include <map>
++#include <memory>
++#include <optional>
++#include <string>
++#include <vector>
++
++#include "chrome/android/inweb/adblock/inweb_filter_list_cache.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_fetcher.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_source.h"
++#include "chrome/android/inweb/adblock/inweb_filter_rule.h"
++#include "chrome/android/inweb/adblock/inweb_update_policy.h"
++
++namespace inweb::adblock {
++
++// Per-source outcome of a startup load or refresh pass. Ported from the
++// Kotlin reference (lists/FilterListManager.kt).
++enum class ListUpdateKind {
++  kUpdated,          // Downloaded a new body — parsed and cached.
++  kNotModified,      // Server confirmed the cached copy is current (304).
++  kFailed,           // Download failed; |served_from_cache| says whether
++                     // the engine kept content.
++  kSkipped,          // Not attempted — disabled, or refresh not due.
++  kLoadedFromCache,  // Startup served the verified cached copy.
++};
++
++struct ListUpdateStatus {
++  ListUpdateKind kind = ListUpdateKind::kSkipped;
++  std::optional<std::string> version;  // kUpdated / kNotModified
++  int rule_count = 0;                  // kUpdated
++  std::string reason;                  // kFailed / kSkipped
++  bool served_from_cache = false;      // kFailed
++};
++
++// Orchestrates the filter-list lifecycle: startup (cache first, download
++// only what is missing), conditional refresh (ETag / Last-Modified → 304),
++// and graceful degradation — a failed refresh always keeps the cached
++// copy. Ported from the Kotlin reference; performs no background
++// scheduling itself (UpdatePolicy is the decision, the host layer runs
++// the timer).
++//
++// Content integrity (G-07): every downloaded body is pinned with its
++// SHA-256 in the cache metadata and re-verified on every cache load; a
++// mismatching copy is NEVER served — the manager re-downloads (when
++// allowed) or reports an honest failure with nothing loaded.
++class FilterListManager {
++ public:
++  // |fetcher| may be null: v1 runs with the embedded default list and no
++  // subscription transport (ADR-041); a null fetcher turns any required
++  // download into an honest kFailed without touching the network.
++  FilterListManager(std::vector<FilterListSource> sources,
++                    FilterListFetcher* fetcher,
++                    FilterListCache* cache,
++                    UpdatePolicy policy = UpdatePolicy());
++
++  // Initial load: serve every enabled source from cache; download only
++  // the ones with no cached copy (when UpdatePolicy::fetch_on_startup
++  // allows).
++  std::map<std::string, ListUpdateStatus> Startup(int64_t now_ms);
++
++  // Refresh pass for all enabled sources whose content is due.
++  // Conditional validators make unchanged lists a cheap 304; failures
++  // never evict the cached copy.
++  std::map<std::string, ListUpdateStatus> Refresh(int64_t now_ms);
++
++  // Moves the parsed lists out — the one-shot handoff that builds a
++  // TrackingProtectionEngine. ParsedFilterList is move-only (compiled
++  // regexes); after this call the manager keeps bodies, metadata and rule
++  // counts for reporting, but no longer holds parsed rules.
++  std::vector<ParsedFilterList> TakeParsedLists();
++
++  // Per-list reporting facts for the Security Center (§24). Rule counts
++  // are the real counts from the parse that produced each list (stable
++  // across TakeParsedLists()).
++  struct FilterListReport {
++    std::string id;
++    int rule_count = 0;
++    std::optional<std::string> version;
++    std::optional<int64_t> last_checked_at_ms;
++  };
++  std::vector<FilterListReport> list_reports() const;
++
++  int total_network_rules() const;
++
++  std::optional<FilterListMetadata> metadata_of(
++      const std::string& source_id) const;
++
++  std::map<std::string, ListUpdateStatus> last_report() const {
++    return last_status_;
++  }
++
++ private:
++  struct ManagedList {
++    FilterListSource source;
++    std::string body;
++    FilterListMetadata metadata;
++    // Parsed rules; moved out by TakeParsedLists(). |rule_count| keeps
++    // the real count for reporting afterwards.
++    ParsedFilterList parsed;
++    int rule_count = 0;
++  };
++
++  void StoreAndRecord(const FilterListSource& source,
++                      const FetchResult& result,
++                      int64_t now_ms);
++  void Put(const FilterListSource& source,
++           const std::string& body,
++           const FilterListMetadata& metadata);
++  std::optional<FilterListMetadata> LoadFromCache(
++      const FilterListSource& source);
++  FetchResult FetchOrNull(const FilterListSource& source,
++                          const std::optional<FilterListMetadata>& metadata);
++  bool VerifiedCachedCopy(const std::string& body,
++                          const FilterListMetadata& metadata) const;
++  void Record(const std::string& source_id, ListUpdateStatus status);
++
++  std::vector<FilterListSource> sources_;
++  FilterListFetcher* fetcher_ = nullptr;
++  FilterListCache* cache_ = nullptr;
++  UpdatePolicy policy_;
++  std::map<std::string, ManagedList> lists_;
++  std::map<std::string, ListUpdateStatus> last_status_;
++};
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_MANAGER_H_
+diff --git a/chrome/android/inweb/adblock/inweb_filter_list_manager_unittest.cc b/chrome/android/inweb/adblock/inweb_filter_list_manager_unittest.cc
+new file mode 100644
+index 0000000..59f2b8c
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_filter_list_manager_unittest.cc
+@@ -0,0 +1,245 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — FilterListManager unit tests: startup cache-first
++// behavior, G-07 integrity pinning, conditional refresh, graceful
++// degradation. Ported from the Kotlin reference
++// (FilterListManagerTest) with a scriptable fake fetcher.
++
++#include "chrome/android/inweb/adblock/inweb_filter_list_manager.h"
++
++#include <deque>
++#include <optional>
++#include <string>
++#include <vector>
++
++#include "chrome/android/inweb/adblock/inweb_filter_list_checksum.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_source.h"
++#include "testing/gtest/include/gtest/gtest.h"
++
++namespace inweb::adblock {
++
++namespace {
++
++class FakeFetcher : public FilterListFetcher {
++ public:
++  struct Call {
++    std::string url;
++    std::optional<std::string> etag;
++    std::optional<std::string> last_modified;
++  };
++
++  FetchResult Fetch(const std::string& url,
++                    const std::optional<std::string>& etag,
++                    const std::optional<std::string>& last_modified) override {
++    calls.push_back(Call{url, etag, last_modified});
++    if (script.empty()) {
++      return FetchResult::Failure("script exhausted");
++    }
++    const FetchResult result = std::move(script.front());
++    script.pop_front();
++    return result;
++  }
++
++  std::vector<Call> calls;
++  std::deque<FetchResult> script;
++};
++
++FilterListSource Source(bool enabled = true) {
++  return *FilterListSource::Create("easylist", "EasyList",
++                                   std::string("https://example.com/l.txt"),
++                                   enabled);
++}
++
++constexpr char kBodyV1[] = "[Adblock Plus 2.0]\n! Version: 1\n||ads.example.com^\n";
++constexpr char kBodyV2[] = "[Adblock Plus 2.0]\n! Version: 2\n||ads.example.com^\n||tracker.net^$script\n";
++
++FilterListMetadata MetadataFor(const std::string& body, int64_t at) {
++  FilterListMetadata metadata;
++  metadata.source_id = "easylist";
++  metadata.downloaded_at_ms = at;
++  metadata.etag = "\"v1\"";
++  metadata.version = "1";
++  metadata.rule_count = 1;
++  metadata.content_sha256 = Sha256Hex(body);
++  return metadata;
++}
++
++}  // namespace
++
++TEST(InwebFilterListManagerTest, StartupFetchesWhenNoCache) {
++  FakeFetcher fetcher;
++  fetcher.script.push_back(FetchResult::Success(
++      kBodyV1, std::string("\"v1\""), std::string("Mon, 21 Sep 2026")));
++  MemoryFilterListCache cache;
++  FilterListManager manager(std::vector<FilterListSource>{Source()}, &fetcher,
++                            &cache);
++
++  const auto status = manager.Startup(1000);
++  ASSERT_EQ(1u, status.count("easylist"));
++  EXPECT_EQ(ListUpdateKind::kUpdated, status.at("easylist").kind);
++  EXPECT_EQ(1, status.at("easylist").rule_count);
++  ASSERT_TRUE(status.at("easylist").version.has_value());
++  EXPECT_EQ("1", *status.at("easylist").version);
++  ASSERT_EQ(1u, fetcher.calls.size());
++  EXPECT_EQ("https://example.com/l.txt", fetcher.calls[0].url);
++  EXPECT_FALSE(fetcher.calls[0].etag.has_value());
++
++  EXPECT_EQ(1, manager.total_network_rules());
++  const std::optional<FilterListMetadata> metadata =
++      manager.metadata_of("easylist");
++  ASSERT_TRUE(metadata.has_value());
++  EXPECT_EQ(1000, metadata->downloaded_at_ms);
++  ASSERT_TRUE(metadata->content_sha256.has_value());
++  EXPECT_EQ(Sha256Hex(kBodyV1), *metadata->content_sha256);
++  // Cached for the next start.
++  EXPECT_EQ(kBodyV1, cache.LoadBody(Source()).value_or(""));
++}
++
++TEST(InwebFilterListManagerTest, StartupServesVerifiedCacheWithoutNetwork) {
++  MemoryFilterListCache cache;
++  cache.Store(Source(), kBodyV1, MetadataFor(kBodyV1, 500));
++  FakeFetcher fetcher;
++  FilterListManager manager(std::vector<FilterListSource>{Source()}, &fetcher,
++                            &cache);
++
++  const auto status = manager.Startup(1000);
++  EXPECT_EQ(ListUpdateKind::kLoadedFromCache, status.at("easylist").kind);
++  EXPECT_TRUE(fetcher.calls.empty());
++  EXPECT_EQ(1, manager.total_network_rules());
++}
++
++TEST(InwebFilterListManagerTest, TamperedCacheIsNeverServed) {
++  // G-07: pinned checksum does not match the body.
++  FilterListMetadata tampered = MetadataFor(kBodyV1, 500);
++  tampered.content_sha256 = Sha256Hex("a different body");
++  MemoryFilterListCache cache;
++  cache.Store(Source(), kBodyV1, tampered);
++  FakeFetcher fetcher;
++  fetcher.script.push_back(FetchResult::Success(kBodyV2, std::nullopt, std::nullopt));
++  FilterListManager manager(std::vector<FilterListSource>{Source()}, &fetcher,
++                            &cache);
++
++  const auto status = manager.Startup(1000);
++  EXPECT_EQ(ListUpdateKind::kUpdated, status.at("easylist").kind);
++  EXPECT_EQ(2, manager.total_network_rules());
++  EXPECT_EQ(kBodyV2, cache.LoadBody(Source()).value_or(""));
++}
++
++TEST(InwebFilterListManagerTest, TamperedCacheWithNoFetchFailsHonestly) {
++  FilterListMetadata tampered = MetadataFor(kBodyV1, 500);
++  tampered.content_sha256 = Sha256Hex("a different body");
++  MemoryFilterListCache cache;
++  cache.Store(Source(), kBodyV1, tampered);
++  UpdatePolicy policy;
++  policy.fetch_on_startup = false;
++  FilterListManager manager(std::vector<FilterListSource>{Source()},
++                            /*fetcher=*/nullptr, &cache, policy);
++
++  const auto status = manager.Startup(1000);
++  EXPECT_EQ(ListUpdateKind::kFailed, status.at("easylist").kind);
++  EXPECT_FALSE(status.at("easylist").served_from_cache);
++  EXPECT_EQ(0, manager.total_network_rules());
++}
++
++TEST(InwebFilterListManagerTest, NullFetcherFailsHonestlyOnStartup) {
++  MemoryFilterListCache cache;
++  FilterListManager manager(std::vector<FilterListSource>{Source()},
++                            /*fetcher=*/nullptr, &cache);
++  const auto status = manager.Startup(1000);
++  EXPECT_EQ(ListUpdateKind::kFailed, status.at("easylist").kind);
++  EXPECT_FALSE(status.at("easylist").served_from_cache);
++  EXPECT_EQ(0, manager.total_network_rules());
++}
++
++TEST(InwebFilterListManagerTest, RefreshNotModifiedUpdatesTimestamp) {
++  MemoryFilterListCache cache;
++  cache.Store(Source(), kBodyV1, MetadataFor(kBodyV1, 500));
++  FakeFetcher fetcher;
++  FilterListManager manager(std::vector<FilterListSource>{Source()}, &fetcher,
++                            &cache);
++  manager.Startup(1000);
++
++  fetcher.script.push_back(FetchResult::NotModified(std::string("\"v2\""), std::nullopt));
++  const auto status = manager.Refresh(90'000'000);
++  EXPECT_EQ(ListUpdateKind::kNotModified, status.at("easylist").kind);
++  ASSERT_EQ(1u, fetcher.calls.size());
++  // Conditional validators were sent.
++  ASSERT_TRUE(fetcher.calls[0].etag.has_value());
++  EXPECT_EQ("\"v1\"", *fetcher.calls[0].etag);
++  const std::optional<FilterListMetadata> metadata =
++      manager.metadata_of("easylist");
++  ASSERT_TRUE(metadata.has_value());
++  EXPECT_EQ(90'000'000, metadata->downloaded_at_ms);
++  ASSERT_TRUE(metadata->etag.has_value());
++  EXPECT_EQ("\"v2\"", *metadata->etag);
++  EXPECT_EQ(1, manager.total_network_rules());
++}
++
++TEST(InwebFilterListManagerTest, RefreshFailureKeepsCachedContent) {
++  MemoryFilterListCache cache;
++  cache.Store(Source(), kBodyV1, MetadataFor(kBodyV1, 500));
++  FakeFetcher fetcher;
++  FilterListManager manager(std::vector<FilterListSource>{Source()}, &fetcher,
++                            &cache);
++  manager.Startup(1000);
++
++  fetcher.script.push_back(FetchResult::Failure("HTTP 500"));
++  const auto status = manager.Refresh(90'000'000);
++  ASSERT_EQ(1u, status.count("easylist"));
++  EXPECT_EQ(ListUpdateKind::kFailed, status.at("easylist").kind);
++  EXPECT_TRUE(status.at("easylist").served_from_cache);
++  EXPECT_EQ(1, manager.total_network_rules());
++}
++
++TEST(InwebFilterListManagerTest, RefreshSkippedWhenNotDueOrDisabled) {
++  MemoryFilterListCache cache;
++  cache.Store(Source(), kBodyV1, MetadataFor(kBodyV1, 90'000'000));
++  FakeFetcher fetcher;
++  FilterListManager manager(std::vector<FilterListSource>{Source()}, &fetcher,
++                            &cache);
++  manager.Startup(90'000'000);
++
++  const auto status = manager.Refresh(90'000'000 + 1000);
++  EXPECT_EQ(ListUpdateKind::kSkipped, status.at("easylist").kind);
++  EXPECT_EQ("not due", status.at("easylist").reason);
++  EXPECT_TRUE(fetcher.calls.empty());
++}
++
++TEST(InwebFilterListManagerTest, DisabledSourceIsSkipped) {
++  MemoryFilterListCache cache;
++  FakeFetcher fetcher;
++  FilterListManager manager(std::vector<FilterListSource>{Source(false)},
++                            &fetcher, &cache);
++  const auto status = manager.Startup(1000);
++  EXPECT_EQ(ListUpdateKind::kSkipped, status.at("easylist").kind);
++  EXPECT_EQ("disabled", status.at("easylist").reason);
++  EXPECT_TRUE(fetcher.calls.empty());
++}
++
++TEST(InwebFilterListManagerTest, TakeParsedListsHandsOffRulesOnce) {
++  FakeFetcher fetcher;
++  fetcher.script.push_back(FetchResult::Success(kBodyV2, std::nullopt, std::nullopt));
++  MemoryFilterListCache cache;
++  FilterListManager manager(std::vector<FilterListSource>{Source()}, &fetcher,
++                            &cache);
++  manager.Startup(1000);
++
++  std::vector<ParsedFilterList> lists = manager.TakeParsedLists();
++  ASSERT_EQ(1u, lists.size());
++  EXPECT_EQ(2u, lists[0].network_rules.size());
++  EXPECT_EQ("easylist", lists[0].list_id);
++
++  // Reporting facts survive the handoff.
++  EXPECT_EQ(2, manager.total_network_rules());
++  const auto reports = manager.list_reports();
++  ASSERT_EQ(1u, reports.size());
++  EXPECT_EQ("easylist", reports[0].id);
++  EXPECT_EQ(2, reports[0].rule_count);
++  ASSERT_TRUE(reports[0].version.has_value());
++  EXPECT_EQ("2", *reports[0].version);
++  EXPECT_EQ(1000, reports[0].last_checked_at_ms.value_or(-1));
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_filter_list_source.cc b/chrome/android/inweb/adblock/inweb_filter_list_source.cc
+new file mode 100644
+index 0000000..d29e856
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_filter_list_source.cc
+@@ -0,0 +1,86 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include <utility>
++
++#include "base/no_destructor.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_source.h"
++
++namespace inweb::adblock {
++
++namespace {
++
++bool IsValidListId(const std::string& id) {
++  if (id.empty() || id.size() > 64) {
++    return false;
++  }
++  const char first = id[0];
++  if (!((first >= 'a' && first <= 'z') ||
++        (first >= '0' && first <= '9'))) {
++    return false;
++  }
++  for (const char c : id) {
++    if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-')) {
++      return false;
++    }
++  }
++  return true;
++}
++
++bool IsBlank(const std::string& text) {
++  for (const char c : text) {
++    if (c != ' ' && c != '\t' && c != '\n' && c != '\r') {
++      return false;
++    }
++  }
++  return true;
++}
++
++bool IsHttpUrl(const std::string& url) {
++  return url.rfind("https://", 0) == 0 || url.rfind("http://", 0) == 0;
++}
++
++}  // namespace
++
++// static
++std::optional<FilterListSource> FilterListSource::Create(
++    std::string id,
++    std::string title,
++    std::optional<std::string> download_url,
++    bool enabled) {
++  if (!IsValidListId(id) || IsBlank(title)) {
++    return std::nullopt;
++  }
++  if (download_url && !IsHttpUrl(*download_url)) {
++    return std::nullopt;
++  }
++  return FilterListSource{std::move(id), std::move(title),
++                          std::move(download_url), enabled};
++}
++
++// static
++const std::vector<FilterListSource>& FilterListSource::Defaults() {
++  static const base::NoDestructor<std::vector<FilterListSource>> defaults([] {
++    std::vector<FilterListSource> lists;
++    if (auto easylist = Create("easylist", "EasyList",
++                               std::string("https://easylist.to/easylist/easylist.txt"))) {
++      lists.push_back(std::move(*easylist));
++    }
++    if (auto easyprivacy =
++            Create("easyprivacy", "EasyPrivacy",
++                   std::string("https://easylist.to/easylist/easyprivacy.txt"))) {
++      lists.push_back(std::move(*easyprivacy));
++    }
++    return lists;
++  }());
++  return *defaults;
++}
++
++// static
++FilterListSource FilterListSource::DefaultList() {
++  return FilterListSource{"inweb-default", "iNWEB Starter List",
++                          /*download_url=*/std::nullopt, /*enabled=*/true};
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_filter_list_source.h b/chrome/android/inweb/adblock/inweb_filter_list_source.h
+new file mode 100644
+index 0000000..73307d5
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_filter_list_source.h
+@@ -0,0 +1,49 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_SOURCE_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_SOURCE_H_
++
++#include <optional>
++#include <string>
++#include <vector>
++
++namespace inweb::adblock {
++
++// One subscribable filter-list source (EasyList-family). Ported from the
++// Kotlin reference (lists/FilterListSource.kt).
++//
++// `id` is the stable key used for cache files and status reports; it is
++// restricted to [a-z0-9-] so it can never escape the cache directory.
++//
++// Deviation from the Kotlin reference (ADR-041): `download_url` is optional —
++// the embedded default list (inweb_default_filter_list.h) has no upstream
++// URL. Validation is applied only when a URL is present.
++struct FilterListSource {
++  std::string id;
++  std::string title;
++  std::optional<std::string> download_url;
++  bool enabled = true;
++
++  // Returns a validated source, or nullopt when id/title/url constraints
++  // fail (the Kotlin `require` blocks). Id must match
++  // [a-z0-9][a-z0-9-]{0,63}; the title must be non-blank; a present
++  // download URL must be http(s).
++  static std::optional<FilterListSource> Create(
++      std::string id,
++      std::string title,
++      std::optional<std::string> download_url,
++      bool enabled = true);
++
++  // Canonical, subscription-free community lists (§10 defaults). Used when
++  // subscription downloads are wired (deferred from patch 0007, ADR-041).
++  static const std::vector<FilterListSource>& Defaults();
++
++  // The embedded starter list's identity (no download URL).
++  static FilterListSource DefaultList();
++};
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_SOURCE_H_
+diff --git a/chrome/android/inweb/adblock/inweb_filter_list_stack_unittest.cc b/chrome/android/inweb/adblock/inweb_filter_list_stack_unittest.cc
+new file mode 100644
+index 0000000..a492cf6
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_filter_list_stack_unittest.cc
+@@ -0,0 +1,86 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — filter-list stack unit tests (source model, version
++// headers, checksum, update policy). Ported from the Kotlin reference
++// (FilterListSource/FilterListVersion/FilterListChecksum/UpdatePolicy
++// tests).
++
++#include "chrome/android/inweb/adblock/inweb_filter_list_checksum.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_source.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_version.h"
++#include "chrome/android/inweb/adblock/inweb_update_policy.h"
++
++#include <string>
++
++#include "testing/gtest/include/gtest/gtest.h"
++
++namespace inweb::adblock {
++
++TEST(InwebFilterListSourceTest, ValidatesIdTitleAndUrl) {
++  EXPECT_TRUE(FilterListSource::Create("easylist", "EasyList",
++                                       std::string("https://example.com/l")));
++  EXPECT_FALSE(FilterListSource::Create("EasyList", "EasyList",
++                                        std::string("https://e.com/l")));
++  EXPECT_FALSE(FilterListSource::Create("", "T", std::string("https://e.com/l")));
++  EXPECT_FALSE(FilterListSource::Create("has_underscore", "T",
++                                        std::string("https://e.com/l")));
++  EXPECT_FALSE(FilterListSource::Create("a", " ", std::string("https://e.com/l")));
++  EXPECT_FALSE(FilterListSource::Create("a", "T", std::string("ftp://e.com/l")));
++  // Embedded lists carry no download URL — allowed (ADR-041 deviation).
++  EXPECT_TRUE(FilterListSource::Create("inweb-default", "iNWEB Starter List",
++                                       std::nullopt));
++}
++
++TEST(InwebFilterListSourceTest, DefaultsAndDefaultList) {
++  const std::vector<FilterListSource>& defaults = FilterListSource::Defaults();
++  ASSERT_EQ(2u, defaults.size());
++  EXPECT_EQ("easylist", defaults[0].id);
++  EXPECT_EQ("easyprivacy", defaults[1].id);
++  EXPECT_TRUE(defaults[0].enabled);
++
++  const FilterListSource builtin = FilterListSource::DefaultList();
++  EXPECT_EQ("inweb-default", builtin.id);
++  EXPECT_FALSE(builtin.download_url.has_value());
++}
++
++TEST(InwebFilterListVersionTest, ParsesEasyListFamilyHeaders) {
++  const FilterListVersionInfo info = ParseFilterListVersion(
++      "[Adblock Plus 2.0]\n! Version: 1.2.3\n! Last modified: 22 Sep 2026\n! "
++      "x\n||ads.example.com^\n");
++  ASSERT_TRUE(info.version.has_value());
++  EXPECT_EQ("1.2.3", *info.version);
++  ASSERT_TRUE(info.last_modified.has_value());
++  EXPECT_EQ("22 Sep 2026", *info.last_modified);
++}
++
++TEST(InwebFilterListVersionTest, CaseInsensitiveAndFirstWins) {
++  const FilterListVersionInfo info =
++      ParseFilterListVersion("! version: A\n! Version: B\n");
++  ASSERT_TRUE(info.version.has_value());
++  EXPECT_EQ("A", *info.version);
++  EXPECT_FALSE(ParseFilterListVersion("! comment only\n").version.has_value());
++  EXPECT_FALSE(ParseFilterListVersion("! Version:  \n").version.has_value());
++}
++
++TEST(InwebFilterListChecksumTest, KnownSha256Vector) {
++  // sha256("abc") — the standard test vector.
++  EXPECT_EQ("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
++            Sha256Hex("abc"));
++  EXPECT_EQ("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
++            Sha256Hex(""));
++}
++
++TEST(InwebUpdatePolicyTest, RefreshDueDecisions) {
++  UpdatePolicy policy;
++  EXPECT_FALSE(UpdatePolicy{/*enabled=*/false}.IsRefreshDue(std::nullopt, 100));
++
++  EXPECT_TRUE(policy.IsRefreshDue(std::nullopt, 0));
++  FilterListMetadata fresh;
++  fresh.downloaded_at_ms = 1000;
++  EXPECT_FALSE(policy.IsRefreshDue(fresh, 1000 + policy.refresh_interval_ms - 1));
++  EXPECT_TRUE(policy.IsRefreshDue(fresh, 1000 + policy.refresh_interval_ms));
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_filter_list_version.cc b/chrome/android/inweb/adblock/inweb_filter_list_version.cc
+new file mode 100644
+index 0000000..18969ef
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_filter_list_version.cc
+@@ -0,0 +1,72 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/adblock/inweb_filter_list_version.h"
++
++#include <strings.h>
++
++#include <string_view>
++
++#include "base/strings/string_split.h"
++#include "base/strings/string_util.h"
++
++namespace inweb::adblock {
++
++namespace {
++
++bool CaseInsensitiveStartsWith(std::string_view text,
++                               std::string_view prefix) {
++  if (text.size() < prefix.size()) {
++    return false;
++  }
++  return ::strncasecmp(text.data(), prefix.data(), prefix.size()) == 0;
++}
++
++// Kotlin parity: value after the first ':', trimmed; empty -> nullopt.
++std::optional<std::string> ValueAfterColon(std::string_view comment) {
++  const size_t colon = comment.find(':');
++  if (colon == std::string_view::npos) {
++    return std::nullopt;
++  }
++  const std::string value(
++      base::TrimString(comment.substr(colon + 1), base::kWhitespaceASCII,
++                       base::TRIM_ALL));
++  if (value.empty()) {
++    return std::nullopt;
++  }
++  return value;
++}
++
++}  // namespace
++
++FilterListVersionInfo ParseFilterListVersion(const std::string& text) {
++  FilterListVersionInfo info;
++  for (const std::string& line :
++       base::SplitString(text, "\n", base::TRIM_WHITESPACE,
++                         base::SPLIT_WANT_NONEMPTY)) {
++    if (line.empty() || line[0] != '!') {
++      continue;
++    }
++    const std::string_view comment(line);
++    const std::string_view body = comment.substr(1);
++    const size_t first_non_space = body.find_first_not_of(" \t");
++    const std::string_view trimmed =
++        first_non_space == std::string_view::npos
++            ? std::string_view()
++            : body.substr(first_non_space);
++    if (!info.version &&
++        CaseInsensitiveStartsWith(trimmed, "Version:")) {
++      info.version = ValueAfterColon(trimmed);
++    } else if (!info.last_modified &&
++               CaseInsensitiveStartsWith(trimmed, "Last modified:")) {
++      info.last_modified = ValueAfterColon(trimmed);
++    }
++    if (info.version && info.last_modified) {
++      break;
++    }
++  }
++  return info;
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_filter_list_version.h b/chrome/android/inweb/adblock/inweb_filter_list_version.h
+new file mode 100644
+index 0000000..c72e392
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_filter_list_version.h
+@@ -0,0 +1,28 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_VERSION_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_VERSION_H_
++
++#include <optional>
++#include <string>
++
++namespace inweb::adblock {
++
++// Version information extracted from EasyList-family header comments.
++struct FilterListVersionInfo {
++  std::optional<std::string> version;
++  std::optional<std::string> last_modified;
++};
++
++// Extracts `! Version:` and `! Last modified:` header comments from a
++// filter list (the EasyList-family convention). Matching is
++// case-insensitive; the first occurrence wins. Absent or empty headers
++// yield nullopt — never a made-up value. Ported from the Kotlin reference
++// (lists/FilterListVersion.kt).
++FilterListVersionInfo ParseFilterListVersion(const std::string& text);
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_VERSION_H_
+diff --git a/chrome/android/inweb/adblock/inweb_security_center.cc b/chrome/android/inweb/adblock/inweb_security_center.cc
+new file mode 100644
+index 0000000..b2d0385
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_security_center.cc
+@@ -0,0 +1,59 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/adblock/inweb_security_center.h"
++
++#include <algorithm>
++#include <utility>
++
++#include "chrome/android/inweb/adblock/inweb_filter_list_manager.h"
++
++namespace inweb::adblock {
++
++// static
++SecurityCenterModel SecurityCenter::Build(
++    const TrackingProtectionSettings& settings,
++    const EngineStatisticsSnapshot& statistics,
++    const FilterListManager& list_manager,
++    bool enforcement_active) {
++  SecurityCenterModel model;
++  model.enforcement_active = enforcement_active;
++  model.tracking_protection_enabled = settings.enabled();
++  model.cookie_policy = settings.cookie_policy();
++  model.allowlisted_site_count =
++      static_cast<int>(settings.allowlisted_sites().size());
++
++  for (const auto& report : list_manager.list_reports()) {
++    FilterListStatus status;
++    status.id = report.id;
++    status.rule_count = report.rule_count;
++    status.version = report.version;
++    status.last_checked_at_ms = report.last_checked_at_ms;
++    model.filter_lists.push_back(std::move(status));
++  }
++
++  model.total_network_rules = list_manager.total_network_rules();
++  model.blocked_count = statistics.block_count;
++  model.allowed_count = statistics.allow_count;
++  model.passed_count = statistics.pass_count;
++
++  model.top_blocked_domains.reserve(statistics.blocked_by_domain.size());
++  for (const auto& [domain, count] : statistics.blocked_by_domain) {
++    model.top_blocked_domains.push_back(BlockedDomainCount{domain, count});
++  }
++  std::sort(model.top_blocked_domains.begin(),
++            model.top_blocked_domains.end(),
++            [](const BlockedDomainCount& a, const BlockedDomainCount& b) {
++              if (a.count != b.count) {
++                return a.count > b.count;
++              }
++              return a.domain < b.domain;
++            });
++  if (model.top_blocked_domains.size() > kTopDomainsLimit) {
++    model.top_blocked_domains.resize(kTopDomainsLimit);
++  }
++  return model;
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_security_center.h b/chrome/android/inweb/adblock/inweb_security_center.h
+new file mode 100644
+index 0000000..027316d
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_security_center.h
+@@ -0,0 +1,71 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_SECURITY_CENTER_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_SECURITY_CENTER_H_
++
++#include <optional>
++#include <string>
++#include <vector>
++
++#include "chrome/android/inweb/adblock/inweb_filter_list_cache.h"
++#include "chrome/android/inweb/adblock/inweb_tracking_protection_engine.h"
++
++namespace inweb::adblock {
++
++class FilterListManager;
++
++// Status of one filter list, for the Security Center (§24).
++struct FilterListStatus {
++  std::string id;
++  int rule_count = 0;
++  std::optional<std::string> version;
++  std::optional<int64_t> last_checked_at_ms;
++};
++
++// A domain with its real blocked-request count, for the Security Center.
++struct BlockedDomainCount {
++  std::string domain;
++  int count = 0;
++};
++
++// The Security Center dashboard contract (MASTER-SPEC §24). Every number
++// comes from real state: real decisions made by TrackingProtectionEngine,
++// real parsed filter lists, real policy inputs. Nothing is estimated or
++// fabricated. Ported from the Kotlin reference (SecurityCenter.kt).
++struct SecurityCenterModel {
++  bool enforcement_active = false;
++  bool tracking_protection_enabled = false;
++  CookiePolicy cookie_policy = CookiePolicy::kBlockThirdParty;
++  int allowlisted_site_count = 0;
++  std::vector<FilterListStatus> filter_lists;
++  int total_network_rules = 0;
++  int blocked_count = 0;
++  int allowed_count = 0;
++  int passed_count = 0;
++  std::vector<BlockedDomainCount> top_blocked_domains;
++
++  int total_decisions() const {
++    return blocked_count + allowed_count + passed_count;
++  }
++};
++
++// Builds the SecurityCenterModel from real engine statistics, real policy
++// inputs, and the real filter-list state. The dashboard UI renders this
++// model; it never reads raw internals itself. Ported from the Kotlin
++// reference.
++class SecurityCenter {
++ public:
++  static constexpr size_t kTopDomainsLimit = 5;
++
++  static SecurityCenterModel Build(
++      const TrackingProtectionSettings& settings,
++      const EngineStatisticsSnapshot& statistics,
++      const FilterListManager& list_manager,
++      bool enforcement_active);
++};
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_SECURITY_CENTER_H_
+diff --git a/chrome/android/inweb/adblock/inweb_security_center_unittest.cc b/chrome/android/inweb/adblock/inweb_security_center_unittest.cc
+new file mode 100644
+index 0000000..ee1dad3
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_security_center_unittest.cc
+@@ -0,0 +1,137 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — Security Center read-path tests + the embedded default
++// list integration (patch 0007): real blocking from construction, honest
++// dashboard numbers. Ported from the Kotlin reference
++// (SecurityCenterTest) plus the native holder/bootstrap behaviors.
++
++#include "chrome/android/inweb/adblock/inweb_adblock_engine_holder.h"
++
++#include <string>
++#include <vector>
++
++#include "chrome/android/inweb/adblock/inweb_default_filter_list.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_parser.h"
++#include "chrome/android/inweb/adblock/inweb_security_center.h"
++#include "testing/gtest/include/gtest/gtest.h"
++
++namespace inweb::adblock {
++
++namespace {
++
++RequestContext Request(const std::string& url,
++                       ResourceType type = ResourceType::kImage) {
++  return RequestContext{GURL(url), GURL("https://news.example.com/story"),
++                        type};
++}
++
++}  // namespace
++
++TEST(InwebDefaultFilterListTest, ParsesAndBlocksFixtures) {
++  const ParsedFilterList parsed =
++      FilterListParser::Parse(kInwebDefaultFilterList, "inweb-default");
++  EXPECT_EQ(0, parsed.invalid_rule_count);
++  EXPECT_EQ(0, parsed.unsupported_rule_count);
++  EXPECT_GT(static_cast<int>(parsed.network_rules.size()), 10);
++
++  InwebAdblockEngineHolder holder;
++  EXPECT_TRUE(holder.IsEnabled());
++
++  // Device-test fixture: all three decision paths, deterministically.
++  EXPECT_EQ(FilterAction::kBlock,
++            holder.Decide(Request("https://adblock-fixture.invalid/ad.png")).action);
++  EXPECT_EQ(FilterAction::kBlock,
++            holder.Decide(Request("https://tracker-fixture.invalid/t.js",
++                                  ResourceType::kScript)).action);
++  EXPECT_EQ(FilterAction::kBlock,
++            holder.Decide(Request("https://tracker-fixture.invalid/t.png")).action);
++  EXPECT_EQ(FilterAction::kPass,
++            holder.Decide(Request("https://tracker-fixture.invalid/t.woff",
++                                  ResourceType::kFont)).action);
++  EXPECT_EQ(FilterAction::kAllow,
++            holder.Decide(Request("https://allowed-fixture.invalid/x")).action);
++  // A well-known default-list host is blocked out of the box.
++  EXPECT_EQ(FilterAction::kBlock,
++            holder.Decide(Request("https://doubleclick.net/pixel")).action);
++  // Clean hosts pass.
++  EXPECT_EQ(FilterAction::kPass,
++            holder.Decide(Request("https://clean.example.org/logo.png")).action);
++}
++
++TEST(InwebSecurityCenterTest, ModelCarriesRealNumbersOnly) {
++  InwebAdblockEngineHolder holder;
++
++  // Produce real decisions.
++  holder.Decide(Request("https://adblock-fixture.invalid/a.png"));
++  holder.Decide(Request("https://adblock-fixture.invalid/b.png"));
++  holder.Decide(Request("https://tracker-fixture.invalid/c.js",
++                        ResourceType::kScript));
++  holder.Decide(Request("https://allowed-fixture.invalid/x"));
++  holder.Decide(Request("https://clean.example.org/logo.png"));
++
++  const SecurityCenterModel model =
++      holder.BuildSecurityCenterModel(/*enforcement_active=*/true);
++  EXPECT_TRUE(model.enforcement_active);
++  EXPECT_TRUE(model.tracking_protection_enabled);
++  EXPECT_EQ(3, model.blocked_count);
++  EXPECT_EQ(1, model.allowed_count);
++  EXPECT_EQ(1, model.passed_count);
++  EXPECT_EQ(5, model.total_decisions());
++
++  ASSERT_EQ(1u, model.filter_lists.size());
++  EXPECT_EQ("inweb-default", model.filter_lists[0].id);
++  ASSERT_TRUE(model.filter_lists[0].version.has_value());
++  EXPECT_EQ("iNWEB-1.0", *model.filter_lists[0].version);
++
++  // The default list's real rule count, computed independently.
++  const ParsedFilterList parsed =
++      FilterListParser::Parse(kInwebDefaultFilterList, "inweb-default");
++  EXPECT_EQ(static_cast<int>(parsed.network_rules.size()),
++            model.filter_lists[0].rule_count);
++  EXPECT_EQ(static_cast<int>(parsed.network_rules.size()),
++            model.total_network_rules);
++
++  ASSERT_EQ(2u, model.top_blocked_domains.size());
++  EXPECT_EQ("adblock-fixture.invalid", model.top_blocked_domains[0].domain);
++  EXPECT_EQ(2, model.top_blocked_domains[0].count);
++  EXPECT_EQ("tracker-fixture.invalid", model.top_blocked_domains[1].domain);
++  EXPECT_EQ(1, model.top_blocked_domains[1].count);
++}
++
++TEST(InwebSecurityCenterTest, TopDomainsSortedAndLimited) {
++  InwebAdblockEngineHolder holder;
++  // Six distinct blocked hosts (b.example … g.example patterns map onto
++  // the fixture host's path space is not separable, so use the engine
++  // directly for the sort/limit contract instead).
++  std::vector<ParsedFilterList> lists;
++  lists.push_back(FilterListParser::Parse(
++      "||a.test^\n||b.test^\n||c.test^\n||d.test^\n||e.test^\n||f.test^\n",
++      "six"));
++  TrackingProtectionEngine engine(std::move(lists),
++                                  TrackingProtectionSettings());
++
++  for (const std::string& host :
++       {"https://a.test/x", "https://a.test/y", "https://a.test/z",
++        "https://b.test/x", "https://b.test/y", "https://c.test/x"}) {
++    engine.Decide(Request(host));
++  }
++  // d/e/f get no decisions — the top list holds the 5 that did, ordered
++  // by count desc then domain asc: a(3), b(2), c(1).
++  const SecurityCenterModel model = SecurityCenter::Build(
++      TrackingProtectionSettings(), engine.statistics().Snapshot(),
++      FilterListManager(std::vector<FilterListSource>{}, nullptr, nullptr),
++      /*enforcement_active=*/false);
++  EXPECT_FALSE(model.enforcement_active);
++  ASSERT_EQ(3u, model.top_blocked_domains.size());
++  EXPECT_EQ("a.test", model.top_blocked_domains[0].domain);
++  EXPECT_EQ(3, model.top_blocked_domains[0].count);
++  EXPECT_EQ("b.test", model.top_blocked_domains[1].domain);
++  EXPECT_EQ("c.test", model.top_blocked_domains[2].domain);
++  EXPECT_EQ(6, model.blocked_count);
++  EXPECT_TRUE(model.filter_lists.empty());
++  EXPECT_EQ(0, model.total_network_rules);
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
+index 1485e65..83c962a 100644
+--- a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
++++ b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
+@@ -158,6 +158,16 @@ FilterDecision TrackingProtectionEngine::Decide(
+                         .matched_rule = block_match};
+ }
+ 
++EngineStatisticsSnapshot EngineStatistics::Snapshot() const {
++  base::AutoLock lock(lock_);
++  EngineStatisticsSnapshot snapshot;
++  snapshot.block_count = block_count_;
++  snapshot.allow_count = allow_count_;
++  snapshot.pass_count = pass_count_;
++  snapshot.blocked_by_domain = blocked_by_domain_;
++  return snapshot;
++}
++
+ void TrackingProtectionEngine::UpdateSettings(
+     TrackingProtectionSettings settings) {
+   settings_ = std::move(settings);
+diff --git a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h
+index 2477e76..e1d46be 100644
+--- a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h
++++ b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h
+@@ -71,6 +71,15 @@ class TrackingProtectionSettings {
+   std::set<std::string> allowlisted_sites_;
+ };
+ 
++// Copyable snapshot of decision counters for reporting (Security Center
++// read path, patch 0007). Produced by EngineStatistics::Snapshot().
++struct EngineStatisticsSnapshot {
++  int block_count = 0;
++  int allow_count = 0;
++  int pass_count = 0;
++  std::map<std::string, int> blocked_by_domain;
++};
++
+ // Real decision counters, backing Security Center statistics (§24).
+ // Thread-safe: decisions run on worker-pool threads.
+ class EngineStatistics {
+@@ -80,6 +89,9 @@ class EngineStatistics {
+   int pass_count() const;
+   std::map<std::string, int> blocked_by_domain() const;
+ 
++  // Thread-safe snapshot for the Security Center read path.
++  EngineStatisticsSnapshot Snapshot() const;
++
+   void RecordBlock(const std::string& request_host) const;
+   void RecordAllow() const;
+   void RecordPass() const;
+diff --git a/chrome/android/inweb/adblock/inweb_update_policy.h b/chrome/android/inweb/adblock/inweb_update_policy.h
+new file mode 100644
+index 0000000..74f4a48
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_update_policy.h
+@@ -0,0 +1,39 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_UPDATE_POLICY_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_UPDATE_POLICY_H_
++
++#include <optional>
++
++#include "chrome/android/inweb/adblock/inweb_filter_list_cache.h"
++
++namespace inweb::adblock {
++
++// Update-scheduling *decision* model. The actual timer lives in the host
++// layer and calls FilterListManager::Refresh when this policy says a list
++// is due — the policy itself never runs background work. Ported from the
++// Kotlin reference (lists/UpdatePolicy.kt).
++struct UpdatePolicy {
++  bool enabled = true;
++  // Download a list on startup when no cached copy exists.
++  bool fetch_on_startup = true;
++  // Minimum age of the last confirmed download before a refresh is due.
++  int64_t refresh_interval_ms = 24LL * 60 * 60 * 1000;
++
++  bool IsRefreshDue(const std::optional<FilterListMetadata>& metadata,
++                    int64_t now_ms) const {
++    if (!enabled) {
++      return false;
++    }
++    if (!metadata) {
++      return true;
++    }
++    return now_ms - metadata->downloaded_at_ms >= refresh_interval_ms;
++  }
++};
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_UPDATE_POLICY_H_

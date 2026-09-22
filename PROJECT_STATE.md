@@ -1229,6 +1229,7 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-038 | 2026-09-22 | Product naming (author-directed): launcher/app label = "iNWEB" (one-word, Chrome/Opera-style; avoids launcher truncation); full product name in store listings/legal = "iNWEB Browser" (master prompt #1); Android package id = com.inweb.android set via Chromium's supported rebranding GN argument chrome_public_manifest_package (declare_args in chrome/android/chrome_public_apk_tmpl.gni) — no upstream source patch, rebase-proof; permanent once released | professional brand identity: short iconic launcher name, product-domain package (DuckDuckGo-style .android suffix), traceable and reproducible |
 | ADR-039 | 2026-09-22 | Repository structure professionalization (author-directed): docs/ organized into phases/ (14 phase designs), design/ (BRAND.md + logo study assets), releases/ (per-version notes + template), verification/ (existing) with docs/README.md as the full index; brand masters in a dedicated assets/logo/ folder; stale README/PROJECT_STATE build & test status reconciled with the recorded v1.0.0-alpha.1 release; src/, scripts/, tests/, config/, .github/, ci/ and all script-read data paths (docs/STORAGE-INVENTORY.yaml) unchanged — CI path triggers preserved and the local Python suite re-run green | navigability and a single truthful status picture without breaking any CI path contract; phase/design/release documents discoverable by group |
 | ADR-040 | 2026-09-22 | Ad-block engine implementation language (Stage 2): native C++ port of the tested Kotlin tracking-protection engine instead of the originally designed JNI-into-Kotlin bridge — pinned-tree verification (154.0.8037.21) shows no first-party Kotlin compilation exists (no Kotlin step in build/android/gyp/, kotlin_stdlib is a prebuilt AAR-runtime jar only, zero .kt in chrome/android/BUILD.gn); the Kotlin implementation remains the behavioral specification with its tests mirrored at build time; the URLLoaderThrottle interception point is confirmed on the pinned tree as ContentBrowserClient::CreateURLLoaderThrottles | the only buildable path on this baseline; reuses 116-test-verified behavior; avoids vendoring a toolchain or a parallel build system; every Phase-4 design decision except the language/bridge is preserved |
+| ADR-041 | 2026-09-22 | Ad-block provisioning scope (patch 0007): ship the embedded conservative starter list loaded at engine-holder construction (real blocking from the first request, no network dependency) with the full lists/ stack ported (source model, header versioning, update-policy decisions, G-07 SHA-256 integrity pinning via crypto::SHA256HashString, wire-compatible cache, fetcher interface + decision logic, manager orchestration); DEFER the SimpleURLLoader subscription-download transport and its profile/scheduling wiring to a follow-up; FilterListSource.download_url becomes optional for embedded lists; ParsedFilterList is move-only so the manager hands rules to the engine via TakeParsedLists() | v1 keeps zero new upstream hunks (no profile-dependent startup hook), keeps blocking deterministic on-device, and lands the full decision logic now; the Kotlin reference remains the behavioral spec; deviations documented in-code and in the patch manifest |
 
 ## Build status
 
@@ -1238,14 +1239,17 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   the 14-run resumable B-001 chain (hop 14 = run 35715711786; full ledger:
   `docs/verification/B001-BUILD-CHAIN.md`). B-3 (real build completes) and
   B-4 (real verified artifact) evidence recorded.
-- **Stage 2 in progress** — iNWEB patch series: 0001–0004 authored AND
-  CI-verified on the real pinned tree: b001-verify run 35749687902 on
-  commit 75c71fa (`TAG: PASS`, `PATCHES: PASS` — the 0003 v1-logo rework
-  and the 0004 monochrome themed icon included); ci-authoring green on
-  the same head (35749687907) and on the adblock authoring commit 0f9d368
-  (35751502661). Next: patch 0005 (native ad-block engine, ADR-040). The
-  Android UI sources compile inside the Chromium build once the
-  integration patches land (see `docs/phases/PHASE2-INTEGRATION-PLAN.md`).
+- **Stage 2 in progress** — iNWEB patch series: **0001–0007 authored**
+  (7/24). CI-verified on the real pinned tree: 0001–0004 (b001-verify
+  35749687902 @75c71fa) and 0005–0006 — the native ad-block engine +
+  URL-loader throttle wiring (b001-verify **35756172332 @4bb5024:
+  `TAG: PASS`, `PATCHES: PASS`**; ci-authoring 35756172362 green).
+  0007 (provisioning: lists/ stack port, embedded starter list with the
+  RFC-2606 device-test fixture, Security Center read path — ADR-041)
+  fully validated by the host harness (73/73) and 7-patch series E2E;
+  riding the next push's verify. The Android UI sources compile inside
+  the Chromium build once the integration patches land (see
+  `docs/phases/PHASE2-INTEGRATION-PLAN.md`).
 - **Next build:** incremental resume from cached state-13 → first
   iNWEB-branded APK → v1.0.0-alpha.2.
 
@@ -1276,11 +1280,13 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Stage 2 — adblock series (0005+):** the 0001–0004 batch is pushed
-(single b001-verify + ci-authoring run in flight; record the verdict
-lines here when green); author the adblock patch series per
-`docs/phases/PHASE4-ADBLOCK-DESIGN.md`, then popup protection,
-extensions, offline, security, settings; after the full series verifies,
+**Stage 2 — continue the series (0008+):** the adblock core (0005–0007)
+is authored — 0005–0006 CI-verified (35756172332), 0007 pushed with its
+verify pending (record the 7-patch verdict lines here when green). Next:
+the popup-protection series (0008–0011) per the design docs, then
+extensions, offline, security, settings; after the series verifies,
 dispatch the incremental build hop (resume from state-13) for the first
-iNWEB-branded APK → v1.0.0-alpha.2, then the B-5…B-8 device matrix and
-G-closure per `docs/DEVICE-VERIFICATION-MATRIX.md`.
+iNWEB-branded APK **with working ad-block** → v1.0.0-alpha.2, then the
+B-5…B-8 device matrix (the 0007 `.invalid` fixture exercises
+block/type-constraint/exception on-device) and G-closure per
+`docs/DEVICE-VERIFICATION-MATRIX.md`.

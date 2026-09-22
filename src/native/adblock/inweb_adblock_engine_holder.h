@@ -5,6 +5,7 @@
 #ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_ADBLOCK_ENGINE_HOLDER_H_
 #define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_ADBLOCK_ENGINE_HOLDER_H_
 
+#include <memory>
 #include <vector>
 
 #include "base/no_destructor.h"
@@ -12,6 +13,9 @@
 #include "base/thread_annotations.h"
 #include "chrome/android/inweb/adblock/inweb_filter_rule.h"
 #include "chrome/android/inweb/adblock/inweb_request_context.h"
+#include "chrome/android/inweb/adblock/inweb_filter_list_cache.h"
+#include "chrome/android/inweb/adblock/inweb_filter_list_manager.h"
+#include "chrome/android/inweb/adblock/inweb_security_center.h"
 #include "chrome/android/inweb/adblock/inweb_tracking_protection_engine.h"
 
 namespace inweb::adblock {
@@ -39,6 +43,10 @@ class InwebAdblockEngineHolder {
   // Replaces settings, keeping current rule lists.
   void UpdateSettings(TrackingProtectionSettings settings);
 
+  // Security Center read path (§24): builds the dashboard model from the
+  // real settings, the real engine statistics, and the real list state.
+  SecurityCenterModel BuildSecurityCenterModel(bool enforcement_active) const;
+
  private:
   friend class base::NoDestructor<InwebAdblockEngineHolder>;
 
@@ -50,6 +58,8 @@ class InwebAdblockEngineHolder {
 
   mutable base::Lock lock_;
   TrackingProtectionSettings settings_ GUARDED_BY(lock_);
+  std::unique_ptr<MemoryFilterListCache> cache_ GUARDED_BY(lock_);
+  std::unique_ptr<FilterListManager> manager_ GUARDED_BY(lock_);
   std::unique_ptr<TrackingProtectionEngine> engine_ GUARDED_BY(lock_);
 };
 
