@@ -80,3 +80,43 @@ patches:
       iNWEB, Chrome -> iNWEB, Chromium -> iNWEB outside <ex>, with the
       exclusion list) against the new grd. Promo strings tied to Google
       services may be removed entirely by later privacy/security patches.
+  - id: 0003-launcher-icons
+    file: ui/0003-launcher-icons.patch
+    area: ui
+    description: >-
+      iNWEB launcher icon set: replaces all 15 launcher icon assets in
+      res_chromium_base (app_icon.png legacy round icon at
+      48/72/96/144/192 px; layered_app_icon.png adaptive-foreground and
+      layered_app_icon_background.png adaptive-background at
+      108/162/216/324/432 px per density). Design: minimalist white globe
+      with meridian lines and a cyan orbit swoosh over a deep navy-to-teal
+      gradient. Master artwork generated, programmatically derived to all
+      densities (PIL), binary git diff.
+    upstream_files:
+      - chrome/android/java/res_chromium_base/mipmap-mdpi/app_icon.png
+      - chrome/android/java/res_chromium_base/mipmap-hdpi/app_icon.png
+      - chrome/android/java/res_chromium_base/mipmap-xhdpi/app_icon.png
+      - chrome/android/java/res_chromium_base/mipmap-xxhdpi/app_icon.png
+      - chrome/android/java/res_chromium_base/mipmap-xxxhdpi/app_icon.png
+      - chrome/android/java/res_chromium_base/mipmap-mdpi/layered_app_icon.png
+      - chrome/android/java/res_chromium_base/mipmap-hdpi/layered_app_icon.png
+      - chrome/android/java/res_chromium_base/mipmap-xhdpi/layered_app_icon.png
+      - chrome/android/java/res_chromium_base/mipmap-xxhdpi/layered_app_icon.png
+      - chrome/android/java/res_chromium_base/mipmap-xxxhdpi/layered_app_icon.png
+      - chrome/android/java/res_chromium_base/mipmap-mdpi/layered_app_icon_background.png
+      - chrome/android/java/res_chromium_base/mipmap-hdpi/layered_app_icon_background.png
+      - chrome/android/java/res_chromium_base/mipmap-xhdpi/layered_app_icon_background.png
+      - chrome/android/java/res_chromium_base/mipmap-xxhdpi/layered_app_icon_background.png
+      - chrome/android/java/res_chromium_base/mipmap-xxxhdpi/layered_app_icon_background.png
+    risk: low
+    validation: >-
+      Programmatic image sanity (palette/contrast/center-brightness) on the
+      master; exact upstream dimensions reproduced per density; git
+      apply/--reverse binary round-trip; apply_patches.py E2E (apply,
+      verify, PEEL-idempotence, 3-patch series); lint_manifest.py;
+      b001-verify (patches mode) on a real fetched tree; visual acceptance
+      at first iNWEB APK install.
+    rebase_notes: >-
+      Binary patch - on rebase, regenerate assets from the master design
+      and re-diff. themed_app_icon.xml (Android 13+ monochrome) not yet
+      rebranded; planned for the final polish patch.
