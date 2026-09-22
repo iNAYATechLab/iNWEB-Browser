@@ -137,9 +137,12 @@ jobs:
           } 2>&1 | tee b001-logs/30-pristine-hash.txt
 
       # ---- stage: patch series apply + verify + patched digest ------------
+      # NOTE: on push events inputs.mode is EMPTY (workflow_dispatch inputs
+      # do not exist), so the default must be treated as 'patches' — the
+      # push trigger exists precisely to validate patch-series changes.
       - name: Patch series apply + verify + hash
         id: patches
-        if: ${{ always() && steps.fetch.outcome == 'success' && steps.tag.outcome == 'success' && (inputs.mode == 'patches' || inputs.mode == 'both') }}
+        if: ${{ always() && steps.fetch.outcome == 'success' && steps.tag.outcome == 'success' && (inputs.mode == '' || inputs.mode == 'patches' || inputs.mode == 'both') }}
         timeout-minutes: 40
         continue-on-error: true
         run: |
