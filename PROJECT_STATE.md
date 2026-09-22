@@ -1106,7 +1106,11 @@ next_action: >-
   conducted an interactive Arena.ai chat session through it — install,
   launch, networking, rendering and input all worked in real use. The
   author is the browser's first user; the build conversation now runs
-  inside the browser it built. Full chain ledger,
+  inside the browser it built. Author-verified data points (2026-09-22):
+  Bengali text renders correctly in the alpha; device = Android 16
+  (build BP2A.250605.031.A3), 1080x2340 FHD+ phone; install-time Settings
+  screenshot archived in the workspace (uploads/, not pushed to the public
+  repo for privacy). Full chain ledger,
   audit and result: docs/verification/B001-BUILD-CHAIN.md. Chain history: 14
   runs / ~45 h; ~24 h defect-attributable, all root causes fixed and proven by
   exact-remainder resumes (hops 10, 12, 13); verification separated from
