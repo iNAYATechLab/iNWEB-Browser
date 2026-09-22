@@ -1093,7 +1093,14 @@ next_action: >-
   locales. **B-3 evidence: the real Chromium build completes; B-4 evidence:
   real verified artifact** (verdict updates in the B-001 verification docs).
   This APK is the PRISTINE baseline (no iNWEB patches — B-001 gate); Stage 2
-  resumes from state-13 (3.4 GB) for the patched iNWEB APK. Full chain ledger,
+  resumes from state-13 (3.4 GB) for the patched iNWEB APK.
+- **FIRST RELEASE — v1.0.0-alpha.1 (2026-09-22, author-directed):** GitHub
+  Release https://github.com/iNAYATechLab/iNWEB-Browser/releases/tag/v1.0.0-alpha.1
+  (prerelease, semver per §47), asset iNWEB-1.0.0-alpha.1-engine-baseline.apk
+  (689 MB). Release asset sha256 verified identical to the build hash
+  098fff9c…c9799b (runner → artifact → release, bit-for-bit). Release notes
+  state honestly what the alpha is (real-engine baseline) and is not (iNWEB
+  patch layer pending, Stage 2). Full chain ledger,
   audit and result: docs/verification/B001-BUILD-CHAIN.md. Chain history: 14
   runs / ~45 h; ~24 h defect-attributable, all root causes fixed and proven by
   exact-remainder resumes (hops 10, 12, 13); verification separated from
