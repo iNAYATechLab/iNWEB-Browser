@@ -1110,7 +1110,14 @@ next_action: >-
   Bengali text renders correctly in the alpha; device = Android 16
   (build BP2A.250605.031.A3), 1080x2340 FHD+ phone; install-time Settings
   screenshot archived in the workspace (uploads/, not pushed to the public
-  repo for privacy). Full chain ledger,
+  repo for privacy). Device-matrix data point #1 (author device, §48):
+  Xiaomi Redmi 15 — Android 16 / HyperOS 3.0.304.0.WBOMIXM.CO7 (build
+  BP2A.250605.031.A3, security patch 2026-07-01), Snapdragon 685 (SM6225,
+  6 nm, arm64) + Adreno 610, 8 GB RAM (+8 GB virtual), 128 GB storage,
+  6.9" IPS LCD 144 Hz 1080x2340, 7000 mAh. Build target arm64-v8a matches
+  the SoC; EXIF build ID and resolution independently corroborate the
+  author's report. Mid-tier hardware running the alpha smoothly = good
+  low-RAM-class compatibility signal for §48. Full chain ledger,
   audit and result: docs/verification/B001-BUILD-CHAIN.md. Chain history: 14
   runs / ~45 h; ~24 h defect-attributable, all root causes fixed and proven by
   exact-remainder resumes (hops 10, 12, 13); verification separated from
