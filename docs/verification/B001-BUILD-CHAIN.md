@@ -41,6 +41,7 @@ The chain exists because the *whole* build (~60k–78k edges depending on execut
 | 35447512278 | 10 | 09-19 | 4h41m | state-9 | ninja | plan `31456` = exact remainder; `6630` done (~25/min, blink CXX) | **real advance; resume math exact** ✓ |
 | 35641788135 | 11 | 09-21 | 1h37m | state-10 | ninja | cancelled mid-box **by author order** (this audit) | ~1.3 h compile discarded; state-10 intact |
 | 35652613459 | 12 | 09-21 | 4h46m | state-10 | ninja | plan `24826` = exact audit remainder; `12985` done (~49/min, content/browser region); state-12 = 2.6 GB / 37,523 objects | **real advance ✓** first hop on the audited workflow (4711311); depot_tools cache saved on first use |
+| 35694777976 | 13 | 09-22 | 3h33m | state-12 | ninja | RESUME PASS; plan `11841` exact; stopped at `[10393/11841]` — first genuine build error: `AUTONINJA_BUILD_ID is not set` (build_server steps); state-13 = 3.4 GB | ~10,390 done ✓; **~1,451 edges remain**; fixed in build_android.sh (set AUTONINJA_BUILD_ID → verified local-execution fallback) |
 
 **Totals:** ≈44 h of hosted-runner time over 12 runs; ≈24 h attributable to the defects/restart below; ≈20 h of genuine compile progress (hops 2, 9, 10, and 12).
 
@@ -59,7 +60,7 @@ The chain exists because the *whole* build (~60k–78k edges depending on execut
 - Hop 10 (ninja, blink CXX region — the slowest part of any Chromium build): **~25 edges/min** (6,630 in 265 m).
 - Hop 12 (ninja, content/browser CXX region): **~49 edges/min** (12,985 in 265 m).
 
-**Remaining after state-12:** 24,826 − 12,985 = **11,841 edges**. At the measured regional rates (25–49/min) ≈ 242–474 compile-minutes ≈ **1–2 further hops** to `chrome_public_apk`. Estimates must always quote the measured per-region rate, never a single blended number.
+**Remaining after state-13:** ~1,451 edges (11,841 − ~10,390 done; the two FAILED stamp edges rerun). Region: Java/ACTION + final links + packaging — expect one final short hop. **Hop-13 root cause (fixed):** plain-ninja chain hops lacked `AUTONINJA_BUILD_ID`, which Chromium's `android_static_analysis=build_server` steps hard-require; with the ID set and no `AUTONINJA_STDOUT_NAME`, `server_utils.MaybeRunCommand` falls back to normal local execution (verified against the pinned tag source). Fix: build_android.sh now exports it on the ninja path. Estimates must always quote the measured per-region rate, never a single blended number.
 
 ## 5. Optimizations shipped with this audit (this commit)
 

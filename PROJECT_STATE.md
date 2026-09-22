@@ -1084,19 +1084,23 @@ next_action: >-
 
 ## In progress
 
-- Step 50 — chained resumable build (b001-build-hop.yml). Chain at **state-12**
-  (run 35652613459, first hop on the audited workflow 4711311: resumed state-10
-  exactly — plan 24,826 = audit remainder; 12,985 edges done at ~49/min;
-  out = 17 GB / 37,523 objects; state-12 = 2.6 GB). **11,841 edges remain
-  ≈ 1–2 hops.** 2026-09-22 audit per author directive: hop 11 cancelled
-  mid-box; all runs audited — ≈24 h of the ≈44 h spent were
+- Step 50 — chained resumable build (b001-build-hop.yml). Chain at **state-13**
+  (run 35694777976: resumed state-12 exactly — plan 11,841; stopped at
+  [10393/11841] on the chain's first genuine build error:
+  android_static_analysis=build_server steps require AUTONINJA_BUILD_ID,
+  absent under the plain-ninja executor. Fixed in build_android.sh — export
+  the ID; verified against the pinned tag's server_utils.py that this enables
+  normal local execution, no build server needed. out = 3.4 GB state-13.)
+  **~1,451 edges remain (Java/ACTION + final links + packaging) — APK
+  expected on hop 14.** 2026-09-22 audit per author directive: hop 11
+  cancelled mid-box; all runs audited — ≈24 h of the ≈47 h spent were
   defect-attributable (resume-download bug, siso restat, executor restart),
-  all root causes fixed and verified by exact-remainder resumes (hops 10, 12);
-  verification separated from compilation (new b001-verify.yml, no-compile,
-  push-triggered); depot_tools cached on its pinned rev (saved by hop-12);
+  all root causes fixed and verified by exact-remainder resumes (hops 10, 12,
+  13); verification separated from compilation (b001-verify.yml, no-compile,
+  push-triggered); depot_tools cached on its pinned rev (hit on hop-13);
   ninja-jobs input added. Full ledger + accounting:
-  docs/verification/B001-BUILD-CHAIN.md. Next: hop 13
-  (resume state-12, ninja, -j6).
+  docs/verification/B001-BUILD-CHAIN.md. Next: hop 14
+  (resume state-13, ninja, -j6, AUTONINJA_BUILD_ID fix active).
 
 ## Not started
 

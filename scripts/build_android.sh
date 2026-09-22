@@ -69,6 +69,14 @@ gn gen "$OUT_DIR" --args="$(cat "$ARGS_FILE")"
 INWEB_BUILD_TOOL="${INWEB_BUILD_TOOL:-autoninja}"
 INWEB_BUILD_DRYRUN="${INWEB_BUILD_DRYRUN:-false}"
 if [ "$INWEB_BUILD_TOOL" = "ninja" ]; then
+  # Chromium's android_static_analysis=build_server steps (Java validate_deps
+  # etc.) hard-require AUTONINJA_BUILD_ID even under plain ninja — without it
+  # they raise "AUTONINJA_BUILD_ID is not set ... requires autoninja
+  # integration" (hit at hop 13, edge ~10390). With the ID set but no
+  # AUTONINJA_STDOUT_NAME, server_utils.MaybeRunCommand deliberately falls
+  # back to normal LOCAL execution — verified against the pinned tag's
+  # build/android/gyp/util/server_utils.py (154.0.8037.21, lines 55-66).
+  export AUTONINJA_BUILD_ID="${AUTONINJA_BUILD_ID:-inweb-$$-$(date +%s)}"
   if [ "$INWEB_BUILD_DRYRUN" = "true" ] || [ "$INWEB_BUILD_DRYRUN" = "1" ]; then
     ninja -C "$OUT_DIR" -n chrome_public_apk > "$OUT_DIR/ninja_dryrun.txt"
     echo "ninja dry-run: $(wc -l < "$OUT_DIR/ninja_dryrun.txt") commands would run"
