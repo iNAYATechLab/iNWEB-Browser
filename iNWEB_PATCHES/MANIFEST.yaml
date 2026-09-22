@@ -255,8 +255,9 @@ patches:
       (move-only ParsedFilterList copied through optional/parsed_lists)
       fixed via TakeParsedLists() before any build attempt. apply_patches
       E2E on the 7-patch series with byte-identical applied files and
-      PEEL idempotence; lint_manifest.py. Compile + unit tests run in the
-      b001-build-hop chain.
+      PEEL idempotence; lint_manifest.py; b001-verify (patches mode) PASS
+      on the real fetched tree (run 35758519450, commit 9b2b7ab).
+      Compile + unit tests run in the b001-build-hop chain.
     rebase_notes: >-
       No upstream files touched — the whole patch is new/modified files
       under chrome/android/inweb/adblock/. Sources re-sync from

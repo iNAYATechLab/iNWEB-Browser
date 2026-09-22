@@ -1246,8 +1246,9 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   `TAG: PASS`, `PATCHES: PASS`**; ci-authoring 35756172362 green).
   0007 (provisioning: lists/ stack port, embedded starter list with the
   RFC-2606 device-test fixture, Security Center read path — ADR-041)
-  fully validated by the host harness (73/73) and 7-patch series E2E;
-  riding the next push's verify. The Android UI sources compile inside
+  CI-verified too: b001-verify **35758519450 @9b2b7ab: `TAG: PASS`,
+  `PATCHES: PASS` (7-patch series)**; ci-authoring 35758519623 green.
+  The ad-block core series (0005–0007) is complete and verified. The Android UI sources compile inside
   the Chromium build once the integration patches land (see
   `docs/phases/PHASE2-INTEGRATION-PLAN.md`).
 - **Next build:** incremental resume from cached state-13 → first
