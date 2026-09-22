@@ -30,4 +30,27 @@ schema_version: 1
 
 # The series is intentionally EMPTY at Phase 1: no patch ships until it has been
 # generated against the real pinned source and validated (MASTER-SPEC §57).
-patches: []
+patches:
+  # ---------------------------------------------------------------------------
+  # iNWEB patch series — applied in order to the pristine pinned baseline.
+  # Authored against the real pinned tag 154.0.8037.21 (file contents fetched
+  # from the tag; diff round-trip validated: apply / reverse / re-apply).
+  # ---------------------------------------------------------------------------
+  - id: 0001-app-identity
+    file: ui/0001-app-identity.patch
+    area: ui
+    description: >-
+      Application identity: user-visible launcher and widget names rebranded
+      from Chromium to iNWEB Browser (app_name, bookmark/search/quick-action
+      widget titles) per master prompt #1 (Product Identity).
+    upstream_files:
+      - chrome/android/java/res_chromium_base/values/channel_constants.xml
+    risk: low
+    validation: >-
+      Local round-trip (git apply / --reverse / re-apply) on the file fetched
+      from the pinned tag; b001-verify (patches mode) apply+verify on a real
+      fetched tree; incremental build smoke check at Stage-2 build time.
+    rebase_notes: >-
+      channel_constants.xml moved from res/values to res_chromium_base/values
+      in recent Chromium; on rebase, re-check the path and the string list.
+

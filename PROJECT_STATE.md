@@ -1123,6 +1123,20 @@ next_action: >-
   exact-remainder resumes (hops 10, 12, 13); verification separated from
   compilation (b001-verify.yml); depot_tools cached on its pinned rev.
 
+## In progress
+
+- Stage 2 — iNWEB patch series (B-001 gate CLEARED 2026-09-22). Registry
+  structure ready (9 areas, lint, apply/verify/hash tooling, PEEL-idempotent
+  convergence). Patch 0001 AUTHORED+REGISTERED+LOCALLY VALIDATED:
+  ui/0001-app-identity.patch — rebrands the user-visible launcher/widget
+  names Chromium -> iNWEB Browser via
+  chrome/android/java/res_chromium_base/values/channel_constants.xml
+  (authored against the pinned tag content; git round-trip + tool E2E +
+  lint all PASS). CI validation: b001-verify (patches mode) on a real tree.
+  Next: remaining 23 patches (ui strings/grd, icons, adblock, popup,
+  extension, offline, security, settings), then ONE incremental build from
+  state-13 -> iNWEB-branded APK.
+
 ## Not started
 
 - Phase 3 remainder: filter-list download/cache management, privacy UI surfaces, storage controls (engine patches)
