@@ -51,6 +51,8 @@ inweb-browser/
 ├── README.md                        # This file
 ├── PROJECT_STATE.md                 # Machine-readable project state (§60)
 ├── .gitignore                       # Chromium tree / artifacts are never committed
+├── assets/
+│   └── logo/                       # Application-logo master (v1) — sole regeneration source
 ├── docs/
 │   ├── README.md                   # Documentation index (authoritative map)
 │   ├── MASTER-SPEC.md              # Governing master specification (verbatim)
@@ -63,7 +65,6 @@ inweb-browser/
 ├── iNWEB_PATCHES/                   # Tracked patch series (§5)
 │   ├── MANIFEST.yaml                # Patch registry — the single patch authority
 │   ├── README.md                    # Rules, lifecycle, tooling usage
-│   ├── assets/                      # Brand masters for asset patches (logo v1)
 │   └── privacy/ security/ adblock/ popup_protection/ extension/
 │       performance/ ui/ offline/ settings/ tests/
 ├── scripts/

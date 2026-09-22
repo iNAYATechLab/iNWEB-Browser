@@ -90,7 +90,7 @@ patches:
       adaptive-foreground and layered_app_icon_background.png
       adaptive-background at 108/162/216/324/432 px per density). Design:
       the user-provided iNWEB logo mark (transparent-background PNG
-      master, preserved at iNWEB_PATCHES/assets/inweb_logo_master.png)
+      master, preserved at assets/logo/inweb_logo_master.png)
       composited over the deep navy-to-teal gradient; legacy icons
       circle-cropped with transparent corners, adaptive foreground
       full-bleed, adaptive background pure gradient. All densities
@@ -122,6 +122,6 @@ patches:
       APK install.
     rebase_notes: >-
       Binary patch - on rebase, regenerate assets from the master
-      (iNWEB_PATCHES/assets/inweb_logo_master.png, user-provided v1 logo)
+      (assets/logo/inweb_logo_master.png, user-provided v1 logo)
       and re-diff. themed_app_icon.xml (Android 13+ monochrome) not yet
       rebranded; planned for the final polish patch.

@@ -28,7 +28,7 @@ The author chose their own design as v1. The full study is preserved in
 [`B`](assets/logo-study-variant-B.png)) as the decision record.
 
 **Master.** The pixel master is preserved at
-`iNWEB_PATCHES/assets/inweb_logo_master.png` (2.78 MB). It is the single
+`assets/logo/inweb_logo_master.png` (2.78 MB). It is the single
 regeneration source for every icon asset; nothing else may be used to
 regenerate them.
 
@@ -77,7 +77,7 @@ crisper silhouette is the documented remedy (author decision, as v1 was).
 
 ## Regeneration runbook
 
-1. Master: `iNWEB_PATCHES/assets/inweb_logo_master.png` (never edit in place).
+1. Master: `assets/logo/inweb_logo_master.png` (never edit in place).
 2. Derive the 15 assets with the spec above (PIL; crop to the alpha bbox,
    scale to fit the target box, composite over the gradient, then
    circle-mask/quantize per asset class).
