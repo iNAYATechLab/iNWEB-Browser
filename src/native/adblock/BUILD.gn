@@ -29,17 +29,44 @@ source_set("inweb_adblock_engine") {
   ]
 }
 
+# URL-loader throttle + engine holder (patch 0006): wires the engine into
+# the network stack. Registered from ChromeContentBrowserClient.
+source_set("inweb_adblock_throttle") {
+  sources = [
+    "inweb_adblock_engine_holder.cc",
+    "inweb_adblock_engine_holder.h",
+    "inweb_adblock_url_loader_throttle.cc",
+    "inweb_adblock_url_loader_throttle.h",
+    "inweb_request_destination_map.cc",
+    "inweb_request_destination_map.h",
+  ]
+
+  deps = [
+    ":inweb_adblock_engine",
+    "//base",
+    "//net",
+    "//services/network/public/cpp",
+    "//third_party/blink/public/common",
+    "//url",
+  ]
+}
+
 source_set("unittests") {
   testonly = true
   sources = [
+    "inweb_adblock_engine_holder_unittest.cc",
+    "inweb_adblock_url_loader_throttle_unittest.cc",
     "inweb_domain_classifier_unittest.cc",
     "inweb_filter_list_parser_unittest.cc",
+    "inweb_request_destination_map_unittest.cc",
     "inweb_rule_matcher_unittest.cc",
     "inweb_tracking_protection_engine_unittest.cc",
   ]
 
   deps = [
     ":inweb_adblock_engine",
+    ":inweb_adblock_throttle",
+    "//base/test:test_support",
     "//testing/gtest",
     "//testing/gmock",
   ]

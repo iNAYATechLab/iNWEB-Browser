@@ -187,3 +187,38 @@ patches:
       Two one-line BUILD.gn hook insertions; 18 new files under a new
       directory upstream never touches. On rebase, re-sync from
       src/native/adblock/ and re-diff.
+  - id: 0006-adblock-url-loader-throttle
+    file: adblock/0006-adblock-url-loader-throttle.patch
+    area: adblock
+    description: >-
+      Wires the native ad-block engine into the network stack (ADR-040):
+      InwebAdblockURLLoaderThrottle (blink::URLLoaderThrottle) defers
+      each subresource request and redirect, decides on the thread pool
+      through the engine holder, then cancels with
+      net::ERR_BLOCKED_BY_CLIENT or resumes; RequestDestination to
+      ResourceType mapping (workers->script, kEmpty->other, documented
+      deviations); engine holder (process singleton, thread-safe) with
+      SetFilterLists/UpdateSettings provisioning entry points; engine
+      gains UpdateSettings. Registered in
+      ChromeContentBrowserClient::CreateURLLoaderThrottles (Android
+      only; outermost main frame exempt in v1; no throttle while
+      disabled). chrome/browser BUILD.gn gains the :inweb_adblock_throttle
+      dep.
+    upstream_files:
+      - chrome/browser/BUILD.gn
+      - chrome/browser/chrome_content_browser_client.cc
+    risk: medium
+    validation: >-
+      Host harness (scripts/native_harness): 49/49 tests pass (36 engine
+      + 5 destination map + 4 throttle defer/cancel/resume/redirect +
+      4 holder); the harness caught real defects before any build
+      attempt (missing bind.h include, holder ctor accessibility).
+      apply_patches.py E2E on the 6-patch series with byte-identical
+      applied files and PEEL idempotence; lint_manifest.py. Compile +
+      unit tests run in the b001-build-hop chain.
+    rebase_notes: >-
+      Two upstream hunks (chrome/browser BUILD.gn deps slot; ccbc.cc
+      android include block + registration before the CreateURLLoader
+      Throttles return). Sources re-sync from src/native/adblock/
+      (cumulative for the series; this patch is the delta over the
+      0005-applied state).

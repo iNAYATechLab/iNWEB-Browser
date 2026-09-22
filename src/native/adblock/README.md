@@ -57,3 +57,27 @@ with the patch), then `git diff` → `iNWEB_PATCHES/adblock/0005-…patch`
 (the scratch-tree procedure in `docs/design/BRAND.md` §Regeneration, but
 text files). Round-trip + `apply_patches.py` E2E + `lint_manifest.py`
 before registering.
+
+
+## Patch 0006 additions (URL-loader throttle)
+
+`src/native/adblock/` is CUMULATIVE for the whole adblock series: it always
+holds the sources as of the latest authored patch. Individual patch diffs
+are taken against the PREVIOUS patch's applied state (0006 is the delta
+over 0005-applied, not over pristine). Added for 0006:
+
+- `inweb_request_destination_map.{h,cc}` — network::mojom::RequestDestination
+  → engine ResourceType (workers→script, kXslt→stylesheet, frames→
+  subdocument, kEmpty→other; XHR unreachable in v1 — documented deviation).
+- `inweb_adblock_engine_holder.{h,cc}` — process-wide, thread-safe engine
+  owner; provisioning entry points (`SetFilterLists`, `UpdateSettings`)
+  consumed by patch 0007.
+- `inweb_adblock_url_loader_throttle.{h,cc}` — defers each subresource
+  request/redirect, decides on the thread pool, cancels with
+  `net::ERR_BLOCKED_BY_CLIENT` or resumes. Registered (Android, outermost
+  main frame exempt) in `ChromeContentBrowserClient::CreateURLLoader
+  Throttles` — the single upstream hook of 0006.
+- `inweb_tracking_protection_engine.{h,cc}` — gained `UpdateSettings`
+  (caller-synchronized).
+- Unit tests: destination map (5), throttle defer/cancel/resume/redirect
+  (4), engine holder (4). Host harness total: 49/49 green.

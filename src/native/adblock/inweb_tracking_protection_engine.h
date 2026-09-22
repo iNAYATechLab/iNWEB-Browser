@@ -100,6 +100,11 @@ class TrackingProtectionEngine {
 
   FilterDecision Decide(const RequestContext& request) const;
 
+  // Replaces settings (site allowlist, enabled flag). Not internally
+  // synchronized: the caller must serialize against Decide() —
+  // InwebAdblockEngineHolder (patch 0006) holds its lock across calls.
+  void UpdateSettings(TrackingProtectionSettings settings);
+
   const EngineStatistics& statistics() const { return statistics_; }
   const TrackingProtectionSettings& settings() const { return settings_; }
   const std::vector<NetworkFilterRule>& rules() const { return rules_; }

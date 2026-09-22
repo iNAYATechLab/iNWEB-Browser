@@ -158,4 +158,9 @@ FilterDecision TrackingProtectionEngine::Decide(
                         .matched_rule = block_match};
 }
 
+void TrackingProtectionEngine::UpdateSettings(
+    TrackingProtectionSettings settings) {
+  settings_ = std::move(settings);
+}
+
 }  // namespace inweb::adblock

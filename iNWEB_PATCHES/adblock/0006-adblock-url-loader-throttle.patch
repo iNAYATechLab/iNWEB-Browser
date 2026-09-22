@@ -1,0 +1,876 @@
+diff --git a/chrome/android/inweb/adblock/BUILD.gn b/chrome/android/inweb/adblock/BUILD.gn
+index 4dcc57d..4fe9f6a 100644
+--- a/chrome/android/inweb/adblock/BUILD.gn
++++ b/chrome/android/inweb/adblock/BUILD.gn
+@@ -29,17 +29,44 @@ source_set("inweb_adblock_engine") {
+   ]
+ }
+ 
++# URL-loader throttle + engine holder (patch 0006): wires the engine into
++# the network stack. Registered from ChromeContentBrowserClient.
++source_set("inweb_adblock_throttle") {
++  sources = [
++    "inweb_adblock_engine_holder.cc",
++    "inweb_adblock_engine_holder.h",
++    "inweb_adblock_url_loader_throttle.cc",
++    "inweb_adblock_url_loader_throttle.h",
++    "inweb_request_destination_map.cc",
++    "inweb_request_destination_map.h",
++  ]
++
++  deps = [
++    ":inweb_adblock_engine",
++    "//base",
++    "//net",
++    "//services/network/public/cpp",
++    "//third_party/blink/public/common",
++    "//url",
++  ]
++}
++
+ source_set("unittests") {
+   testonly = true
+   sources = [
++    "inweb_adblock_engine_holder_unittest.cc",
++    "inweb_adblock_url_loader_throttle_unittest.cc",
+     "inweb_domain_classifier_unittest.cc",
+     "inweb_filter_list_parser_unittest.cc",
++    "inweb_request_destination_map_unittest.cc",
+     "inweb_rule_matcher_unittest.cc",
+     "inweb_tracking_protection_engine_unittest.cc",
+   ]
+ 
+   deps = [
+     ":inweb_adblock_engine",
++    ":inweb_adblock_throttle",
++    "//base/test:test_support",
+     "//testing/gtest",
+     "//testing/gmock",
+   ]
+diff --git a/chrome/android/inweb/adblock/inweb_adblock_engine_holder.cc b/chrome/android/inweb/adblock/inweb_adblock_engine_holder.cc
+new file mode 100644
+index 0000000..360b6ab
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_adblock_engine_holder.cc
+@@ -0,0 +1,50 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/adblock/inweb_adblock_engine_holder.h"
++
++#include <memory>
++#include <utility>
++
++namespace inweb::adblock {
++
++InwebAdblockEngineHolder* InwebAdblockEngineHolder::GetInstance() {
++  static base::NoDestructor<InwebAdblockEngineHolder> instance;
++  return instance.get();
++}
++
++InwebAdblockEngineHolder::InwebAdblockEngineHolder()
++    : settings_(TrackingProtectionSettings()),
++      engine_(std::make_unique<TrackingProtectionEngine>(
++          std::vector<ParsedFilterList>(),
++          TrackingProtectionSettings())) {}
++
++InwebAdblockEngineHolder::~InwebAdblockEngineHolder() = default;
++
++bool InwebAdblockEngineHolder::IsEnabled() const {
++  base::AutoLock lock(lock_);
++  return settings_.enabled();
++}
++
++FilterDecision InwebAdblockEngineHolder::Decide(
++    const RequestContext& request) const {
++  base::AutoLock lock(lock_);
++  return engine_->Decide(request);
++}
++
++void InwebAdblockEngineHolder::SetFilterLists(
++    std::vector<ParsedFilterList> lists) {
++  base::AutoLock lock(lock_);
++  engine_ = std::make_unique<TrackingProtectionEngine>(std::move(lists),
++                                                       settings_);
++}
++
++void InwebAdblockEngineHolder::UpdateSettings(
++    TrackingProtectionSettings settings) {
++  base::AutoLock lock(lock_);
++  settings_ = settings;
++  engine_->UpdateSettings(std::move(settings));
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_adblock_engine_holder.h b/chrome/android/inweb/adblock/inweb_adblock_engine_holder.h
+new file mode 100644
+index 0000000..af6f2a8
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_adblock_engine_holder.h
+@@ -0,0 +1,58 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_ADBLOCK_ENGINE_HOLDER_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_ADBLOCK_ENGINE_HOLDER_H_
++
++#include <vector>
++
++#include "base/no_destructor.h"
++#include "base/synchronization/lock.h"
++#include "base/thread_annotations.h"
++#include "chrome/android/inweb/adblock/inweb_filter_rule.h"
++#include "chrome/android/inweb/adblock/inweb_request_context.h"
++#include "chrome/android/inweb/adblock/inweb_tracking_protection_engine.h"
++
++namespace inweb::adblock {
++
++// Process-wide owner of the tracking-protection engine (v1: one engine for
++// the whole browser; ADR-040 native port). Thread-safe: Decide() may be
++// called from any sequence (the URL-loader throttle runs it on the thread
++// pool); rule-list and settings updates arrive from the provisioning paths
++// (patch 0007).
++class InwebAdblockEngineHolder {
++ public:
++  static InwebAdblockEngineHolder* GetInstance();
++
++  // True when filtering is enabled. Lets throttle registration skip all
++  // per-request work while tracking protection is off.
++  bool IsEnabled() const;
++
++  // Thread-safe; callable from any sequence. Holds the holder lock for the
++  // duration of the (v1 full-scan) decision — see ADR-013/ADR-040 notes.
++  FilterDecision Decide(const RequestContext& request) const;
++
++  // Replaces the rule lists, keeping current settings.
++  void SetFilterLists(std::vector<ParsedFilterList> lists);
++
++  // Replaces settings, keeping current rule lists.
++  void UpdateSettings(TrackingProtectionSettings settings);
++
++ private:
++  friend class base::NoDestructor<InwebAdblockEngineHolder>;
++
++ public:
++  // Public for unit tests (direct instances avoid polluting the process
++  // singleton). Production code must go through GetInstance().
++  InwebAdblockEngineHolder();
++  ~InwebAdblockEngineHolder();
++
++  mutable base::Lock lock_;
++  TrackingProtectionSettings settings_ GUARDED_BY(lock_);
++  std::unique_ptr<TrackingProtectionEngine> engine_ GUARDED_BY(lock_);
++};
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_ADBLOCK_ENGINE_HOLDER_H_
+diff --git a/chrome/android/inweb/adblock/inweb_adblock_engine_holder_unittest.cc b/chrome/android/inweb/adblock/inweb_adblock_engine_holder_unittest.cc
+new file mode 100644
+index 0000000..2eb38d1
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_adblock_engine_holder_unittest.cc
+@@ -0,0 +1,86 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — engine holder unit tests: provisioning entry points and
++// the disabled/empty-list behavior that patch 0006 ships with (0007 wires
++// real list loading). Uses direct instances — the process-wide
++// GetInstance() stays untouched by tests.
++
++#include "chrome/android/inweb/adblock/inweb_adblock_engine_holder.h"
++
++#include <vector>
++
++#include "chrome/android/inweb/adblock/inweb_filter_list_parser.h"
++#include "testing/gtest/include/gtest/gtest.h"
++
++namespace inweb::adblock {
++
++namespace {
++
++RequestContext Request(const std::string& url) {
++  return RequestContext{GURL(url), GURL("https://news.example.com/story"),
++                        ResourceType::kImage};
++}
++
++}  // namespace
++
++TEST(InwebAdblockEngineHolderTest, EmptyByDefaultPassesEverything) {
++  InwebAdblockEngineHolder holder;
++  EXPECT_TRUE(holder.IsEnabled());
++  const FilterDecision decision =
++      holder.Decide(Request("https://ads.example.com/pixel.gif"));
++  EXPECT_EQ(FilterAction::kPass, decision.action);
++  EXPECT_EQ(nullptr, decision.matched_rule);
++}
++
++TEST(InwebAdblockEngineHolderTest, SetFilterListsActivatesBlocking) {
++  InwebAdblockEngineHolder holder;
++  std::vector<ParsedFilterList> lists;
++  lists.push_back(FilterListParser::Parse("||ads.example.com^\n", "test"));
++  holder.SetFilterLists(std::move(lists));
++
++  const FilterDecision blocked =
++      holder.Decide(Request("https://ads.example.com/pixel.gif"));
++  EXPECT_EQ(FilterAction::kBlock, blocked.action);
++
++  const FilterDecision clean =
++      holder.Decide(Request("https://clean.example.org/logo.png"));
++  EXPECT_EQ(FilterAction::kPass, clean.action);
++}
++
++TEST(InwebAdblockEngineHolderTest, UpdateSettingsDisablesFiltering) {
++  InwebAdblockEngineHolder holder;
++  std::vector<ParsedFilterList> lists;
++  lists.push_back(FilterListParser::Parse("||ads.example.com^\n", "test"));
++  holder.SetFilterLists(std::move(lists));
++
++  TrackingProtectionSettings off(/*enabled=*/false,
++                                 CookiePolicy::kBlockThirdParty,
++                                 /*allowlisted_sites=*/{});
++  holder.UpdateSettings(off);
++  EXPECT_FALSE(holder.IsEnabled());
++
++  const FilterDecision decision =
++      holder.Decide(Request("https://ads.example.com/pixel.gif"));
++  EXPECT_EQ(FilterAction::kPass, decision.action);
++}
++
++TEST(InwebAdblockEngineHolderTest, SettingsSurviveListReplacement) {
++  InwebAdblockEngineHolder holder;
++  TrackingProtectionSettings settings =
++      TrackingProtectionSettings().WithAllowlistedSite("news.example.com");
++  holder.UpdateSettings(settings);
++
++  std::vector<ParsedFilterList> lists;
++  lists.push_back(FilterListParser::Parse("||ads.example.com^\n", "test"));
++  holder.SetFilterLists(std::move(lists));
++
++  // The allowlisted document host still bypasses the fresh rules.
++  const FilterDecision decision =
++      holder.Decide(Request("https://ads.example.com/pixel.gif"));
++  EXPECT_EQ(FilterAction::kAllow, decision.action);
++  EXPECT_EQ("news.example.com", decision.allowlisted_site);
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_adblock_url_loader_throttle.cc b/chrome/android/inweb/adblock/inweb_adblock_url_loader_throttle.cc
+new file mode 100644
+index 0000000..5a591ab
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_adblock_url_loader_throttle.cc
+@@ -0,0 +1,89 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/adblock/inweb_adblock_url_loader_throttle.h"
++
++#include <optional>
++#include <utility>
++
++#include "base/functional/bind.h"
++#include "base/task/task_traits.h"
++#include "base/task/thread_pool.h"
++#include "chrome/android/inweb/adblock/inweb_request_destination_map.h"
++#include "net/base/net_errors.h"
++#include "net/base/redirect_info.h"
++#include "services/network/public/cpp/resource_request.h"
++#include "url/origin.h"
++
++namespace inweb::adblock {
++
++namespace {
++
++// The engine's party classification only needs the document's host. The
++// initiator origin carries exactly that (scheme + host [+ port]); opaque
++// initiators yield an empty document URL, which the engine treats per its
++// documented third-party rules.
++GURL DocumentUrlFromInitiator(const std::optional<url::Origin>& initiator) {
++  if (!initiator || initiator->opaque()) {
++    return GURL();
++  }
++  return initiator->GetURL();
++}
++
++}  // namespace
++
++InwebAdblockURLLoaderThrottle::InwebAdblockURLLoaderThrottle(
++    FilterDecider decider)
++    : decider_(std::move(decider)) {}
++
++InwebAdblockURLLoaderThrottle::~InwebAdblockURLLoaderThrottle() = default;
++
++void InwebAdblockURLLoaderThrottle::DetachFromCurrentSequence() {
++  weak_factory_.DetachFromThread();
++}
++
++void InwebAdblockURLLoaderThrottle::WillStartRequest(
++    network::ResourceRequest* request,
++    bool* defer) {
++  document_url_ = DocumentUrlFromInitiator(request->request_initiator);
++  resource_type_ = ResourceTypeFromRequestDestination(request->destination);
++  Evaluate(request->url, defer);
++}
++
++void InwebAdblockURLLoaderThrottle::WillRedirectRequest(
++    net::RedirectInfo* redirect_info,
++    const network::mojom::URLResponseHead& response_head,
++    bool* defer,
++    network::HttpRequestHeadersUpdateParams* headers_update_params) {
++  // Redirects re-evaluate the new URL while keeping the original document
++  // and resource type: the initiator document governs party classification,
++  // and a request's destination cannot change mid-load.
++  Evaluate(redirect_info->new_url, defer);
++}
++
++void InwebAdblockURLLoaderThrottle::Evaluate(const GURL& request_url,
++                                             bool* defer) {
++  *defer = true;
++  RequestContext context{request_url, document_url_, resource_type_};
++  base::ThreadPool::PostTaskAndReplyWithResult(
++      FROM_HERE, {base::TaskPriority::USER_VISIBLE},
++      base::BindOnce(
++          [](const FilterDecider& decider, const RequestContext& context) {
++            return decider.Run(context);
++          },
++          decider_, std::move(context)),
++      base::BindOnce(&InwebAdblockURLLoaderThrottle::OnDecision,
++                     weak_factory_.GetWeakPtr()));
++}
++
++void InwebAdblockURLLoaderThrottle::OnDecision(FilterDecision decision) {
++  if (decision.action == FilterAction::kBlock) {
++    delegate_->CancelWithError(net::ERR_BLOCKED_BY_CLIENT,
++                                "iNWEB tracking protection");
++    return;
++  }
++  delegate_->Resume();
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_adblock_url_loader_throttle.h b/chrome/android/inweb/adblock/inweb_adblock_url_loader_throttle.h
+new file mode 100644
+index 0000000..863b394
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_adblock_url_loader_throttle.h
+@@ -0,0 +1,64 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_ADBLOCK_URL_LOADER_THROTTLE_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_ADBLOCK_URL_LOADER_THROTTLE_H_
++
++#include "base/functional/callback.h"
++#include "base/memory/weak_ptr.h"
++#include "chrome/android/inweb/adblock/inweb_request_context.h"
++#include "chrome/android/inweb/adblock/inweb_resource_type.h"
++#include "third_party/blink/public/common/loader/url_loader_throttle.h"
++#include "url/gurl.h"
++
++namespace inweb::adblock {
++
++// Produces the filter decision for a request. Invoked on the thread pool;
++// implementations must be safe to call from any sequence (production:
++// InwebAdblockEngineHolder::Decide; tests: scriptable lambdas).
++using FilterDecider =
++    base::RepeatingCallback<FilterDecision(const RequestContext&)>;
++
++// Defers each observed request (start + redirects) until the native ad-block
++// engine has decided, then resumes or cancels:
++//   kBlock → Delegate::CancelWithError(net::ERR_BLOCKED_BY_CLIENT)
++//   kAllow/kPass → Delegate::Resume()
++//
++// v1 scope (PHASE4 §7, ADR-040): the outermost main-frame navigation is
++// exempt (the registration site skips it); redirects re-evaluate against
++// the redirect target with the original document; party classification
++// uses the request initiator origin. Cosmetic filtering and
++// websocket/popup handling are out of scope in v1.
++class InwebAdblockURLLoaderThrottle : public blink::URLLoaderThrottle {
++ public:
++  explicit InwebAdblockURLLoaderThrottle(FilterDecider decider);
++  ~InwebAdblockURLLoaderThrottle() override;
++
++  InwebAdblockURLLoaderThrottle(const InwebAdblockURLLoaderThrottle&) = delete;
++  InwebAdblockURLLoaderThrottle& operator=(
++      const InwebAdblockURLLoaderThrottle&) = delete;
++
++  // blink::URLLoaderThrottle:
++  void DetachFromCurrentSequence() override;
++  void WillStartRequest(network::ResourceRequest* request,
++                        bool* defer) override;
++  void WillRedirectRequest(
++      net::RedirectInfo* redirect_info,
++      const network::mojom::URLResponseHead& response_head,
++      bool* defer,
++      network::HttpRequestHeadersUpdateParams* headers_update_params) override;
++
++ private:
++  void Evaluate(const GURL& request_url, bool* defer);
++  void OnDecision(FilterDecision decision);
++
++  FilterDecider decider_;
++  GURL document_url_;
++  ResourceType resource_type_ = ResourceType::kOther;
++  base::WeakPtrFactory<InwebAdblockURLLoaderThrottle> weak_factory_{this};
++};
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_ADBLOCK_URL_LOADER_THROTTLE_H_
+diff --git a/chrome/android/inweb/adblock/inweb_adblock_url_loader_throttle_unittest.cc b/chrome/android/inweb/adblock/inweb_adblock_url_loader_throttle_unittest.cc
+new file mode 100644
+index 0000000..1f2449b
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_adblock_url_loader_throttle_unittest.cc
+@@ -0,0 +1,190 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — URLLoaderThrottle unit tests. Exercises the defer →
++// worker-pool decide → cancel/resume flow with a scriptable decider (the
++// engine itself is covered by the engine unittests; the throttle only
++// transports decisions).
++
++#include "chrome/android/inweb/adblock/inweb_adblock_url_loader_throttle.h"
++
++#include <optional>
++#include <string>
++#include <vector>
++
++#include "base/functional/bind.h"
++#include "base/test/task_environment.h"
++#include "chrome/android/inweb/adblock/inweb_request_destination_map.h"
++#include "net/base/net_errors.h"
++#include "net/base/redirect_info.h"
++#include "services/network/public/cpp/resource_request.h"
++#include "testing/gtest/include/gtest/gtest.h"
++#include "third_party/blink/public/common/loader/url_loader_throttle.h"
++#include "url/gurl.h"
++#include "url/origin.h"
++
++namespace inweb::adblock {
++
++namespace {
++
++class RecordingDelegate : public blink::URLLoaderThrottle::Delegate {
++ public:
++  void CancelWithError(int error_code, std::string_view) override {
++    canceled_error_ = error_code;
++  }
++  void Resume() override { resumed_ = true; }
++
++  std::optional<int> canceled_error_;
++  bool resumed_ = false;
++};
++
++FilterDecision Decision(FilterAction action) {
++  FilterDecision decision;
++  decision.action = action;
++  return decision;
++}
++
++}  // namespace
++
++class InwebAdblockURLLoaderThrottleTest : public ::testing::Test {
++ protected:
++  base::test::TaskEnvironment task_environment_{
++      base::test::TaskEnvironment::ThreadPoolPointerSupport::kNoPointerSupport};
++
++  network::ResourceRequest ImageRequestFromNewsDoc() {
++    network::ResourceRequest request;
++    request.url = GURL("https://ads.example.com/pixel.gif");
++    request.destination = network::mojom::RequestDestination::kImage;
++    request.request_initiator =
++        url::Origin::Create(GURL("https://news.example.com"));
++    return request;
++  }
++};
++
++TEST_F(InwebAdblockURLLoaderThrottleTest, DefersThenBlocksWhenEngineBlocks) {
++  std::vector<RequestContext> seen;
++  InwebAdblockURLLoaderThrottle throttle(base::BindRepeating(
++      [](std::vector<RequestContext>* seen, const RequestContext& ctx) {
++        seen->push_back(ctx);
++        return Decision(FilterAction::kBlock);
++      },
++      &seen));
++  RecordingDelegate delegate;
++  throttle.set_delegate(&delegate);
++
++  network::ResourceRequest request = ImageRequestFromNewsDoc();
++  bool defer = false;
++  throttle.WillStartRequest(&request, &defer);
++  EXPECT_TRUE(defer);
++  EXPECT_FALSE(delegate.resumed_);
++  EXPECT_FALSE(delegate.canceled_error_.has_value());
++
++  task_environment_.RunUntilIdle();
++
++  ASSERT_EQ(1u, seen.size());
++  EXPECT_EQ("https://ads.example.com/pixel.gif",
++            seen[0].request_url.possibly_invalid_spec());
++  EXPECT_EQ("news.example.com", seen[0].document_url.host());
++  EXPECT_EQ(ResourceType::kImage, seen[0].resource_type);
++  ASSERT_TRUE(delegate.canceled_error_.has_value());
++  EXPECT_EQ(net::ERR_BLOCKED_BY_CLIENT, *delegate.canceled_error_);
++  EXPECT_FALSE(delegate.resumed_);
++}
++
++TEST_F(InwebAdblockURLLoaderThrottleTest, ResumesOnPassAndOnAllow) {
++  for (FilterAction action : {FilterAction::kPass, FilterAction::kAllow}) {
++    InwebAdblockURLLoaderThrottle throttle(base::BindRepeating(
++        [](FilterAction action, const RequestContext&) {
++          return Decision(action);
++        },
++        action));
++    RecordingDelegate delegate;
++    throttle.set_delegate(&delegate);
++
++    network::ResourceRequest request = ImageRequestFromNewsDoc();
++    bool defer = false;
++    throttle.WillStartRequest(&request, &defer);
++    EXPECT_TRUE(defer);
++    task_environment_.RunUntilIdle();
++    EXPECT_TRUE(delegate.resumed_);
++    EXPECT_FALSE(delegate.canceled_error_.has_value());
++  }
++}
++
++TEST_F(InwebAdblockURLLoaderThrottleTest, MapsDestinationAndInitiator) {
++  std::vector<RequestContext> seen;
++  InwebAdblockURLLoaderThrottle throttle(base::BindRepeating(
++      [](std::vector<RequestContext>* seen, const RequestContext& ctx) {
++        seen->push_back(ctx);
++        return Decision(FilterAction::kPass);
++      },
++      &seen));
++  RecordingDelegate delegate;
++  throttle.set_delegate(&delegate);
++
++  network::ResourceRequest request;
++  request.url = GURL("https://cdn.example.com/app.js");
++  request.destination = network::mojom::RequestDestination::kScript;
++  request.request_initiator =
++      url::Origin::Create(GURL("https://news.example.com"));
++  bool defer = false;
++  throttle.WillStartRequest(&request, &defer);
++  EXPECT_TRUE(defer);
++  task_environment_.RunUntilIdle();
++
++  ASSERT_EQ(1u, seen.size());
++  EXPECT_EQ(ResourceType::kScript, seen[0].resource_type);
++
++  // A request without an initiator gets an empty document URL.
++  network::ResourceRequest no_initiator;
++  no_initiator.url = GURL("https://tracker.example.net/x");
++  no_initiator.destination = network::mojom::RequestDestination::kIframe;
++  throttle.WillStartRequest(&no_initiator, &defer);
++  EXPECT_TRUE(defer);
++  task_environment_.RunUntilIdle();
++  ASSERT_EQ(2u, seen.size());
++  EXPECT_EQ(ResourceType::kSubdocument, seen[1].resource_type);
++  EXPECT_TRUE(seen[1].document_url.is_empty());
++}
++
++TEST_F(InwebAdblockURLLoaderThrottleTest, RedirectReevaluatesWithOriginalDoc) {
++  std::vector<RequestContext> seen;
++  // First decision passes; the redirect target is blocked.
++  InwebAdblockURLLoaderThrottle throttle(base::BindRepeating(
++      [](std::vector<RequestContext>* seen, const RequestContext& ctx) {
++        seen->push_back(ctx);
++        return Decision(seen->size() == 1 ? FilterAction::kPass
++                                          : FilterAction::kBlock);
++      },
++      &seen));
++  RecordingDelegate delegate;
++  throttle.set_delegate(&delegate);
++
++  network::ResourceRequest request = ImageRequestFromNewsDoc();
++  bool defer = false;
++  throttle.WillStartRequest(&request, &defer);
++  EXPECT_TRUE(defer);
++  task_environment_.RunUntilIdle();
++  EXPECT_TRUE(delegate.resumed_);
++
++  net::RedirectInfo redirect_info;
++  redirect_info.new_url = GURL("https://evil-tracker.net/pixel.gif");
++  defer = false;
++  throttle.WillRedirectRequest(&redirect_info,
++                               network::mojom::URLResponseHead(), &defer,
++                               nullptr);
++  EXPECT_TRUE(defer);
++  task_environment_.RunUntilIdle();
++
++  ASSERT_EQ(2u, seen.size());
++  EXPECT_EQ("https://evil-tracker.net/pixel.gif",
++            seen[1].request_url.possibly_invalid_spec());
++  // Original document governs party classification on redirects.
++  EXPECT_EQ("news.example.com", seen[1].document_url.host());
++  EXPECT_EQ(ResourceType::kImage, seen[1].resource_type);
++  ASSERT_TRUE(delegate.canceled_error_.has_value());
++  EXPECT_EQ(net::ERR_BLOCKED_BY_CLIENT, *delegate.canceled_error_);
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_request_destination_map.cc b/chrome/android/inweb/adblock/inweb_request_destination_map.cc
+new file mode 100644
+index 0000000..871e016
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_request_destination_map.cc
+@@ -0,0 +1,54 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "base/notreached.h"
++#include "chrome/android/inweb/adblock/inweb_request_destination_map.h"
++
++namespace inweb::adblock {
++
++ResourceType ResourceTypeFromRequestDestination(
++    network::mojom::RequestDestination destination) {
++  switch (destination) {
++    case network::mojom::RequestDestination::kScript:
++    case network::mojom::RequestDestination::kWorker:
++    case network::mojom::RequestDestination::kSharedWorker:
++    case network::mojom::RequestDestination::kServiceWorker:
++    case network::mojom::RequestDestination::kAudioWorklet:
++    case network::mojom::RequestDestination::kPaintWorklet:
++      return ResourceType::kScript;
++    case network::mojom::RequestDestination::kImage:
++      return ResourceType::kImage;
++    case network::mojom::RequestDestination::kStyle:
++    case network::mojom::RequestDestination::kXslt:
++      return ResourceType::kStylesheet;
++    case network::mojom::RequestDestination::kDocument:
++    case network::mojom::RequestDestination::kFrame:
++    case network::mojom::RequestDestination::kIframe:
++    case network::mojom::RequestDestination::kFencedframe:
++      return ResourceType::kSubdocument;
++    case network::mojom::RequestDestination::kObject:
++    case network::mojom::RequestDestination::kEmbed:
++      return ResourceType::kObject;
++    case network::mojom::RequestDestination::kAudio:
++    case network::mojom::RequestDestination::kVideo:
++    case network::mojom::RequestDestination::kTrack:
++      return ResourceType::kMedia;
++    case network::mojom::RequestDestination::kFont:
++      return ResourceType::kFont;
++    case network::mojom::RequestDestination::kEmpty:
++    case network::mojom::RequestDestination::kManifest:
++    case network::mojom::RequestDestination::kReport:
++    case network::mojom::RequestDestination::kWebBundle:
++    case network::mojom::RequestDestination::kWebIdentity:
++    case network::mojom::RequestDestination::kCompressionDictionary:
++    case network::mojom::RequestDestination::kSpeculationRules:
++    case network::mojom::RequestDestination::kJson:
++    case network::mojom::RequestDestination::kEmailVerification:
++    case network::mojom::RequestDestination::kText:
++      return ResourceType::kOther;
++  }
++  NOTREACHED_NORETURN();
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_request_destination_map.h b/chrome/android/inweb/adblock/inweb_request_destination_map.h
+new file mode 100644
+index 0000000..dc2f779
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_request_destination_map.h
+@@ -0,0 +1,32 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_REQUEST_DESTINATION_MAP_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_REQUEST_DESTINATION_MAP_H_
++
++#include "chrome/android/inweb/adblock/inweb_resource_type.h"
++#include "services/network/public/mojom/fetch_api.mojom-shared.h"
++
++namespace inweb::adblock {
++
++// Maps a network request's RequestDestination to the engine's ResourceType.
++//
++// Documented v1 mapping decisions (PHASE4 §7/§10, ADR-040):
++// - Workers and worklets (kWorker, kSharedWorker, kServiceWorker,
++//   kAudioWorklet, kPaintWorklet) map to kScript: they are script fetches and
++//   ABP-family `$script` rules apply to them.
++// - kXslt maps to kStylesheet.
++// - kDocument/kFrame/kIframe/kFencedframe map to kSubdocument. The outermost
++//   main frame never reaches the engine: throttle registration exempts it.
++// - kEmpty maps to kOther. RequestDestination cannot distinguish XHR/fetch
++//   (both are destination "empty" per the Fetch spec), so the engine's kXhr
++//   type is unreachable from the network stack in v1 — a documented
++//   deviation from the Kotlin reference. Rules that constrain only $xhr
++//   therefore do not match in v1.
++ResourceType ResourceTypeFromRequestDestination(
++    network::mojom::RequestDestination destination);
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_REQUEST_DESTINATION_MAP_H_
+diff --git a/chrome/android/inweb/adblock/inweb_request_destination_map_unittest.cc b/chrome/android/inweb/adblock/inweb_request_destination_map_unittest.cc
+new file mode 100644
+index 0000000..f9651d2
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_request_destination_map_unittest.cc
+@@ -0,0 +1,71 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — RequestDestination → ResourceType mapping unit tests.
++// Ported from the Kotlin reference semantics; the mapping table itself is
++// new (Kotlin lived above the network stack).
++
++#include "chrome/android/inweb/adblock/inweb_request_destination_map.h"
++
++#include "testing/gtest/include/gtest/gtest.h"
++
++namespace inweb::adblock {
++
++namespace {
++using Dest = network::mojom::RequestDestination;
++}  // namespace
++
++TEST(InwebRequestDestinationMapTest, ScriptsAndWorkersMapToScript) {
++  EXPECT_EQ(ResourceType::kScript, ResourceTypeFromRequestDestination(Dest::kScript));
++  EXPECT_EQ(ResourceType::kScript, ResourceTypeFromRequestDestination(Dest::kWorker));
++  EXPECT_EQ(ResourceType::kScript,
++            ResourceTypeFromRequestDestination(Dest::kSharedWorker));
++  EXPECT_EQ(ResourceType::kScript,
++            ResourceTypeFromRequestDestination(Dest::kServiceWorker));
++  EXPECT_EQ(ResourceType::kScript,
++            ResourceTypeFromRequestDestination(Dest::kAudioWorklet));
++  EXPECT_EQ(ResourceType::kScript,
++            ResourceTypeFromRequestDestination(Dest::kPaintWorklet));
++}
++
++TEST(InwebRequestDestinationMapTest, MediaTypesMapDirectly) {
++  EXPECT_EQ(ResourceType::kImage, ResourceTypeFromRequestDestination(Dest::kImage));
++  EXPECT_EQ(ResourceType::kStylesheet,
++            ResourceTypeFromRequestDestination(Dest::kStyle));
++  EXPECT_EQ(ResourceType::kStylesheet,
++            ResourceTypeFromRequestDestination(Dest::kXslt));
++  EXPECT_EQ(ResourceType::kFont, ResourceTypeFromRequestDestination(Dest::kFont));
++  EXPECT_EQ(ResourceType::kMedia, ResourceTypeFromRequestDestination(Dest::kAudio));
++  EXPECT_EQ(ResourceType::kMedia, ResourceTypeFromRequestDestination(Dest::kVideo));
++  EXPECT_EQ(ResourceType::kMedia, ResourceTypeFromRequestDestination(Dest::kTrack));
++}
++
++TEST(InwebRequestDestinationMapTest, FramesMapToSubdocument) {
++  // kDocument reaching the engine means a non-outermost frame (throttle
++  // registration exempts the outermost main frame).
++  EXPECT_EQ(ResourceType::kSubdocument,
++            ResourceTypeFromRequestDestination(Dest::kDocument));
++  EXPECT_EQ(ResourceType::kSubdocument, ResourceTypeFromRequestDestination(Dest::kFrame));
++  EXPECT_EQ(ResourceType::kSubdocument,
++            ResourceTypeFromRequestDestination(Dest::kIframe));
++  EXPECT_EQ(ResourceType::kSubdocument,
++            ResourceTypeFromRequestDestination(Dest::kFencedframe));
++}
++
++TEST(InwebRequestDestinationMapTest, ObjectsAndEmbeds) {
++  EXPECT_EQ(ResourceType::kObject, ResourceTypeFromRequestDestination(Dest::kObject));
++  EXPECT_EQ(ResourceType::kObject, ResourceTypeFromRequestDestination(Dest::kEmbed));
++}
++
++TEST(InwebRequestDestinationMapTest, EverythingElseIsOtherIncludingEmpty) {
++  // kEmpty covers XHR/fetch — documented v1 deviation: kXhr unreachable.
++  EXPECT_EQ(ResourceType::kOther, ResourceTypeFromRequestDestination(Dest::kEmpty));
++  EXPECT_EQ(ResourceType::kOther, ResourceTypeFromRequestDestination(Dest::kJson));
++  EXPECT_EQ(ResourceType::kOther,
++            ResourceTypeFromRequestDestination(Dest::kManifest));
++  EXPECT_EQ(ResourceType::kOther,
++            ResourceTypeFromRequestDestination(Dest::kSpeculationRules));
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
+index 706fa31..1485e65 100644
+--- a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
++++ b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
+@@ -158,4 +158,9 @@ FilterDecision TrackingProtectionEngine::Decide(
+                         .matched_rule = block_match};
+ }
+ 
++void TrackingProtectionEngine::UpdateSettings(
++    TrackingProtectionSettings settings) {
++  settings_ = std::move(settings);
++}
++
+ }  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h
+index 80c2c45..2477e76 100644
+--- a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h
++++ b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h
+@@ -100,6 +100,11 @@ class TrackingProtectionEngine {
+ 
+   FilterDecision Decide(const RequestContext& request) const;
+ 
++  // Replaces settings (site allowlist, enabled flag). Not internally
++  // synchronized: the caller must serialize against Decide() —
++  // InwebAdblockEngineHolder (patch 0006) holds its lock across calls.
++  void UpdateSettings(TrackingProtectionSettings settings);
++
+   const EngineStatistics& statistics() const { return statistics_; }
+   const TrackingProtectionSettings& settings() const { return settings_; }
+   const std::vector<NetworkFilterRule>& rules() const { return rules_; }
+diff --git a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
+index 21a2734..4a877c1 100644
+--- a/chrome/browser/BUILD.gn
++++ b/chrome/browser/BUILD.gn
+@@ -1664,6 +1664,7 @@ source_set("core") {
+       ":profile_key_startup_accessor",
+       "//chrome/android:jni_headers",
+       "//chrome/android/inweb/adblock:inweb_adblock_engine",
++      "//chrome/android/inweb/adblock:inweb_adblock_throttle",
+       "//chrome/browser/android",
+       "//chrome/browser/autocomplete",
+       "//chrome/browser/bookmarks",
+diff --git a/chrome/browser/chrome_content_browser_client.cc b/chrome/browser/chrome_content_browser_client.cc
+index 92e1a5a..baa5f31 100644
+--- a/chrome/browser/chrome_content_browser_client.cc
++++ b/chrome/browser/chrome_content_browser_client.cc
+@@ -533,6 +533,8 @@
+ #include "base/android/apk_info.h"
+ #include "base/android/application_status_listener.h"
+ #include "base/feature_list.h"
++#include "chrome/android/inweb/adblock/inweb_adblock_engine_holder.h"
++#include "chrome/android/inweb/adblock/inweb_adblock_url_loader_throttle.h"
+ #include "chrome/browser/android/customtabs/client_data_header_web_contents_observer.h"  // nogncheck crbug.com/40147906
+ #include "chrome/browser/android/devtools_manager_delegate_android.h"  // nogncheck crbug.com/40147906
+ #include "chrome/browser/android/ntp/new_tab_page_url_handler.h"  // nogncheck crbug.com/40147906
+@@ -6031,6 +6033,23 @@ ChromeContentBrowserClient::CreateURLLoaderThrottles(
+     result.push_back(std::move(contextual_tasks_throttle));
+   }
+ 
++#if BUILDFLAG(IS_ANDROID)
++  // iNWEB: run subresource requests and redirects through the native
++  // tracking-protection engine (patch 0006, ADR-040). The outermost
++  // main-frame navigation is exempt in v1; redirects re-evaluate at the
++  // redirect target.
++  if (!request.is_outermost_main_frame &&
++      inweb::adblock::InwebAdblockEngineHolder::GetInstance()->IsEnabled()) {
++    result.push_back(
++        std::make_unique<inweb::adblock::InwebAdblockURLLoaderThrottle>(
++            base::BindRepeating(
++                [](const inweb::adblock::RequestContext& context) {
++                  return inweb::adblock::InwebAdblockEngineHolder::GetInstance()
++                      ->Decide(context);
++                })));
++  }
++#endif
++
+   return result;
+ }
+ 
