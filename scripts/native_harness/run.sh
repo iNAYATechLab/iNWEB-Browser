@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Host-side validation harness for src/native/adblock/ (patch 0005 sources).
+#
+# Compiles the native ad-block engine + its mirrored unit tests against
+# shimmed Chromium APIs (base strings/locks, GURL, PSL table) and REAL
+# RE2, then runs the tests. Catches C++ port bugs BEFORE the multi-hour
+# b001-build-hop cycle. NOT part of the Chromium build or the patch —
+# repo-side tooling only (ADR-040 quality loop).
+#
+# Requires: g++ (C++20), libre2-dev. Shim fidelity is documented in the
+# shims' headers; authoritative validation is the Chromium build itself.
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO="$(cd "$HERE/../.." && pwd)"
+ROOT="$HERE/root"
+mkdir -p "$ROOT/chrome/android/inweb"
+ln -sfn "$REPO/src/native/adblock" "$ROOT/chrome/android/inweb/adblock"
+LIBRE2="$(find /usr/lib -name 'libre2.so' 2>/dev/null | head -1)"
+if [ -z "$LIBRE2" ]; then
+  echo "libre2.so not found — apt-get install libre2-dev" >&2
+  exit 1
+fi
+mapfile -t ENGINE < <(ls "$REPO"/src/native/adblock/*.cc | grep -v _unittest || true)
+mapfile -t TESTS < <(ls "$REPO"/src/native/adblock/*_unittest.cc)
+g++ -std=c++20 -I"$HERE/shims" -I"$ROOT" \
+  "$HERE/shims/url/gurl.cc" "$HERE/shims/base/strings/string_util.cc" \
+  "$HERE/shims/net/base/registry_controlled_domains.cc" \
+  "${ENGINE[@]}" "${TESTS[@]}" "$HERE/main.cc" "$LIBRE2" -o "$HERE/run_tests"
+"$HERE/run_tests"

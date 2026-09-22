@@ -1,0 +1,1675 @@
+diff --git a/chrome/android/inweb/adblock/BUILD.gn b/chrome/android/inweb/adblock/BUILD.gn
+new file mode 100644
+index 0000000..4dcc57d
+--- /dev/null
++++ b/chrome/android/inweb/adblock/BUILD.gn
+@@ -0,0 +1,46 @@
++# iNWEB Browser — native ad-block engine build (patch 0005, ADR-040).
++#
++# Sources are authored at src/native/adblock/ in the iNWEB repository and
++# synced into this patch; the patch series is the single authority for the
++# Chromium tree.
++
++source_set("inweb_adblock_engine") {
++  sources = [
++    "inweb_domain_classifier.cc",
++    "inweb_domain_classifier.h",
++    "inweb_filter_list_parser.cc",
++    "inweb_filter_list_parser.h",
++    "inweb_filter_rule.h",
++    "inweb_pattern_compiler.cc",
++    "inweb_pattern_compiler.h",
++    "inweb_request_context.h",
++    "inweb_resource_type.h",
++    "inweb_rule_matcher.cc",
++    "inweb_rule_matcher.h",
++    "inweb_tracking_protection_engine.cc",
++    "inweb_tracking_protection_engine.h",
++  ]
++
++  deps = [
++    "//base",
++    "//net",
++    "//third_party/re2",
++    "//url",
++  ]
++}
++
++source_set("unittests") {
++  testonly = true
++  sources = [
++    "inweb_domain_classifier_unittest.cc",
++    "inweb_filter_list_parser_unittest.cc",
++    "inweb_rule_matcher_unittest.cc",
++    "inweb_tracking_protection_engine_unittest.cc",
++  ]
++
++  deps = [
++    ":inweb_adblock_engine",
++    "//testing/gtest",
++    "//testing/gmock",
++  ]
++}
+diff --git a/chrome/android/inweb/adblock/inweb_domain_classifier.cc b/chrome/android/inweb/adblock/inweb_domain_classifier.cc
+new file mode 100644
+index 0000000..78160da
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_domain_classifier.cc
+@@ -0,0 +1,40 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — registrable-domain (eTLD+1) classification (implementation).
++
++#include "chrome/android/inweb/adblock/inweb_domain_classifier.h"
++
++#include <string>
++
++#include "base/strings/string_util.h"
++#include "net/base/registry_controlled_domains.h"
++
++namespace inweb::adblock {
++
++// static
++std::string DomainClassifier::RegistrableDomain(const std::string& host) {
++  std::string h(base::TrimString(host, ".", base::TRIM_ALL));
++  h = base::ToLowerASCII(h);
++  if (h.empty()) {
++    return h;
++  }
++  std::string registrable =
++      net::registry_controlled_domains::GetDomainAndRegistry(
++          h, net::registry_controlled_domains::EXCLUDE_PRIVATE_REGISTRIES);
++  if (!registrable.empty()) {
++    return registrable;
++  }
++  // No registrable domain: IP literal, single-label host, or a bare public
++  // suffix — the lowercased host itself (Kotlin-reference parity).
++  return h;
++}
++
++// static
++bool DomainClassifier::IsThirdParty(const std::string& document_host,
++                                    const std::string& request_host) {
++  return RegistrableDomain(document_host) != RegistrableDomain(request_host);
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_domain_classifier.h b/chrome/android/inweb/adblock/inweb_domain_classifier.h
+new file mode 100644
+index 0000000..0ce9896
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_domain_classifier.h
+@@ -0,0 +1,34 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — registrable-domain (eTLD+1) classification.
++//
++// Interface ported from the tested Kotlin reference implementation
++// (src/core/tracking-protection/…/DomainClassifier.kt). The Kotlin version
++// used a built-in table of common multi-part public suffixes; this native
++// integration uses Chromium's full Public Suffix List instead (the
++// documented engine-side integration intent — PHASE4-ADBLOCK-DESIGN §1).
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_DOMAIN_CLASSIFIER_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_DOMAIN_CLASSIFIER_H_
++
++#include <string>
++
++namespace inweb::adblock {
++
++class DomainClassifier {
++ public:
++  // The registrable domain of a host (e.g. `a.b.example.com` →
++  // `example.com`). IP literals, single-label hosts (e.g. `localhost`)
++  // and bare public suffixes return the (lowercased) host itself.
++  static std::string RegistrableDomain(const std::string& host);
++
++  // True when the two hosts belong to different registrable domains.
++  static bool IsThirdParty(const std::string& document_host,
++                           const std::string& request_host);
++};
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_DOMAIN_CLASSIFIER_H_
+diff --git a/chrome/android/inweb/adblock/inweb_domain_classifier_unittest.cc b/chrome/android/inweb/adblock/inweb_domain_classifier_unittest.cc
+new file mode 100644
+index 0000000..e08707e
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_domain_classifier_unittest.cc
+@@ -0,0 +1,57 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — DomainClassifier unit tests.
++// Ported from the Kotlin reference (DomainClassifierTest.kt). Runs against
++// Chromium's full Public Suffix List (the Kotlin table's suffixes —
++// co.uk, com.bd, co.jp — are real PSL entries, so expectations match).
++
++#include "chrome/android/inweb/adblock/inweb_domain_classifier.h"
++
++#include "testing/gtest/include/gtest/gtest.h"
++
++namespace inweb::adblock {
++
++TEST(InwebDomainClassifierTest, SimpleDomainsReduceToRegistrableDomain) {
++  EXPECT_EQ("example.com", DomainClassifier::RegistrableDomain("example.com"));
++  EXPECT_EQ("example.com",
++            DomainClassifier::RegistrableDomain("a.example.com"));
++  EXPECT_EQ("example.com",
++            DomainClassifier::RegistrableDomain("a.b.c.example.com"));
++}
++
++TEST(InwebDomainClassifierTest, MultiPartSuffixesNeedThreeLabels) {
++  EXPECT_EQ("bbc.co.uk", DomainClassifier::RegistrableDomain("www.bbc.co.uk"));
++  EXPECT_EQ("bbc.co.uk",
++            DomainClassifier::RegistrableDomain("news.bbc.co.uk"));
++  EXPECT_EQ("example.com.bd",
++            DomainClassifier::RegistrableDomain("www.example.com.bd"));
++  EXPECT_EQ("shop.co.jp",
++            DomainClassifier::RegistrableDomain("www.shop.co.jp"));
++}
++
++TEST(InwebDomainClassifierTest, IpAddressHostsStayWhole) {
++  EXPECT_EQ("192.168.0.1",
++            DomainClassifier::RegistrableDomain("192.168.0.1"));
++}
++
++TEST(InwebDomainClassifierTest, SingleLabelHostsStayWhole) {
++  EXPECT_EQ("localhost", DomainClassifier::RegistrableDomain("localhost"));
++}
++
++TEST(InwebDomainClassifierTest, ThirdPartyClassification) {
++  // Same registrable domain → first-party.
++  EXPECT_FALSE(DomainClassifier::IsThirdParty("news.example.com",
++                                              "cdn.example.com"));
++  // Different registrable domains → third-party.
++  EXPECT_TRUE(
++      DomainClassifier::IsThirdParty("news.example.com", "ads.other.net"));
++  // Multi-part suffix: different sites under co.uk are third-party.
++  EXPECT_TRUE(DomainClassifier::IsThirdParty("bbc.co.uk", "itv.co.uk"));
++  // Same multi-part-suffix site.
++  EXPECT_FALSE(
++      DomainClassifier::IsThirdParty("www.bbc.co.uk", "news.bbc.co.uk"));
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_filter_list_parser.cc b/chrome/android/inweb/adblock/inweb_filter_list_parser.cc
+new file mode 100644
+index 0000000..44cb4b0
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_filter_list_parser.cc
+@@ -0,0 +1,226 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — filter-list parser (implementation).
++
++#include "chrome/android/inweb/adblock/inweb_filter_list_parser.h"
++
++#include <string>
++#include <utility>
++#include <vector>
++
++#include "base/no_destructor.h"
++#include "base/strings/string_split.h"
++#include "base/strings/string_util.h"
++#include "chrome/android/inweb/adblock/inweb_pattern_compiler.h"
++
++namespace inweb::adblock {
++
++namespace {
++
++bool IsBlank(const std::string& s) {
++  return base::TrimString(s, base::kWhitespaceASCII, base::TRIM_ALL).empty();
++}
++
++}  // namespace
++
++// static
++ParsedFilterList FilterListParser::Parse(const std::string& text,
++                                         const std::string& list_id) {
++  ParsedFilterList parsed;
++  parsed.list_id = list_id;
++
++  std::vector<std::string> lines =
++      base::SplitString(text, "\n", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
++
++  int line_number = 0;
++  for (const std::string& raw_line : lines) {
++    ++line_number;
++    const std::string& line = raw_line;  // already trimmed by SplitString
++    if (line.empty()) {
++      continue;
++    }
++    if (line[0] == '!' || line[0] == '[') {
++      ++parsed.comment_count;
++      continue;
++    }
++    if (line.find("##") != std::string::npos ||
++        line.find("#@#") != std::string::npos ||
++        line.find("#?#") != std::string::npos) {
++      ++parsed.cosmetic_rule_count;
++      continue;
++    }
++    std::optional<NetworkFilterRule> rule = ParseRule(line, line_number);
++    if (!rule) {
++      ++parsed.invalid_rule_count;
++    } else if (rule->unsupported) {
++      ++parsed.unsupported_rule_count;
++    } else {
++      parsed.network_rules.push_back(std::move(*rule));
++    }
++  }
++  return parsed;
++}
++
++// static
++std::optional<NetworkFilterRule> FilterListParser::ParseRule(
++    const std::string& line,
++    int line_number) {
++  std::string body = line;
++  const bool is_exception = base::StartsWith(body, "@@");
++  if (is_exception) {
++    body = body.substr(2);
++  }
++
++  FilterOptions options;
++  bool unsupported = false;
++  const size_t dollar = body.rfind('$');
++  // `dollar == 0` means the pattern part is empty ("$script" options-only
++  // body) — an invalid rule; the empty-body check below rejects it.
++  if (dollar != std::string::npos) {
++    OptionsResult result = ParseOptions(body.substr(dollar + 1));
++    if (result.kind == OptionsResultKind::kInvalid) {
++      return std::nullopt;
++    }
++    if (result.kind == OptionsResultKind::kUnsupported) {
++      unsupported = true;
++    } else {
++      options = std::move(result.options);
++    }
++    body = body.substr(0, dollar);
++  }
++  if (body.empty()) {
++    return std::nullopt;
++  }
++
++  bool domain_anchor = false;
++  bool anchor_start = false;
++  bool anchor_end = false;
++  if (base::StartsWith(body, "||")) {
++    domain_anchor = true;
++    body = body.substr(2);
++  } else if (base::StartsWith(body, "|")) {
++    anchor_start = true;
++    body = body.substr(1);
++  }
++  if (body.size() > 1 && body.back() == '|') {
++    anchor_end = true;
++    body.pop_back();
++  }
++  if (body.empty()) {
++    return std::nullopt;
++  }
++
++  NetworkFilterRule rule;
++  rule.raw = line;
++  rule.pattern = body;
++  rule.is_exception = is_exception;
++  rule.domain_anchor = domain_anchor;
++  rule.anchor_start = anchor_start;
++  rule.anchor_end = anchor_end;
++  rule.options = std::move(options);
++  rule.unsupported = unsupported;
++  rule.line = line_number;
++  rule.regex =
++      PatternCompiler::Compile(body, domain_anchor, anchor_start, anchor_end);
++  if (!rule.regex) {
++    return std::nullopt;
++  }
++  return rule;
++}
++
++// static
++const std::map<std::string, ResourceType>& FilterListParser::TypeTokens() {
++  static const base::NoDestructor<std::map<std::string, ResourceType>> tokens(
++      std::map<std::string, ResourceType>{
++          {"script", ResourceType::kScript},
++          {"image", ResourceType::kImage},
++          {"stylesheet", ResourceType::kStylesheet},
++          {"xhr", ResourceType::kXhr},
++          {"xmlhttprequest", ResourceType::kXhr},
++          {"subdocument", ResourceType::kSubdocument},
++          {"object", ResourceType::kObject},
++          {"websocket", ResourceType::kWebsocket},
++          {"popup", ResourceType::kPopup},
++          {"document", ResourceType::kDocument},
++          {"media", ResourceType::kMedia},
++          {"font", ResourceType::kFont},
++          {"other", ResourceType::kOther},
++      });
++  return *tokens;
++}
++
++// static
++FilterListParser::OptionsResult FilterListParser::ParseOptions(
++    const std::string& text) {
++  OptionsResult result;
++  if (IsBlank(text)) {
++    return result;  // kInvalid
++  }
++
++  std::set<ResourceType>& types = result.options.types;
++  std::set<ResourceType>& negated_types = result.options.negated_types;
++  std::optional<bool>& third_party = result.options.third_party;
++  std::map<std::string, bool>& domains = result.options.domains;
++
++  // WANT_ALL mirrors the Kotlin split(','): empty tokens fall through to
++  // the unsupported branch.
++  std::vector<std::string> tokens =
++      base::SplitString(text, ",", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
++  for (const std::string& token : tokens) {
++    const std::string t = base::ToLowerASCII(token);
++    if (t == "third-party") {
++      third_party = true;
++    } else if (t == "first-party") {
++      third_party = false;
++    } else if (t == "~third-party") {
++      third_party = false;
++    } else if (t == "~first-party") {
++      third_party = true;
++    } else if (base::StartsWith(t, "domain=")) {
++      if (!ParseDomains(t.substr(7), &domains)) {
++        return OptionsResult();  // kInvalid
++      }
++    } else if (TypeTokens().count(t) != 0) {
++      types.insert(TypeTokens().at(t));
++    } else if (base::StartsWith(t, "~") && TypeTokens().count(t.substr(1)) != 0) {
++      negated_types.insert(TypeTokens().at(t.substr(1)));
++    } else if (t == "match-case") {
++      // Ignored by design (Kotlin parity).
++    } else {
++      result.kind = OptionsResultKind::kUnsupported;
++      return result;
++    }
++  }
++  result.kind = OptionsResultKind::kOk;
++  return result;
++}
++
++// static
++bool FilterListParser::ParseDomains(const std::string& text,
++                                    std::map<std::string, bool>* into) {
++  if (IsBlank(text)) {
++    return false;
++  }
++  std::vector<std::string> entries =
++      base::SplitString(text, "|", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
++  for (const std::string& entry : entries) {
++    const std::string e = base::ToLowerASCII(entry);
++    if (e.empty()) {
++      return false;
++    }
++    if (e[0] == '~') {
++      const std::string domain = e.substr(1);
++      if (domain.empty()) {
++        return false;
++      }
++      (*into)[domain] = false;
++    } else {
++      (*into)[e] = true;
++    }
++  }
++  return true;
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_filter_list_parser.h b/chrome/android/inweb/adblock/inweb_filter_list_parser.h
+new file mode 100644
+index 0000000..3884192
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_filter_list_parser.h
+@@ -0,0 +1,58 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — filter-list parser (EasyList-family syntax subset).
++//
++// Ported 1:1 from the tested Kotlin reference implementation
++// (src/core/tracking-protection/…/FilterListParser.kt).
++//
++// Line classification:
++//  - blank, `!` comment, `[...]` header   → comments
++//  - cosmetic rules (`##`, `#@#`, `#?#`)  → recognized and counted; the
++//    network matcher ignores them (cosmetic filtering is a later phase)
++//  - `@@` prefix                          → exception rule (allow)
++//  - options after the last `$`           → parsed; unknown options mark
++//    the rule unsupported (kept out of matching, counted honestly)
++//  - anything unparseable                 → invalid (counted, never
++//    silently dropped)
++//
++// Deviation from the Kotlin reference (robustness): a pattern that RE2
++// rejects at compile time counts as invalid (the Kotlin version could
++// throw lazily); regexes compile once here, at parse time.
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_PARSER_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_PARSER_H_
++
++#include <map>
++#include <optional>
++#include <string>
++
++#include "chrome/android/inweb/adblock/inweb_filter_rule.h"
++#include "chrome/android/inweb/adblock/inweb_resource_type.h"
++
++namespace inweb::adblock {
++
++class FilterListParser {
++ public:
++  static ParsedFilterList Parse(const std::string& text,
++                                const std::string& list_id = "default");
++
++ private:
++  enum class OptionsResultKind { kInvalid, kUnsupported, kOk };
++  struct OptionsResult {
++    OptionsResultKind kind = OptionsResultKind::kInvalid;
++    FilterOptions options;
++  };
++
++  static std::optional<NetworkFilterRule> ParseRule(const std::string& line,
++                                                    int line_number);
++  static OptionsResult ParseOptions(const std::string& text);
++  static bool ParseDomains(const std::string& text,
++                           std::map<std::string, bool>* into);
++  static const std::map<std::string, ResourceType>& TypeTokens();
++};
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_PARSER_H_
+diff --git a/chrome/android/inweb/adblock/inweb_filter_list_parser_unittest.cc b/chrome/android/inweb/adblock/inweb_filter_list_parser_unittest.cc
+new file mode 100644
+index 0000000..0374e5b
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_filter_list_parser_unittest.cc
+@@ -0,0 +1,110 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — FilterListParser unit tests.
++// Ported 1:1 from the Kotlin reference (FilterListParserTest.kt).
++
++#include "chrome/android/inweb/adblock/inweb_filter_list_parser.h"
++
++#include "testing/gtest/include/gtest/gtest.h"
++
++namespace inweb::adblock {
++
++TEST(InwebFilterListParserTest, CommentsAndHeaderAreCountedNotParsed) {
++  const ParsedFilterList list =
++      FilterListParser::Parse("[Adblock Plus 2.0]\n! a comment\n! another comment\n",
++                              "test");
++  EXPECT_EQ(0u, list.network_rules.size());
++  EXPECT_EQ(3, list.comment_count);
++}
++
++TEST(InwebFilterListParserTest, CosmeticRulesAreRecognizedAndCounted) {
++  const ParsedFilterList list = FilterListParser::Parse(
++      "example.com##.ad-banner\n##.sponsor\n||ads.example.com^\n");
++  EXPECT_EQ(2, list.cosmetic_rule_count);
++  EXPECT_EQ(1u, list.network_rules.size());
++}
++
++TEST(InwebFilterListParserTest, ParsesDomainAnchoredRule) {
++  const ParsedFilterList list = FilterListParser::Parse("||ads.example.com^");
++  ASSERT_EQ(1u, list.network_rules.size());
++  const NetworkFilterRule& rule = list.network_rules[0];
++  EXPECT_TRUE(rule.domain_anchor);
++  EXPECT_FALSE(rule.anchor_start);
++  EXPECT_FALSE(rule.anchor_end);
++  EXPECT_FALSE(rule.is_exception);
++  EXPECT_EQ("ads.example.com^", rule.pattern);
++  EXPECT_EQ("||ads.example.com^", rule.raw);
++}
++
++TEST(InwebFilterListParserTest, ParsesExceptionRule) {
++  const ParsedFilterList list =
++      FilterListParser::Parse("@@||example.com^");
++  ASSERT_EQ(1u, list.network_rules.size());
++  EXPECT_TRUE(list.network_rules[0].is_exception);
++  EXPECT_EQ("example.com^", list.network_rules[0].pattern);
++}
++
++TEST(InwebFilterListParserTest, ParsesLeftAndRightAnchors) {
++  const ParsedFilterList left =
++      FilterListParser::Parse("|https://ads.example.com/x");
++  ASSERT_EQ(1u, left.network_rules.size());
++  EXPECT_TRUE(left.network_rules[0].anchor_start);
++  EXPECT_FALSE(left.network_rules[0].domain_anchor);
++
++  const ParsedFilterList right = FilterListParser::Parse("/banner*.gif|");
++  ASSERT_EQ(1u, right.network_rules.size());
++  EXPECT_TRUE(right.network_rules[0].anchor_end);
++  EXPECT_FALSE(right.network_rules[0].anchor_start);
++  EXPECT_FALSE(right.network_rules[0].domain_anchor);
++}
++
++TEST(InwebFilterListParserTest, ParsesTypeAndPartyOptions) {
++  const ParsedFilterList list =
++      FilterListParser::Parse("||ads.example.com^$script,third-party");
++  ASSERT_EQ(1u, list.network_rules.size());
++  const FilterOptions& options = list.network_rules[0].options;
++  EXPECT_EQ(1u, options.types.size());
++  EXPECT_NE(0u, options.types.count(ResourceType::kScript));
++  ASSERT_TRUE(options.third_party.has_value());
++  EXPECT_TRUE(*options.third_party);
++}
++
++TEST(InwebFilterListParserTest, ParsesDomainIncludeAndExcludeOptions) {
++  const ParsedFilterList list = FilterListParser::Parse(
++      "||ads.example.com^$domain=news.example|~meta.news.example");
++  ASSERT_EQ(1u, list.network_rules.size());
++  const auto& domains = list.network_rules[0].options.domains;
++  EXPECT_EQ(2u, domains.size());
++  EXPECT_NE(0u, domains.count("news.example"));
++  EXPECT_TRUE(domains.at("news.example"));
++  EXPECT_NE(0u, domains.count("meta.news.example"));
++  EXPECT_FALSE(domains.at("meta.news.example"));
++}
++
++TEST(InwebFilterListParserTest, NegatedTypeOptions) {
++  const ParsedFilterList list =
++      FilterListParser::Parse("||example.com^$~script,~image");
++  ASSERT_EQ(1u, list.network_rules.size());
++  const FilterOptions& options = list.network_rules[0].options;
++  EXPECT_EQ(2u, options.negated_types.size());
++  EXPECT_NE(0u, options.negated_types.count(ResourceType::kScript));
++  EXPECT_NE(0u, options.negated_types.count(ResourceType::kImage));
++  EXPECT_TRUE(options.types.empty());
++}
++
++TEST(InwebFilterListParserTest, UnknownOptionMarksRuleUnsupported) {
++  const ParsedFilterList list =
++      FilterListParser::Parse("||example.com^$csp=script-src 'none'");
++  EXPECT_EQ(0u, list.network_rules.size());
++  EXPECT_EQ(1, list.unsupported_rule_count);
++}
++
++TEST(InwebFilterListParserTest, MalformedRulesAreCountedInvalid) {
++  const ParsedFilterList list = FilterListParser::Parse("||\n@@\n@@$script\n");
++  EXPECT_EQ(0u, list.network_rules.size());
++  EXPECT_EQ(3, list.invalid_rule_count);
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_filter_rule.h b/chrome/android/inweb/adblock/inweb_filter_rule.h
+new file mode 100644
+index 0000000..9d8b23a
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_filter_rule.h
+@@ -0,0 +1,87 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — parsed network-filter rule model.
++//
++// Ported 1:1 from the tested Kotlin reference implementation
++// (src/core/tracking-protection/…/FilterRule.kt).
++//
++// Pattern anchors:
++//  - `||pattern` — domain anchor: matches at a scheme/host boundary
++//  - `|pattern`  — left anchor: matches at the start of the URL
++//  - `pattern|`  — right anchor: matches at the end of the URL
++// Pattern specials: `*` (any characters), `^` (separator character or
++// end of URL).
++//
++// A rule marked `unsupported` carries options outside the supported
++// subset; it is never matched (counted separately by the parser —
++// honest scoping).
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_RULE_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_RULE_H_
++
++#include <map>
++#include <memory>
++#include <optional>
++#include <set>
++#include <string>
++#include <vector>
++
++#include "chrome/android/inweb/adblock/inweb_resource_type.h"
++#include "third_party/re2/re2.h"
++
++namespace inweb::adblock {
++
++// Option constraints of a rule (the part after `$`).
++struct FilterOptions {
++  std::set<ResourceType> types;
++  std::set<ResourceType> negated_types;
++  // true = third-party requests only; false = first-party only;
++  // nullopt = no constraint.
++  std::optional<bool> third_party;
++  // `domain=` entries: include (true) / exclude (false).
++  std::map<std::string, bool> domains;
++};
++
++// Parsed network-filter rule (EasyList-family syntax subset). Move-only:
++// owns its compiled regex.
++struct NetworkFilterRule {
++  NetworkFilterRule() = default;
++  NetworkFilterRule(NetworkFilterRule&&) = default;
++  NetworkFilterRule& operator=(NetworkFilterRule&&) = default;
++  ~NetworkFilterRule() = default;
++
++  std::string raw;
++  std::string pattern;
++  bool is_exception = false;
++  bool domain_anchor = false;
++  bool anchor_start = false;
++  bool anchor_end = false;
++  FilterOptions options;
++  bool unsupported = false;
++  int line = 0;
++  // Compiled matcher (translation per InwebPatternCompiler). Compiled
++  // once at parse time; RE2 objects are immutable and safe to use from
++  // multiple threads afterwards.
++  std::unique_ptr<RE2> regex;
++};
++
++// Result of parsing one filter list.
++struct ParsedFilterList {
++  std::string list_id;
++  std::vector<NetworkFilterRule> network_rules;
++  int cosmetic_rule_count = 0;
++  int comment_count = 0;
++  int invalid_rule_count = 0;
++  int unsupported_rule_count = 0;
++
++  int total_lines() const {
++    return static_cast<int>(network_rules.size()) + cosmetic_rule_count +
++           comment_count + invalid_rule_count + unsupported_rule_count;
++  }
++};
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_RULE_H_
+diff --git a/chrome/android/inweb/adblock/inweb_pattern_compiler.cc b/chrome/android/inweb/adblock/inweb_pattern_compiler.cc
+new file mode 100644
+index 0000000..4da8165
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_pattern_compiler.cc
+@@ -0,0 +1,67 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — filter pattern → RE2 translation (implementation).
++//
++// Ported 1:1 from the tested Kotlin reference implementation
++// (src/core/tracking-protection/…/PatternCompiler.kt).
++
++#include "chrome/android/inweb/adblock/inweb_pattern_compiler.h"
++
++namespace inweb::adblock {
++
++namespace {
++
++constexpr char kSeparator[] = "(?:[^a-zA-Z0-9_.%-]|$)";
++constexpr char kDomainAnchorPrefix[] =
++    "^[a-zA-Z][a-zA-Z0-9+.-]*://(?:[^/?#]*\\.)?";
++
++}  // namespace
++
++// static
++std::string PatternCompiler::Translate(const std::string& pattern,
++                                       bool domain_anchor,
++                                       bool anchor_start,
++                                       bool anchor_end) {
++  std::string out;
++  if (domain_anchor) {
++    out += kDomainAnchorPrefix;
++  } else if (anchor_start) {
++    out += '^';
++  }
++  for (char ch : pattern) {
++    switch (ch) {
++      case '*':
++        out += ".*";
++        break;
++      case '^':
++        out += kSeparator;
++        break;
++      default:
++        out += RE2::QuoteMeta(std::string(1, ch));
++        break;
++    }
++  }
++  if (anchor_end) {
++    out += '$';
++  }
++  return out;
++}
++
++// static
++std::unique_ptr<RE2> PatternCompiler::Compile(const std::string& pattern,
++                                              bool domain_anchor,
++                                              bool anchor_start,
++                                              bool anchor_end) {
++  RE2::Options options;
++  options.set_case_sensitive(false);
++  auto re = std::make_unique<RE2>(
++      Translate(pattern, domain_anchor, anchor_start, anchor_end), options);
++  if (!re->ok()) {
++    return nullptr;
++  }
++  return re;
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_pattern_compiler.h b/chrome/android/inweb/adblock/inweb_pattern_compiler.h
+new file mode 100644
+index 0000000..808b263
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_pattern_compiler.h
+@@ -0,0 +1,47 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — filter pattern → RE2 translation.
++//
++// Ported 1:1 from the tested Kotlin reference implementation
++// (src/core/tracking-protection/…/PatternCompiler.kt).
++//
++// Translation rules (EasyList semantics):
++//  - `||x` becomes `^[scheme]://[optional subdomain-ish prefix.]x`
++//  - `|` at the start becomes `^`; `|` at the end becomes `$`
++//  - `*` becomes `.*`
++//  - `^` becomes a separator: any character that is NOT a letter, digit,
++//    `_`, `-`, `.` or `%` — or the end of the URL
++//  - everything else is matched literally (case-insensitively)
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_PATTERN_COMPILER_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_PATTERN_COMPILER_H_
++
++#include <memory>
++#include <string>
++
++#include "third_party/re2/re2.h"
++
++namespace inweb::adblock {
++
++class PatternCompiler {
++ public:
++  // Compiles the matcher regex for a rule body plus its anchor flags.
++  // Returns nullptr if RE2 rejects the translated pattern (treated by the
++  // parser as an invalid rule).
++  static std::unique_ptr<RE2> Compile(const std::string& pattern,
++                                      bool domain_anchor,
++                                      bool anchor_start,
++                                      bool anchor_end);
++
++  // Exposed for unit tests.
++  static std::string Translate(const std::string& pattern,
++                               bool domain_anchor,
++                               bool anchor_start,
++                               bool anchor_end);
++};
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_PATTERN_COMPILER_H_
+diff --git a/chrome/android/inweb/adblock/inweb_request_context.h b/chrome/android/inweb/adblock/inweb_request_context.h
+new file mode 100644
+index 0000000..4f2016c
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_request_context.h
+@@ -0,0 +1,44 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — one network request, as seen by the decision engine.
++//
++// Ported from the tested Kotlin reference implementation
++// (src/core/tracking-protection/…/TrackingProtectionEngine.kt, data class
++// RequestContext / FilterAction / FilterDecision). Minimal surface by
++// design: requestUrl, documentUrl, resourceType only.
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_REQUEST_CONTEXT_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_REQUEST_CONTEXT_H_
++
++#include <string>
++
++#include "chrome/android/inweb/adblock/inweb_filter_rule.h"
++#include "chrome/android/inweb/adblock/inweb_resource_type.h"
++#include "url/gurl.h"
++
++namespace inweb::adblock {
++
++// One network request, as seen by the decision engine.
++struct RequestContext {
++  GURL request_url;
++  GURL document_url;
++  ResourceType resource_type = ResourceType::kOther;
++};
++
++// Decision for a request.
++enum class FilterAction { kBlock, kAllow, kPass };
++
++// The decision plus what caused it (for the Security Center, §24).
++// `matched_rule` points into the engine's rule storage and is valid for
++// as long as the engine snapshot that produced the decision is alive.
++struct FilterDecision {
++  FilterAction action = FilterAction::kPass;
++  const NetworkFilterRule* matched_rule = nullptr;
++  std::string allowlisted_site;
++};
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_REQUEST_CONTEXT_H_
+diff --git a/chrome/android/inweb/adblock/inweb_resource_type.h b/chrome/android/inweb/adblock/inweb_resource_type.h
+new file mode 100644
+index 0000000..2167646
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_resource_type.h
+@@ -0,0 +1,34 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — ad-block resource types.
++//
++// Ported 1:1 from the tested Kotlin reference implementation
++// (src/core/tracking-protection/…/ResourceType.kt).
++// EasyList option tokens map onto these values (see FilterListParser).
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_RESOURCE_TYPE_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_RESOURCE_TYPE_H_
++
++namespace inweb::adblock {
++
++// Resource types a network request can have (EasyList option tokens).
++enum class ResourceType {
++  kDocument,
++  kScript,
++  kImage,
++  kStylesheet,
++  kXhr,
++  kSubdocument,
++  kObject,
++  kWebsocket,
++  kPopup,
++  kMedia,
++  kFont,
++  kOther,
++};
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_RESOURCE_TYPE_H_
+diff --git a/chrome/android/inweb/adblock/inweb_rule_matcher.cc b/chrome/android/inweb/adblock/inweb_rule_matcher.cc
+new file mode 100644
+index 0000000..d2f9eea
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_rule_matcher.cc
+@@ -0,0 +1,111 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — rule-against-request matching (implementation).
++
++#include "chrome/android/inweb/adblock/inweb_rule_matcher.h"
++
++#include <string>
++
++#include "base/strings/string_util.h"
++#include "chrome/android/inweb/adblock/inweb_domain_classifier.h"
++#include "third_party/re2/re2.h"
++
++namespace inweb::adblock {
++
++// static
++bool RuleMatcher::Matches(const NetworkFilterRule& rule,
++                          const RequestContext& request) {
++  if (rule.unsupported) {
++    return false;
++  }
++  if (!OptionsSatisfied(rule.options, request)) {
++    return false;
++  }
++  if (!rule.regex) {
++    return false;
++  }
++  return RE2::PartialMatch(request.request_url.possibly_invalid_spec(),
++                           *rule.regex);
++}
++
++// static
++std::string RuleMatcher::HostOf(const GURL& url) {
++  if (!url.is_valid()) {
++    return std::string();
++  }
++  // GURL hosts are already canonical (lowercased); ToLowerASCII is a
++  // no-op safety net.
++  return base::ToLowerASCII(url.host());
++}
++
++// static
++bool RuleMatcher::OptionsSatisfied(const FilterOptions& options,
++                                   const RequestContext& request) {
++  const ResourceType type = request.resource_type;
++  if (!options.types.empty() && options.types.count(type) == 0) {
++    return false;
++  }
++  if (options.negated_types.count(type) != 0) {
++    return false;
++  }
++  if (options.third_party.has_value()) {
++    if (IsThirdPartyRequest(request) != *options.third_party) {
++      return false;
++    }
++  }
++  if (!options.domains.empty() &&
++      !DocumentDomainAllowed(options.domains, request)) {
++    return false;
++  }
++  return true;
++}
++
++// static
++bool RuleMatcher::IsThirdPartyRequest(const RequestContext& request) {
++  const std::string doc_host = HostOf(request.document_url);
++  if (doc_host.empty()) {
++    return true;
++  }
++  const std::string req_host = HostOf(request.request_url);
++  if (req_host.empty()) {
++    return false;
++  }
++  return DomainClassifier::IsThirdParty(doc_host, req_host);
++}
++
++// static
++bool RuleMatcher::DocumentDomainAllowed(
++    const std::map<std::string, bool>& domains,
++    const RequestContext& request) {
++  const std::string doc_host = HostOf(request.document_url);
++  if (doc_host.empty()) {
++    return false;
++  }
++
++  for (const auto& [domain, include] : domains) {
++    if (!include && HostMatchesDomain(doc_host, domain)) {
++      return false;
++    }
++  }
++
++  bool has_includes = false;
++  for (const auto& [domain, include] : domains) {
++    if (include) {
++      has_includes = true;
++      if (HostMatchesDomain(doc_host, domain)) {
++        return true;
++      }
++    }
++  }
++  return !has_includes;
++}
++
++// static
++bool RuleMatcher::HostMatchesDomain(const std::string& host,
++                                    const std::string& domain) {
++  return host == domain || base::EndsWith(host, "." + domain);
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_rule_matcher.h b/chrome/android/inweb/adblock/inweb_rule_matcher.h
+new file mode 100644
+index 0000000..c32df1f
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_rule_matcher.h
+@@ -0,0 +1,50 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — rule-against-request matching.
++//
++// Ported 1:1 from the tested Kotlin reference implementation
++// (src/core/tracking-protection/…/RuleMatcher.kt): option constraints
++// first (type, party, document domain), then the pattern regex.
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_RULE_MATCHER_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_RULE_MATCHER_H_
++
++#include <map>
++#include <string>
++
++#include "chrome/android/inweb/adblock/inweb_filter_rule.h"
++#include "chrome/android/inweb/adblock/inweb_request_context.h"
++#include "url/gurl.h"
++
++namespace inweb::adblock {
++
++class RuleMatcher {
++ public:
++  // True when `rule` matches `request` (pattern AND options).
++  static bool Matches(const NetworkFilterRule& rule,
++                      const RequestContext& request);
++
++  // Robust host extraction. GURL canonicalizes (lowercase, no port or
++  // userinfo); returns "" when the URL has no usable host. Replaces the
++  // Kotlin URI-parse + manual-fallback pair.
++  static std::string HostOf(const GURL& url);
++
++ private:
++  static bool OptionsSatisfied(const FilterOptions& options,
++                               const RequestContext& request);
++  static bool IsThirdPartyRequest(const RequestContext& request);
++  // `domain=` semantics (ABP): an entry matches when the document HOST is
++  // equal to the entry or a subdomain of it — full-host matching, not
++  // registrable-domain reduction.
++  static bool DocumentDomainAllowed(
++      const std::map<std::string, bool>& domains,
++      const RequestContext& request);
++  static bool HostMatchesDomain(const std::string& host,
++                                const std::string& domain);
++};
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_RULE_MATCHER_H_
+diff --git a/chrome/android/inweb/adblock/inweb_rule_matcher_unittest.cc b/chrome/android/inweb/adblock/inweb_rule_matcher_unittest.cc
+new file mode 100644
+index 0000000..fc4fe13
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_rule_matcher_unittest.cc
+@@ -0,0 +1,136 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — RuleMatcher unit tests.
++// Ported 1:1 from the Kotlin reference (RuleMatcherTest.kt).
++
++#include "chrome/android/inweb/adblock/inweb_rule_matcher.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_parser.h"
++
++#include "testing/gtest/include/gtest/gtest.h"
++
++namespace inweb::adblock {
++
++namespace {
++
++RequestContext Request(const std::string& url,
++                       const std::string& document = "https://news.example.com/story",
++                       ResourceType type = ResourceType::kImage) {
++  return RequestContext{GURL(url), GURL(document), type};
++}
++
++bool Matches(const std::string& line, const RequestContext& request) {
++  ParsedFilterList list = FilterListParser::Parse(line);
++  EXPECT_EQ(1u, list.network_rules.size());
++  return RuleMatcher::Matches(list.network_rules[0], request);
++}
++
++}  // namespace
++
++TEST(InwebRuleMatcherTest, DomainAnchorMatchesHostAndSubdomains) {
++  EXPECT_TRUE(Matches("||ads.example.com^",
++                      Request("https://ads.example.com/pixel.gif")));
++  EXPECT_TRUE(Matches("||ads.example.com^",
++                      Request("https://cdn.ads.example.com/pixel.gif")));
++  // End-of-URL separator.
++  EXPECT_TRUE(
++      Matches("||ads.example.com^", Request("https://ads.example.com")));
++}
++
++TEST(InwebRuleMatcherTest, DomainAnchorRejectsSimilarHosts) {
++  EXPECT_FALSE(Matches("||ads.example.com^",
++                       Request("https://notads.example.com/x")));
++  EXPECT_FALSE(Matches("||ads.example.com^",
++                       Request("https://ads.example.com.evil.net/x")));
++  EXPECT_FALSE(Matches("||ads.example.com^",
++                       Request("https://ads.example.company.com/x")));
++}
++
++TEST(InwebRuleMatcherTest, SeparatorRequiresBoundaryAfterPattern) {
++  EXPECT_TRUE(
++      Matches("||example.com^", Request("https://example.com:8080/x")));
++  EXPECT_TRUE(Matches("||example.com^", Request("https://example.com?utm=1")));
++  EXPECT_FALSE(
++      Matches("||example.com^", Request("https://example.community.com/x")));
++}
++
++TEST(InwebRuleMatcherTest, WildcardMatchesAnyCharacters) {
++  EXPECT_TRUE(Matches("||cdn.example.com/ads/*.js",
++                      Request("https://cdn.example.com/ads/foo.js")));
++  EXPECT_TRUE(Matches("||cdn.example.com/ads/*.js",
++                      Request("https://cdn.example.com/ads/a/b/c.js")));
++  EXPECT_FALSE(Matches("||cdn.example.com/ads/*.js",
++                       Request("https://cdn.example.com/ads/foo.css")));
++}
++
++TEST(InwebRuleMatcherTest, LeftAnchorAnchorsToUrlStart) {
++  EXPECT_TRUE(Matches("|https://example.com",
++                      Request("https://example.com/page")));
++  EXPECT_FALSE(Matches("|https://example.com",
++                       Request("https://evil.com/?u=https://example.com")));
++}
++
++TEST(InwebRuleMatcherTest, RightAnchorAnchorsToUrlEnd) {
++  EXPECT_TRUE(
++      Matches("/banner.gif|", Request("https://x.example.com/banner.gif")));
++  EXPECT_FALSE(Matches("/banner.gif|",
++                       Request("https://x.example.com/banner.gif?v=2")));
++}
++
++TEST(InwebRuleMatcherTest, PlainSubstringMatchesAnywhere) {
++  EXPECT_TRUE(Matches("tracker.js",
++                      Request("https://static.evil.net/libs/tracker.js?x=1")));
++  EXPECT_FALSE(
++      Matches("tracker.js", Request("https://static.evil.net/libs/other.js")));
++}
++
++TEST(InwebRuleMatcherTest, TypeOptionConstrainsMatching) {
++  const std::string line = "||ads.example.com^$script";
++  EXPECT_TRUE(Matches(line, Request("https://ads.example.com/x",
++                                    /*document=*/"", ResourceType::kScript)));
++  EXPECT_FALSE(Matches(line, Request("https://ads.example.com/x")));
++}
++
++TEST(InwebRuleMatcherTest, NegatedTypeOption) {
++  const std::string line = "||ads.example.com^$~script";
++  EXPECT_FALSE(Matches(line, Request("https://ads.example.com/x",
++                                     /*document=*/"", ResourceType::kScript)));
++  EXPECT_TRUE(Matches(line, Request("https://ads.example.com/x")));
++}
++
++TEST(InwebRuleMatcherTest, ThirdPartyOption) {
++  const std::string line = "||media.net^$third-party";
++  // Same registrable domain → first-party → no match.
++  EXPECT_FALSE(Matches(line, Request("https://cdn.media.net/t.gif",
++                                     "https://www.media.net/page")));
++  // Different registrable domain → third-party → match.
++  EXPECT_TRUE(Matches(line, Request("https://cdn.media.net/t.gif",
++                                    "https://news.example.com/story")));
++}
++
++TEST(InwebRuleMatcherTest, DomainOptionIncludesAndExcludes) {
++  const std::string line = "||ads.example^$domain=www.news.example|~meta.news.example";
++  EXPECT_TRUE(Matches(line, Request("https://ads.example/x",
++                                    "https://www.news.example/story")));
++  EXPECT_FALSE(Matches(line, Request("https://ads.example/x",
++                                     "https://meta.news.example/story")));
++  EXPECT_FALSE(Matches(line, Request("https://ads.example/x",
++                                     "https://blog.other.org/story")));
++}
++
++TEST(InwebRuleMatcherTest, DomainOptionMatchesDocumentSubdomains) {
++  const std::string line = "||ads.example^$domain=news.example.com";
++  EXPECT_TRUE(Matches(line, Request("https://ads.example/x",
++                                    "https://sub.news.example.com/story")));
++}
++
++TEST(InwebRuleMatcherTest, DomainOptionWithoutIncludesAppliesEverywhereButExcluded) {
++  const std::string line = "||ads.example^$domain=~news.example.com";
++  EXPECT_TRUE(Matches(line, Request("https://ads.example/x",
++                                    "https://blog.other.org/story")));
++  EXPECT_FALSE(Matches(line, Request("https://ads.example/x",
++                                     "https://sub.news.example.com/story")));
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
+new file mode 100644
+index 0000000..706fa31
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
+@@ -0,0 +1,161 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — tracking-protection engine (implementation).
++
++#include "chrome/android/inweb/adblock/inweb_tracking_protection_engine.h"
++
++#include <string>
++#include <utility>
++#include <vector>
++
++#include "base/strings/string_util.h"
++#include "base/synchronization/lock.h"
++#include "chrome/android/inweb/adblock/inweb_domain_classifier.h"
++#include "chrome/android/inweb/adblock/inweb_rule_matcher.h"
++
++namespace inweb::adblock {
++
++// --- TrackingProtectionSettings ---
++
++TrackingProtectionSettings::TrackingProtectionSettings() = default;
++
++TrackingProtectionSettings::TrackingProtectionSettings(
++    bool enabled,
++    CookiePolicy cookie_policy,
++    std::set<std::string> allowlisted_sites)
++    : enabled_(enabled),
++      cookie_policy_(cookie_policy),
++      allowlisted_sites_(std::move(allowlisted_sites)) {}
++
++bool TrackingProtectionSettings::IsSiteAllowlisted(
++    const std::string& host) const {
++  std::string h(base::TrimString(host, ".", base::TRIM_ALL));
++  h = base::ToLowerASCII(h);
++  if (h.empty()) {
++    return false;
++  }
++  for (const std::string& site : allowlisted_sites_) {
++    if (h == site || base::EndsWith(h, "." + site) ||
++        DomainClassifier::RegistrableDomain(h) == site) {
++      return true;
++    }
++  }
++  return false;
++}
++
++TrackingProtectionSettings TrackingProtectionSettings::WithAllowlistedSite(
++    const std::string& site) const {
++  std::set<std::string> sites = allowlisted_sites_;
++  sites.insert(base::ToLowerASCII(base::TrimString(site, " ", base::TRIM_ALL)));
++  return TrackingProtectionSettings(enabled_, cookie_policy_,
++                                    std::move(sites));
++}
++
++TrackingProtectionSettings TrackingProtectionSettings::WithoutAllowlistedSite(
++    const std::string& site) const {
++  std::set<std::string> sites = allowlisted_sites_;
++  sites.erase(base::ToLowerASCII(base::TrimString(site, " ", base::TRIM_ALL)));
++  return TrackingProtectionSettings(enabled_, cookie_policy_,
++                                    std::move(sites));
++}
++
++// --- EngineStatistics ---
++
++int EngineStatistics::block_count() const {
++  base::AutoLock lock(lock_);
++  return block_count_;
++}
++
++int EngineStatistics::allow_count() const {
++  base::AutoLock lock(lock_);
++  return allow_count_;
++}
++
++int EngineStatistics::pass_count() const {
++  base::AutoLock lock(lock_);
++  return pass_count_;
++}
++
++std::map<std::string, int> EngineStatistics::blocked_by_domain() const {
++  base::AutoLock lock(lock_);
++  return blocked_by_domain_;
++}
++
++void EngineStatistics::RecordBlock(const std::string& request_host) const {
++  base::AutoLock lock(lock_);
++  ++block_count_;
++  if (!request_host.empty()) {
++    const std::string domain =
++        DomainClassifier::RegistrableDomain(request_host);
++    ++blocked_by_domain_[domain];
++  }
++}
++
++void EngineStatistics::RecordAllow() const {
++  base::AutoLock lock(lock_);
++  ++allow_count_;
++}
++
++void EngineStatistics::RecordPass() const {
++  base::AutoLock lock(lock_);
++  ++pass_count_;
++}
++
++// --- TrackingProtectionEngine ---
++
++TrackingProtectionEngine::TrackingProtectionEngine(
++    std::vector<ParsedFilterList> parsed_lists,
++    TrackingProtectionSettings settings)
++    : settings_(std::move(settings)) {
++  size_t total = 0;
++  for (const ParsedFilterList& list : parsed_lists) {
++    total += list.network_rules.size();
++  }
++  rules_.reserve(total);
++  for (ParsedFilterList& list : parsed_lists) {
++    for (NetworkFilterRule& rule : list.network_rules) {
++      rules_.push_back(std::move(rule));
++    }
++  }
++}
++
++FilterDecision TrackingProtectionEngine::Decide(
++    const RequestContext& request) const {
++  if (!settings_.enabled()) {
++    return FilterDecision{.action = FilterAction::kPass};
++  }
++
++  const std::string document_host = RuleMatcher::HostOf(request.document_url);
++  if (!document_host.empty() && settings_.IsSiteAllowlisted(document_host)) {
++    FilterDecision decision;
++    decision.action = FilterAction::kAllow;
++    decision.allowlisted_site = document_host;
++    return decision;
++  }
++
++  const NetworkFilterRule* block_match = nullptr;
++  for (const NetworkFilterRule& rule : rules_) {
++    if (!RuleMatcher::Matches(rule, request)) {
++      continue;
++    }
++    if (rule.is_exception) {
++      statistics_.RecordAllow();
++      return FilterDecision{.action = FilterAction::kAllow, .matched_rule = &rule};
++    }
++    if (block_match == nullptr) {
++      block_match = &rule;
++    }
++  }
++
++  if (block_match == nullptr) {
++    statistics_.RecordPass();
++    return FilterDecision{.action = FilterAction::kPass};
++  }
++  statistics_.RecordBlock(RuleMatcher::HostOf(request.request_url));
++  return FilterDecision{.action = FilterAction::kBlock,
++                        .matched_rule = block_match};
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h
+new file mode 100644
+index 0000000..80c2c45
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h
+@@ -0,0 +1,115 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — tracking-protection / ad-blocking decision engine.
++//
++// Ported from the tested Kotlin reference implementation
++// (src/core/tracking-protection/…/TrackingProtectionEngine.kt).
++//
++// Decision order:
++//  1. engine disabled → PASS (nothing recorded)
++//  2. the document's site is user-allowlisted → ALLOW for the whole page
++//  3. a matching exception rule (@@) → ALLOW
++//  4. a matching blocking rule → BLOCK (first matching rule wins)
++//  5. otherwise → PASS
++//
++// Statistics count real decisions only — never fabricated (§24 honesty
++// rule). Decisions run on worker-pool threads (per the throttle design);
++// the engine snapshot is immutable after construction and the statistics
++// are lock-guarded, so Decide() is safe to call concurrently.
++//
++// v1 performs the full rule scan (`matchingRulesNaive` semantics in the
++// Kotlin reference); the combined matcher is the Phase 5 performance
++// deliverable (patch 0012) — PHASE4-ADBLOCK-DESIGN §5.
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_TRACKING_PROTECTION_ENGINE_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_TRACKING_PROTECTION_ENGINE_H_
++
++#include <map>
++#include <set>
++#include <string>
++#include <vector>
++
++#include "base/synchronization/lock.h"
++#include "chrome/android/inweb/adblock/inweb_filter_rule.h"
++#include "chrome/android/inweb/adblock/inweb_request_context.h"
++
++namespace inweb::adblock {
++
++// Cookie policy defaults (§10). Enforcement ships with the privacy engine
++// patch.
++enum class CookiePolicy { kAllowAll, kBlockThirdParty, kBlockAll };
++
++// Tracking-protection settings model (§10). These are the policy inputs
++// the engine patches enforce; they are NOT yet user-facing toggles (no UI
++// until the enforcing patches exist — §57).
++class TrackingProtectionSettings {
++ public:
++  TrackingProtectionSettings();
++  TrackingProtectionSettings(bool enabled,
++                             CookiePolicy cookie_policy,
++                             std::set<std::string> allowlisted_sites);
++
++  bool enabled() const { return enabled_; }
++  CookiePolicy cookie_policy() const { return cookie_policy_; }
++
++  // True when filtering is bypassed for pages on this host.
++  bool IsSiteAllowlisted(const std::string& host) const;
++
++  TrackingProtectionSettings WithAllowlistedSite(const std::string& site) const;
++  TrackingProtectionSettings WithoutAllowlistedSite(
++      const std::string& site) const;
++
++  const std::set<std::string>& allowlisted_sites() const {
++    return allowlisted_sites_;
++  }
++
++ private:
++  bool enabled_ = true;
++  CookiePolicy cookie_policy_ = CookiePolicy::kBlockThirdParty;
++  std::set<std::string> allowlisted_sites_;
++};
++
++// Real decision counters, backing Security Center statistics (§24).
++// Thread-safe: decisions run on worker-pool threads.
++class EngineStatistics {
++ public:
++  int block_count() const;
++  int allow_count() const;
++  int pass_count() const;
++  std::map<std::string, int> blocked_by_domain() const;
++
++  void RecordBlock(const std::string& request_host) const;
++  void RecordAllow() const;
++  void RecordPass() const;
++
++ private:
++  mutable base::Lock lock_;
++  mutable int block_count_ = 0;
++  mutable int allow_count_ = 0;
++  mutable int pass_count_ = 0;
++  mutable std::map<std::string, int> blocked_by_domain_;
++};
++
++// The decision engine. Immutable after construction except statistics.
++class TrackingProtectionEngine {
++ public:
++  TrackingProtectionEngine(std::vector<ParsedFilterList> parsed_lists,
++                           TrackingProtectionSettings settings);
++
++  FilterDecision Decide(const RequestContext& request) const;
++
++  const EngineStatistics& statistics() const { return statistics_; }
++  const TrackingProtectionSettings& settings() const { return settings_; }
++  const std::vector<NetworkFilterRule>& rules() const { return rules_; }
++
++ private:
++  std::vector<NetworkFilterRule> rules_;
++  TrackingProtectionSettings settings_;
++  EngineStatistics statistics_;
++};
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_TRACKING_PROTECTION_ENGINE_H_
+diff --git a/chrome/android/inweb/adblock/inweb_tracking_protection_engine_unittest.cc b/chrome/android/inweb/adblock/inweb_tracking_protection_engine_unittest.cc
+new file mode 100644
+index 0000000..2a21598
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_tracking_protection_engine_unittest.cc
+@@ -0,0 +1,120 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — TrackingProtectionEngine unit tests.
++// Ported 1:1 from the Kotlin reference (TrackingProtectionEngineTest.kt).
++
++#include "chrome/android/inweb/adblock/inweb_tracking_protection_engine.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_parser.h"
++
++#include "testing/gtest/include/gtest/gtest.h"
++
++namespace inweb::adblock {
++
++namespace {
++
++ParsedFilterList TestList() {
++  return FilterListParser::Parse(
++      "||ads.example.com^\n||tracker.net^$script,third-party\n@@||good.example.com^\n",
++      "test-list");
++}
++
++TrackingProtectionEngine Engine(TrackingProtectionSettings settings =
++                                   TrackingProtectionSettings()) {
++  std::vector<ParsedFilterList> lists;
++  lists.push_back(TestList());
++  return TrackingProtectionEngine(std::move(lists), std::move(settings));
++}
++
++RequestContext Request(const std::string& url,
++                       const std::string& document = "https://news.example.com/story",
++                       ResourceType type = ResourceType::kImage) {
++  return RequestContext{GURL(url), GURL(document), type};
++}
++
++}  // namespace
++
++TEST(InwebTrackingProtectionEngineTest, BlocksMatchingRequestWithRule) {
++  TrackingProtectionEngine engine = Engine();
++  const FilterDecision decision =
++      engine.Decide(Request("https://ads.example.com/pixel.gif"));
++  EXPECT_EQ(FilterAction::kBlock, decision.action);
++  ASSERT_NE(nullptr, decision.matched_rule);
++  EXPECT_EQ("||ads.example.com^", decision.matched_rule->raw);
++}
++
++TEST(InwebTrackingProtectionEngineTest, PassesUnmatchedRequest) {
++  const FilterDecision decision =
++      Engine().Decide(Request("https://cdn.example.org/logo.png"));
++  EXPECT_EQ(FilterAction::kPass, decision.action);
++  EXPECT_EQ(nullptr, decision.matched_rule);
++}
++
++TEST(InwebTrackingProtectionEngineTest, ExceptionRuleOverridesBlocking) {
++  TrackingProtectionEngine engine = Engine();
++  const FilterDecision decision =
++      engine.Decide(Request("https://good.example.com/api"));
++  EXPECT_EQ(FilterAction::kAllow, decision.action);
++  ASSERT_NE(nullptr, decision.matched_rule);
++  EXPECT_EQ("@@||good.example.com^", decision.matched_rule->raw);
++}
++
++TEST(InwebTrackingProtectionEngineTest, TypeConstrainedRuleOnlyBlocksItsType) {
++  const FilterDecision decision = Engine().Decide(
++      Request("https://tracker.net/lib.js", /*document=*/"", ResourceType::kScript));
++  EXPECT_EQ(FilterAction::kBlock, decision.action);
++
++  const FilterDecision image_decision =
++      Engine().Decide(Request("https://tracker.net/pixel.gif"));
++  EXPECT_EQ(FilterAction::kPass, image_decision.action);
++}
++
++TEST(InwebTrackingProtectionEngineTest,
++     PerSiteAllowlistBypassesFilteringForWholePage) {
++  const TrackingProtectionSettings settings =
++      TrackingProtectionSettings().WithAllowlistedSite("news.example.com");
++  const FilterDecision decision =
++      Engine(settings).Decide(Request("https://ads.example.com/pixel.gif"));
++  EXPECT_EQ(FilterAction::kAllow, decision.action);
++  EXPECT_EQ("news.example.com", decision.allowlisted_site);
++  EXPECT_EQ(nullptr, decision.matched_rule);
++}
++
++TEST(InwebTrackingProtectionEngineTest, DisabledEnginePassesEverything) {
++  const TrackingProtectionSettings settings(/*enabled=*/false,
++                                            CookiePolicy::kBlockThirdParty,
++                                            /*allowlisted_sites=*/{});
++  const FilterDecision decision =
++      Engine(settings).Decide(Request("https://ads.example.com/pixel.gif"));
++  EXPECT_EQ(FilterAction::kPass, decision.action);
++}
++
++TEST(InwebTrackingProtectionEngineTest, StatisticsCountRealDecisions) {
++  TrackingProtectionEngine engine = Engine();
++  engine.Decide(Request("https://ads.example.com/pixel.gif"));
++  engine.Decide(Request("https://sub.ads.example.com/other.gif"));
++  engine.Decide(Request("https://clean.example.org/logo.png"));
++
++  EXPECT_EQ(2, engine.statistics().block_count());
++  EXPECT_EQ(1, engine.statistics().pass_count());
++  EXPECT_EQ(0, engine.statistics().allow_count());
++  const std::map<std::string, int> by_domain =
++      engine.statistics().blocked_by_domain();
++  ASSERT_EQ(1u, by_domain.size());
++  EXPECT_EQ(2, by_domain.at("example.com"));
++}
++
++TEST(InwebTrackingProtectionEngineTest, AllowlistSiteHelpersRoundTrip) {
++  const TrackingProtectionSettings settings =
++      TrackingProtectionSettings().WithAllowlistedSite("News.Example.com");
++  EXPECT_EQ(1u, settings.allowlisted_sites().size());
++  EXPECT_NE(0u, settings.allowlisted_sites().count("news.example.com"));
++  EXPECT_TRUE(settings.IsSiteAllowlisted("news.example.com"));
++  EXPECT_TRUE(settings.IsSiteAllowlisted("sub.news.example.com"));
++  const TrackingProtectionSettings removed =
++      settings.WithoutAllowlistedSite("news.example.com");
++  EXPECT_TRUE(removed.allowlisted_sites().empty());
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
+index f261c72..21a2734 100644
+--- a/chrome/browser/BUILD.gn
++++ b/chrome/browser/BUILD.gn
+@@ -1663,6 +1663,7 @@ source_set("core") {
+     deps += [
+       ":profile_key_startup_accessor",
+       "//chrome/android:jni_headers",
++      "//chrome/android/inweb/adblock:inweb_adblock_engine",
+       "//chrome/browser/android",
+       "//chrome/browser/autocomplete",
+       "//chrome/browser/bookmarks",
+diff --git a/chrome/test/BUILD.gn b/chrome/test/BUILD.gn
+index f29c420..899ee74 100644
+--- a/chrome/test/BUILD.gn
++++ b/chrome/test/BUILD.gn
+@@ -6253,6 +6253,7 @@ test("unit_tests") {
+       "//chrome/android:chrome_java",
+       "//chrome/android:chrome_jni_headers",
+       "//chrome/android:delegate_public_impl_java",
++      "//chrome/android/inweb/adblock:unittests",
+       "//chrome/android/modules/dev_ui/provider:native",
+       "//chrome/browser/android",
+       "//chrome/browser/android:delta_file_proto",

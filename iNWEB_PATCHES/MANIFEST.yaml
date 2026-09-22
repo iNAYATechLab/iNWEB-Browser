@@ -152,3 +152,38 @@ patches:
       Small text patch on a rarely-touched vector XML; on logo change,
       re-trace the silhouette from the master with the documented
       pipeline (docs/design/BRAND.md).
+  - id: 0005-adblock-engine-native
+    file: adblock/0005-adblock-engine-native.patch
+    area: adblock
+    description: >-
+      Native ad-block decision engine (ADR-040): the tested Kotlin
+      tracking-protection core ported to C++ under
+      chrome/android/inweb/adblock/ — resource types, rule model,
+      RE2-based pattern compiler, PSL-backed domain classifier
+      (net::registry_controlled_domains), rule matcher, EasyList-family
+      subset parser, decision engine with settings and thread-safe
+      statistics, plus 4 unit-test files mirroring the Kotlin cases.
+      Two one-line upstream hooks (alphabetical deps slots):
+      chrome/browser BUILD.gn gains //chrome/android/inweb/adblock:
+      inweb_adblock_engine; chrome/test BUILD.gn gains :unittests.
+      v1 full-scan decide (combined matcher = patch 0012). Authoring
+      sources: src/native/adblock/.
+    upstream_files:
+      - chrome/browser/BUILD.gn
+      - chrome/test/BUILD.gn
+    risk: medium
+    validation: >-
+      Line-by-line port review against the Kotlin reference (920 lines,
+      116 tests); unit tests mirror the Kotlin cases (parser
+      classification, anchors, options, exceptions, allowlist, decision
+      order, statistics); apply_patches.py E2E with byte-identical
+      applied files (5-patch series, PEEL idempotence);
+      lint_manifest.py; host harness (scripts/native_harness - shimmed
+      base/GURL/PSL + real RE2): 36/36 mirrored unit tests pass, two
+      port/test defects caught and fixed before any build attempt. Full
+      compile + unit tests run in the b001-build-hop chain at the first
+      iNWEB APK build.
+    rebase_notes: >-
+      Two one-line BUILD.gn hook insertions; 18 new files under a new
+      directory upstream never touches. On rebase, re-sync from
+      src/native/adblock/ and re-diff.

@@ -1,0 +1,46 @@
+# iNWEB Browser — native ad-block engine build (patch 0005, ADR-040).
+#
+# Sources are authored at src/native/adblock/ in the iNWEB repository and
+# synced into this patch; the patch series is the single authority for the
+# Chromium tree.
+
+source_set("inweb_adblock_engine") {
+  sources = [
+    "inweb_domain_classifier.cc",
+    "inweb_domain_classifier.h",
+    "inweb_filter_list_parser.cc",
+    "inweb_filter_list_parser.h",
+    "inweb_filter_rule.h",
+    "inweb_pattern_compiler.cc",
+    "inweb_pattern_compiler.h",
+    "inweb_request_context.h",
+    "inweb_resource_type.h",
+    "inweb_rule_matcher.cc",
+    "inweb_rule_matcher.h",
+    "inweb_tracking_protection_engine.cc",
+    "inweb_tracking_protection_engine.h",
+  ]
+
+  deps = [
+    "//base",
+    "//net",
+    "//third_party/re2",
+    "//url",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+  sources = [
+    "inweb_domain_classifier_unittest.cc",
+    "inweb_filter_list_parser_unittest.cc",
+    "inweb_rule_matcher_unittest.cc",
+    "inweb_tracking_protection_engine_unittest.cc",
+  ]
+
+  deps = [
+    ":inweb_adblock_engine",
+    "//testing/gtest",
+    "//testing/gmock",
+  ]
+}
