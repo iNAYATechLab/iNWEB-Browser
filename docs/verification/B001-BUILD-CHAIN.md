@@ -40,8 +40,9 @@ The chain exists because the *whole* build (~60k–78k edges depending on execut
 | 35434012516 | 9 | 09-19 | 4h40m | **fresh** | **ninja** | `[28452/59908]` | deliberate restart to switch executor — one-time cost of fixing §3.2 ✓ |
 | 35447512278 | 10 | 09-19 | 4h41m | state-9 | ninja | plan `31456` = exact remainder; `6630` done (~25/min, blink CXX) | **real advance; resume math exact** ✓ |
 | 35641788135 | 11 | 09-21 | 1h37m | state-10 | ninja | cancelled mid-box **by author order** (this audit) | ~1.3 h compile discarded; state-10 intact |
+| 35652613459 | 12 | 09-21 | 4h46m | state-10 | ninja | plan `24826` = exact audit remainder; `12985` done (~49/min, content/browser region); state-12 = 2.6 GB / 37,523 objects | **real advance ✓** first hop on the audited workflow (4711311); depot_tools cache saved on first use |
 
-**Totals:** ≈39.4 h of hosted-runner time over 11 runs; ≈24 h attributable to the defects/restart below; ≈15 h of genuine compile progress (hops 2, 9, 10, and the partial 11).
+**Totals:** ≈44 h of hosted-runner time over 12 runs; ≈24 h attributable to the defects/restart below; ≈20 h of genuine compile progress (hops 2, 9, 10, and 12).
 
 ## 3. Root causes of the waste — and their (already-landed) fixes
 
@@ -56,8 +57,9 @@ The chain exists because the *whole* build (~60k–78k edges depending on execut
 - Stage-1 B-3 (autoninja/siso, early graph): **267 edges/min** (18,104 edges in 1h07m44s). The 39.7/min figure was an arithmetic error — do not reuse.
 - Hop 9 (ninja, early graph: ACTION/STAMP-heavy): **~107 edges/min** (28,452 in 265 m).
 - Hop 10 (ninja, blink CXX region — the slowest part of any Chromium build): **~25 edges/min** (6,630 in 265 m).
+- Hop 12 (ninja, content/browser CXX region): **~49 edges/min** (12,985 in 265 m).
 
-**Remaining after state-10:** 31,456 − 6,630 = **24,826 edges**. At hop-10's slow-region rate ≈ 993 compile-minutes ≈ **3.75 boxes**; later regions include both slow CXX and faster packaging edges, so the honest estimate is **4–5 further hops (~18–22 h)** to `chrome_public_apk`. Estimates must always quote the measured per-region rate, never a single blended number.
+**Remaining after state-12:** 24,826 − 12,985 = **11,841 edges**. At the measured regional rates (25–49/min) ≈ 242–474 compile-minutes ≈ **1–2 further hops** to `chrome_public_apk`. Estimates must always quote the measured per-region rate, never a single blended number.
 
 ## 5. Optimizations shipped with this audit (this commit)
 

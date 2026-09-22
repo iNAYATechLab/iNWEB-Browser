@@ -1084,17 +1084,19 @@ next_action: >-
 
 ## In progress
 
-- Step 50 — chained resumable build (b001-build-hop.yml). Chain at **state-10**
-  (run 35447512278; ninja resume math exact: plan 31,456 = hop-9 remainder;
-  6,630 done in-box at ~25 edges/min in the blink CXX region; **24,826 edges
-  remain ≈ 4–5 hops**). 2026-09-22 audit per author directive: hop 11
-  cancelled mid-box; all 11 runs audited — ≈24 h of the ≈39 h spent were
+- Step 50 — chained resumable build (b001-build-hop.yml). Chain at **state-12**
+  (run 35652613459, first hop on the audited workflow 4711311: resumed state-10
+  exactly — plan 24,826 = audit remainder; 12,985 edges done at ~49/min;
+  out = 17 GB / 37,523 objects; state-12 = 2.6 GB). **11,841 edges remain
+  ≈ 1–2 hops.** 2026-09-22 audit per author directive: hop 11 cancelled
+  mid-box; all runs audited — ≈24 h of the ≈44 h spent were
   defect-attributable (resume-download bug, siso restat, executor restart),
-  all root causes fixed and verified by hop-10's exact-resume; verification
-  separated from compilation (new b001-verify.yml, no-compile, push-triggered);
-  depot_tools cached on its pinned rev; ninja-jobs input added. Full ledger +
-  accounting: docs/verification/B001-BUILD-CHAIN.md. Next: hop 12
-  (resume state-10, ninja, -j6).
+  all root causes fixed and verified by exact-remainder resumes (hops 10, 12);
+  verification separated from compilation (new b001-verify.yml, no-compile,
+  push-triggered); depot_tools cached on its pinned rev (saved by hop-12);
+  ninja-jobs input added. Full ledger + accounting:
+  docs/verification/B001-BUILD-CHAIN.md. Next: hop 13
+  (resume state-12, ninja, -j6).
 
 ## Not started
 
