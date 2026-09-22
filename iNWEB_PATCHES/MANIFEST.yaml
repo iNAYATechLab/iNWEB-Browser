@@ -303,8 +303,9 @@ patches:
       AddNewContents signature + the "beyond the popup blocker" consent
       comment were verified against the pinned tree (sparse partial
       clone). apply_patches E2E on the 8-patch series with byte-identical
-      applied files and PEEL idempotence; lint_manifest.py. Compile +
-      unit tests run in the b001-build-hop chain.
+      applied files and PEEL idempotence; lint_manifest.py; b001-verify
+      (patches mode) PASS on the real fetched tree (run 35763178532,
+      commit d585887). Compile + unit tests run in the b001-build-hop chain.
     rebase_notes: >-
       Three upstream hunks: tab_web_contents_delegate_android.cc (sorted
       include slot before chrome/browser/actor/actor_util.h; guard block

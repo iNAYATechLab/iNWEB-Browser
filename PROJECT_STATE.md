@@ -1239,8 +1239,8 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   the 14-run resumable B-001 chain (hop 14 = run 35715711786; full ledger:
   `docs/verification/B001-BUILD-CHAIN.md`). B-3 (real build completes) and
   B-4 (real verified artifact) evidence recorded.
-- **Stage 2 in progress** — iNWEB patch series: **0001–0007 authored**
-  (7/24). CI-verified on the real pinned tree: 0001–0004 (b001-verify
+- **Stage 2 in progress** — iNWEB patch series: **0001–0008 authored**
+  (8/24). CI-verified on the real pinned tree: 0001–0004 (b001-verify
   35749687902 @75c71fa) and 0005–0006 — the native ad-block engine +
   URL-loader throttle wiring (b001-verify **35756172332 @4bb5024:
   `TAG: PASS`, `PATCHES: PASS`**; ci-authoring 35756172362 green).
@@ -1248,7 +1248,13 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   RFC-2606 device-test fixture, Security Center read path — ADR-041)
   CI-verified too: b001-verify **35758519450 @9b2b7ab: `TAG: PASS`,
   `PATCHES: PASS` (7-patch series)**; ci-authoring 35758519623 green.
-  The ad-block core series (0005–0007) is complete and verified. The Android UI sources compile inside
+  0008 (popup window guard at the WebContentsDelegate consent point —
+  first real call site for $popup rules, §24 counters) CI-verified:
+  b001-verify **35763178532 @d585887: `PATCHES: PASS` (8-patch series)**;
+  ci-authoring 35763178530 green. The ad-block core (0005–0007) and the
+  popup guard (0008) are complete and verified; the popup series
+  continues with the redirect throttle (0009), notification policy
+  (0010), and download guard (0011). The Android UI sources compile inside
   the Chromium build once the integration patches land (see
   `docs/phases/PHASE2-INTEGRATION-PLAN.md`).
 - **Next build:** incremental resume from cached state-13 → first

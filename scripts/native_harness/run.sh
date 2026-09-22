@@ -26,5 +26,5 @@ mapfile -t TESTS < <(ls "$REPO"/src/native/adblock/*_unittest.cc "$REPO"/src/nat
 g++ -std=c++20 -I"$HERE/shims" -I"$ROOT" \
   "$HERE/shims/url/gurl.cc" "$HERE/shims/base/strings/string_util.cc" \
   "$HERE/shims/net/base/registry_controlled_domains.cc" \
-  "${ENGINE[@]}" "${TESTS[@]}" "$HERE/main.cc" "$LIBRE2" -o "$HERE/run_tests"
+  "${ENGINE[@]}" "${TESTS[@]}" "$HERE/main.cc" "$LIBRE2" -lcrypto -o "$HERE/run_tests"
 "$HERE/run_tests"

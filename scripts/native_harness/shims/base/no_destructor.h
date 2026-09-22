@@ -14,8 +14,8 @@ class NoDestructor {
   T& operator*() { return *get(); }
   const T* operator->() const { return get(); }
   T* operator->() { return get(); }
-  const T* get() const { return reinterpret_cast<const T*>(storage_); }
   T* get() { return reinterpret_cast<T*>(storage_); }
+  const T* get() const { return reinterpret_cast<const T*>(storage_); }
  private:
   alignas(T) unsigned char storage_[sizeof(T)];
 };
