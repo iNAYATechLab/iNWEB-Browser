@@ -1237,10 +1237,11 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   the 14-run resumable B-001 chain (hop 14 = run 35715711786; full ledger:
   `docs/verification/B001-BUILD-CHAIN.md`). B-3 (real build completes) and
   B-4 (real verified artifact) evidence recorded.
-- **Stage 2 in progress** — iNWEB patch series: 0001–0003 authored; the
+- **Stage 2 in progress** — iNWEB patch series: 0001–0004 authored; the
   series applied cleanly on the real pinned tree in b001-verify run
-  35739593282 (`PATCHES: PASS`). Patch 0003 reworked to the user-selected
-  v1 logo (local validation complete; rides the next batch verify). The
+  35739593282 (`PATCHES: PASS`, 0001–0003 content at that commit); patch
+  0003 reworked to the user-selected v1 logo and 0004 (monochrome themed
+  icon) added — both locally validated and riding the next batch verify. The
   Android UI sources compile inside the Chromium build once the
   integration patches land (see `docs/phases/PHASE2-INTEGRATION-PLAN.md`).
 - **Next build:** incremental resume from cached state-13 → first
@@ -1273,12 +1274,11 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Stage 2 — iNWEB patch series (batch pipeline):** author patch 0004
-(Android 13+ monochrome themed icon from the v1 logo silhouette), then
-push the pending batch (0003 rework + 0004) for a single b001-verify run;
-continue with the adblock series (0005+) per
-`docs/phases/PHASE4-ADBLOCK-DESIGN.md`, then popup protection, extensions,
-offline, security, settings; after the full series verifies, dispatch the
-incremental build hop (resume from state-13) for the first iNWEB-branded
-APK → v1.0.0-alpha.2, then the B-5…B-8 device matrix and G-closure per
-`docs/DEVICE-VERIFICATION-MATRIX.md`.
+**Stage 2 — adblock series (0005+):** the 0001–0004 batch is pushed
+(single b001-verify + ci-authoring run in flight; record the verdict
+lines here when green); author the adblock patch series per
+`docs/phases/PHASE4-ADBLOCK-DESIGN.md`, then popup protection,
+extensions, offline, security, settings; after the full series verifies,
+dispatch the incremental build hop (resume from state-13) for the first
+iNWEB-branded APK → v1.0.0-alpha.2, then the B-5…B-8 device matrix and
+G-closure per `docs/DEVICE-VERIFICATION-MATRIX.md`.

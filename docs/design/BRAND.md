@@ -92,8 +92,10 @@ crisper silhouette is the documented remedy (author decision, as v1 was).
 
 ## Pending brand work
 
-- **Monochrome themed icon** (`themed_app_icon.xml`, Android 13+): vector XML
-  derived from the v1 mark's silhouette — planned patch 0004.
+- **Monochrome themed icon** (`themed_app_icon.xml`, Android 13+): done — patch
+  0004 traces the v1 mark's silhouette (2 outer contours + 1 counter, evenOdd)
+  into the upstream vector slot; preview:
+  [`assets/themed-icon-silhouette-preview.png`](assets/themed-icon-silhouette-preview.png).
 - **512 × 512 store icon** at Play Store submission time (derived from the
   same master).
 - Non-English in-app strings fall back to English until iNWEB ships its own

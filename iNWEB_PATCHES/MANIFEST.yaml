@@ -123,5 +123,33 @@ patches:
     rebase_notes: >-
       Binary patch - on rebase, regenerate assets from the master
       (assets/logo/inweb_logo_master.png, user-provided v1 logo)
-      and re-diff. themed_app_icon.xml (Android 13+ monochrome) not yet
-      rebranded; planned for the final polish patch.
+      and re-diff. themed_app_icon.xml (Android 13+ monochrome) is
+      rebranded by patch 0004.
+  - id: 0004-themed-app-icon
+    file: ui/0004-themed-app-icon.patch
+    area: ui
+    description: >-
+      iNWEB monochrome themed app icon (Android 13+): replaces the Chrome
+      glyph in res_chromium_base/drawable/themed_app_icon.xml with a
+      vector silhouette of the iNWEB v1 logo mark, traced from the master
+      (assets/logo/inweb_logo_master.png), simplified (Douglas-Peucker)
+      and fitted into the upstream 36x36 safe-zone clip at the center of
+      the 90x90 viewport. Upstream vector/group/clip-path structure kept;
+      single evenOdd path (2 outer contours + 1 counter), ~2.4 KB
+      pathData.
+    upstream_files:
+      - chrome/android/java/res_chromium_base/drawable/themed_app_icon.xml
+    risk: low
+    validation: >-
+      Trace QA (threshold plateau 0.49-0.53 across 64-192 with constant
+      component count; glyph box 28.0,28.8-62.0,61.2 inside the clip
+      zone; area coverage 0.51; centroid offset under 1 unit);
+      silhouette preview archived at docs/design/assets/
+      themed-icon-silhouette-preview.png for author visual acceptance;
+      git apply/--reverse round-trip byte-identical; apply_patches.py E2E
+      (4-patch series, PEEL idempotence); lint_manifest.py; b001-verify
+      on the real tree rides the batch push.
+    rebase_notes: >-
+      Small text patch on a rarely-touched vector XML; on logo change,
+      re-trace the silhouette from the master with the documented
+      pipeline (docs/design/BRAND.md).

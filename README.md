@@ -21,8 +21,8 @@ written in Kotlin.
 
 | Item | State |
 |---|---|
-| Development phase | **Stage 2 — iNWEB patch-series authoring** (v1.0.0-alpha.1 engine baseline released 2026-09-22; Phases 0–12 authoring complete; 24-patch series in progress: 0001–0003 authored) |
-| Current step | 50 complete · Stage 2: patch series 3/24 authored |
+| Development phase | **Stage 2 — iNWEB patch-series authoring** (v1.0.0-alpha.1 engine baseline released 2026-09-22; Phases 0–12 authoring complete; 24-patch series in progress: 0001–0004 authored) |
+| Current step | 50 complete · Stage 2: patch series 4/24 authored |
 | Chromium baseline | `154.0.8037.21` (upstream Android **stable**, pinned 2026-09-12) |
 | Fork strategy | Tracked iNWEB patch overlay on pinned upstream stable tags (ADR-001) |
 | Core module (`src/core/browser-shell`) | **Implemented & unit-tested — 150 Kotlin tests** (tabs incl. switcher view, omnibox, session, history + bookmarks + top sites incl. persistent file stores, downloads, settings incl. onboarding flag, page-zoom §23 with per-site overrides + Chromium preset table, download preferences §23) |
