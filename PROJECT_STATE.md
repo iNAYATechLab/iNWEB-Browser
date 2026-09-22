@@ -1100,7 +1100,13 @@ next_action: >-
   (689 MB). Release asset sha256 verified identical to the build hash
   098fff9c…c9799b (runner → artifact → release, bit-for-bit). Release notes
   state honestly what the alpha is (real-engine baseline) and is not (iNWEB
-  patch layer pending, Stage 2). Full chain ledger,
+  patch layer pending, Stage 2).
+- **First field use (2026-09-22, author-reported, anecdotal — not a formal
+  B-5 verdict):** the author installed v1.0.0-alpha.1 on their phone and
+  conducted an interactive Arena.ai chat session through it — install,
+  launch, networking, rendering and input all worked in real use. The
+  author is the browser's first user; the build conversation now runs
+  inside the browser it built. Full chain ledger,
   audit and result: docs/verification/B001-BUILD-CHAIN.md. Chain history: 14
   runs / ~45 h; ~24 h defect-attributable, all root causes fixed and proven by
   exact-remainder resumes (hops 10, 12, 13); verification separated from
