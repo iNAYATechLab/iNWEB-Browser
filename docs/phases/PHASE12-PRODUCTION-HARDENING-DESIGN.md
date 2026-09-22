@@ -22,7 +22,7 @@ documentation, store readiness.
 
 | §53 bullet | Concrete scope | Pre-B-001 (authoring/CI) | B-001-gated (device/build) |
 |---|---|---|---|
-| Security audit | Threat-model review vs implemented cores; secrets handling (SecretValue, KNOWN_STORES); pinned toolchain/actions; patch risk labels | review pass over `docs/THREAT-MODEL.md` vs cores + ADR log | full audit on the built APK (permissions, network, storage) |
+| Security audit | Threat-model review vs implemented cores; secrets handling (SecretValue, KNOWN_STORES); pinned toolchain/actions; patch risk labels | review pass over `../THREAT-MODEL.md` vs cores + ADR log | full audit on the built APK (permissions, network, storage) |
 | Performance audit | Filter-engine benchmark (done: 0.10 ms block, 21 MB heap); startup/RAM/battery budgets | keep benchmark on demand; budget table | on-device measurements incl. Chromium multi-process behavior (§52) |
 | Regression testing | The CI suite IS the regression net: 382 Kotlin core + 50 Python + 5 gates (registry, strings, externalization, structure, storage inventory) | keep green; add gates when a new defect class appears | instrumentation/UI tests on the built app |
 | Crash testing | §51 contracts: every persisted store has a corruption/recovery behavior; crash-safe writes | **storage inventory gate (Step 35, live)** + recovery contracts in core tests | kill/fuzz testing on device; ANR/crash loops |
@@ -32,7 +32,7 @@ documentation, store readiness.
 
 ## 2. First item — implemented (Step 35): the storage inventory gate
 
-`docs/STORAGE-INVENTORY.yaml` + `scripts/validate_storage_inventory.py`
+`../STORAGE-INVENTORY.yaml` + `scripts/validate_storage_inventory.py`
 (12 unit tests, wired into CI):
 
 - **23 surfaces** (14 seams + 9 adapters) each documented with: what it
@@ -52,7 +52,7 @@ documentation, store readiness.
 ## 3. Remaining items (proposed order)
 
 1. ~~**Threat-model review pass**~~ — **done (Step 36)**:
-   `docs/THREAT-MODEL-REVIEW.md` (14-row coverage matrix, 10-item gap
+   `../THREAT-MODEL-REVIEW.md` (14-row coverage matrix, 10-item gap
    register — tracked, never silent).
 2. ~~**Clear-data core**~~ — **done (Step 37 core, Step 38 authored
    surface, per ADR-034)**: item universe = the inventory's clear

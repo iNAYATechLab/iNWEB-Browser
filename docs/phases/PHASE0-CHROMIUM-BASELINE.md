@@ -97,4 +97,4 @@ iNWEB_PATCHES/
 4. Patches are kept small and orthogonal; unrelated changes may not be combined into one
    patch (§55 incremental discipline, applied at patch level).
 5. Any patch touching the process model, sandboxing, IPC, or permissions requires a
-   security review note before it may enter the series (see `THREAT-MODEL.md`).
+   security review note before it may enter the series (see `../THREAT-MODEL.md`).

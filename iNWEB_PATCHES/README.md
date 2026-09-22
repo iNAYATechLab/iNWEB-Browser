@@ -70,6 +70,6 @@ python3 scripts/apply_patches.py hash /path/to/chromium/src
 
 ## Rebase discipline
 
-At every upstream rebase (`docs/PHASE0-CHROMIUM-BASELINE.md` §3), each patch is
+At every upstream rebase (`docs/phases/PHASE0-CHROMIUM-BASELINE.md` §3), each patch is
 recorded in the rebase report as: `clean` | `conflict-resolved (how)` |
 `reworked (why)` | `dropped (why)`.

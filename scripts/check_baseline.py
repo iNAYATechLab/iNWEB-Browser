@@ -4,7 +4,7 @@
 Data source: the public Chrome Version History API.
 
 Exit codes: 0 = pinned baseline is current; 1 = a newer upstream Android stable
-exists (baseline drift — rebase required per docs/PHASE0-CHROMIUM-BASELINE.md);
+exists (baseline drift — rebase required per docs/phases/PHASE0-CHROMIUM-BASELINE.md);
 2 = tool error.
 """
 from __future__ import annotations

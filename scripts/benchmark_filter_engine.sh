@@ -6,7 +6,7 @@
 # Compiles the tracking-protection main sources + the benchmark main with the
 # pinned kotlinc, then runs the synthetic EasyList-scale benchmark. Numbers
 # are hardware- and JVM-specific; record them with hardware context
-# (docs/PHASE5-PERFORMANCE-DESIGN.md keeps the baseline log).
+# (docs/phases/PHASE5-PERFORMANCE-DESIGN.md keeps the baseline log).
 #
 # Usage:   bash scripts/benchmark_filter_engine.sh [rules] [decisions]
 # Default: 25000 rules, 200 decisions per workload.

@@ -9,7 +9,7 @@ proceeds. **No WebView fallback is used or permitted** (§2, §71).
 
 ## 1. Method
 
-- Read and analyzed the governing master specification (`MASTER-SPEC.md`).
+- Read and analyzed the governing master specification (`../MASTER-SPEC.md`).
 - Inspected the project repository: pre-existing, empty, single branch `main`.
 - Measured the authoring sandbox (CPU, RAM, disk, tooling, session model).
 - Verified upstream Chromium-for-Android build requirements from the official
@@ -79,7 +79,7 @@ processes between sessions. These are platform limits, not project decisions.
 - a **self-hosted GitHub Actions runner**, or
 - an equivalent cloud VM,
 
-matching the specification in `docs/BUILD-INFRASTRUCTURE.md` §2 (minimum 16 cores /
+matching the specification in `../BUILD-INFRASTRUCTURE.md` §2 (minimum 16 cores /
 64 GB RAM / 300 GB SSD, Ubuntu 22.04/24.04 x86-64, Docker, network to googlesource and
 Google storage). This is a user-provisioned external resource. Until it exists, the
 project authoring continues at full speed; only compile/link/emit-artifact steps wait.

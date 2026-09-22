@@ -60,7 +60,7 @@ next_action: >-
     accessibility labels, home screen, ViewModel binding to core
   - Localized resources: 36 strings in English + Bengali with placeholder
     parity; `validate_strings.py` validator + 9 Python tests
-  - `docs/PHASE2-INTEGRATION-PLAN.md`: patch-by-patch Chromium integration plan
+  - `docs/phases/PHASE2-INTEGRATION-PLAN.md`: patch-by-patch Chromium integration plan
     (inweb_public_apk target, engine adapter, sync + validation checklist)
   - CI extended: Kotlin core test job + string parity validation
 - [x] **Step 4 — Phase 2: Browser Shell (surfaces + persistence)** (2026-09-12)
@@ -206,7 +206,7 @@ next_action: >-
     setup-python v5→v7, setup-java v4→v6, cache v4→v6) — clears the
     Node 20 deprecation annotations; Kotlin job renamed to reflect the
     two modules it validates
-  - `docs/PHASE2-INTEGRATION-PLAN.md`: new "Surface-by-surface
+  - `docs/phases/PHASE2-INTEGRATION-PLAN.md`: new "Surface-by-surface
     engine-adapter binding contract" (§3) covering tabs, omnibox,
     history, bookmarks, downloads, home, onboarding/settings, and
     tracking protection — plus an expanded build-time validation
@@ -236,7 +236,7 @@ next_action: >-
   - Kotlin total 194 (browser-shell 115 + tracking-protection 79)
 
 - [x] **Step 14 — Phase 4: adblock patch-series design document** (2026-09-12)
-  - New `docs/PHASE4-ADBLOCK-DESIGN.md`: the `adblock/` patch-area
+  - New `docs/phases/PHASE4-ADBLOCK-DESIGN.md`: the `adblock/` patch-area
     design — `URLLoaderThrottle` interception with deferred
     background-thread decisions (rationale table vs. alternatives),
     resource-type mapping table (`RequestDestination` → engine
@@ -252,7 +252,7 @@ next_action: >-
     deliverables landed; enforcement remains B-001-gated)
 
 - [x] **Step 15 — Phase 4: popup-protection patch-series design (§12)** (2026-09-12)
-  - New `docs/PHASE4-POPUP-PROTECTION-DESIGN.md`: five protection
+  - New `docs/phases/PHASE4-POPUP-PROTECTION-DESIGN.md`: five protection
     surfaces — (A) popup blocking at the window-creation consent point
     (user-activation policy + the real call site for `$popup` engine
     rules + blocked-popup chip with open-once/allowlist), (B) unwanted
@@ -278,7 +278,7 @@ next_action: >-
     CSS with exception cancellation; `FilterListManager` parses cosmetic
     beside network lists and exposes `buildCosmeticEngine()` — 13 new
     tests
-  - New `docs/PHASE4-COSMETIC-DESIGN.md`: per-frame stylesheet
+  - New `docs/phases/PHASE4-COSMETIC-DESIGN.md`: per-frame stylesheet
     injection at document-commit via the content-layer CSS API (worker-
     thread query, host from the committed origin), one-path policy
     (same settings/allowlist), planned registry entry
@@ -297,7 +297,7 @@ next_action: >-
     ~187k rules/sec; decisions **~16.5 ms (block) / ~18.1 ms (pass)**;
     heap ~111 MB — honest conclusion: v1 is correct but NOT production-
     viable; a 50–100-request page would cost ~0.8–1.8 s CPU
-  - New `docs/PHASE5-PERFORMANCE-DESIGN.md`: budgets as verification
+  - New `docs/phases/PHASE5-PERFORMANCE-DESIGN.md`: budgets as verification
     targets (per-request p95 < 1 ms, engine memory < 60 MB, startup
     off-critical-path, cold start within 10% of vanilla same-tag build);
     combined-matcher design (Step 18) with an explicit decision-
@@ -324,7 +324,7 @@ next_action: >-
   - Kotlin total 217 (browser-shell 115 + tracking-protection 102)
 
 - [x] **Step 19 — Phase 6: extension system design + Phase 5 close-out (§16)** (2026-09-12)
-  - New `docs/PHASE6-EXTENSION-DESIGN.md`: all eight §16 documentation
+  - New `docs/phases/PHASE6-EXTENSION-DESIGN.md`: all eight §16 documentation
     items — supported/partial/unsupported API table (v1 target, to be
     confirmed by a build-time audit that regenerates the table from
     the real APK — release notes show reality, not intent);
@@ -361,7 +361,7 @@ next_action: >-
     the new module in CI
 
 - [x] **Step 21 — Phase 7: offline reading & data-saving design (§17/§18/§19)** (2026-09-12)
-  - New `docs/PHASE7-OFFLINE-DESIGN.md`: reuse-not-rebuild strategy
+  - New `docs/phases/PHASE7-OFFLINE-DESIGN.md`: reuse-not-rebuild strategy
     (upstream DOM distiller for reader mode, Android MHTML offline
     pages for snapshots, browsing-data remover for cache clearing);
     data saver = rule-class mode over OUR filter engine — counters
@@ -394,7 +394,7 @@ next_action: >-
     extensions 17 + offline 14 + tracking-protection 102)
 
 - [x] **Step 23 — Phase 8: VPN & security design (§15/§25/§26/§27)** (2026-09-12)
-  - New `docs/PHASE8-VPN-SECURITY-DESIGN.md`: VPN = REAL Android
+  - New `docs/phases/PHASE8-VPN-SECURITY-DESIGN.md`: VPN = REAL Android
     VpnService + WireGuard-protocol client with a BRING-YOUR-OWN-server
     model — iNWEB operates no servers, no traffic-protection claims
     beyond the user's endpoint; full-tunnel routing, DNS through the
@@ -435,7 +435,7 @@ next_action: >-
     extensions 17 + offline 14 + vpn 17 + tracking-protection 102)
 
 - [x] **Step 25 — Phase 9: profiles/sync/backup design (§28/§29/§30/§31/§32)** (2026-09-12)
-  - New `docs/PHASE9-PROFILES-SYNC-DESIGN.md`: profiles with REAL
+  - New `docs/phases/PHASE9-PROFILES-SYNC-DESIGN.md`: profiles with REAL
     isolation — per-profile namespaces for every iNWEB-owned store
     (isolation enforced at store construction, not cosmetic names) and
     per-profile Chromium user-data dirs for cookies/cache; cloud sync =
@@ -525,7 +525,7 @@ next_action: >-
   - Current authored UI: ZERO violations, ZERO escape hatches — fully
     externalized with full bn-BD parity (validate_strings continues
     to enforce bidirectional key + placeholder parity)
-  - New `docs/PHASE10-LOCALIZATION-ACCESSIBILITY-DESIGN.md`: §36
+  - New `docs/phases/PHASE10-LOCALIZATION-ACCESSIBILITY-DESIGN.md`: §36
     policy (en+bn-BD first-class, same-commit parity, plurals/locale
     formatters, no machine-translation claims, prose quality =
     human-review deliverable) + §49 authoring contracts (TalkBack
@@ -536,7 +536,7 @@ next_action: >-
   - ADR-027 recorded; Python total 38 (30 + 8)
 
 - [x] **Step 30 — Phase 11: notifications & advanced features design (§33/§34/§23)** (2026-09-12)
-  - New `docs/PHASE11-NOTIFICATIONS-FEATURES-DESIGN.md`: §33 policy —
+  - New `docs/phases/PHASE11-NOTIFICATIONS-FEATURES-DESIGN.md`: §33 policy —
     minimal-by-default, real events only, every channel toggleable,
     POST_NOTIFICATIONS requested lazily at the first REAL notification
     (§41-aligned); v1 channel plan mapped to real event sources
@@ -681,7 +681,7 @@ next_action: >-
     Phase 11 items are B-001-gated patch entries)
 
 - [x] **Step 35 — Phase 12: hardening design + storage inventory gate (§50/§51)** (2026-09-12)
-  - New `docs/PHASE12-PRODUCTION-HARDENING-DESIGN.md`: §53's seven
+  - New `docs/phases/PHASE12-PRODUCTION-HARDENING-DESIGN.md`: §53's seven
     bullets (security/performance audit, regression/crash testing,
     release engineering, documentation, store readiness) each mapped
     to concrete pre-B-001 vs B-001-gated work with status; proposed
@@ -1170,7 +1170,7 @@ next_action: >-
 - **Continues without blocker:** All authoring work; live CI (Python + Kotlin core);
   patch framework; application source; documentation.
 
-Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
+Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Known defects
 
@@ -1229,75 +1229,38 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 | ADR-036 | 2026-09-12 | Filter-list content integrity (G-07): every downloaded body is pinned with its SHA-256 (platform MessageDigest, ADR-025) in the cache metadata and re-verified on every cache load; a mismatch is corruption/tampering and the copy is NEVER served — re-download when allowed, otherwise an honest Failed(servedFromCache=false); metadata wire format gains an optional contentSha256 line (safe: no v=1 file exists in the wild, B-001); legacy checksum-less copies are served as-is (documented tolerance, not silent fixing) | closes the threat-register supply-chain gap: cached list content can no longer be silently corrupted or tampered with; integrity pinning is claimed, a publisher signature is NOT (no upstream source signs, §57) |
 | ADR-037 | 2026-09-22 | Privacy-preserving usage statistics pledge (author-directed): any future usage/install metrics are strictly OPT-IN (default off), anonymous, aggregated-only, and disclosed in settings; no personal data, browsing history, or per-user tracking is ever collected by iNWEB — the browser that blocks trackers must never secretly track its own users; distribution signals (GitHub download counter, future store consoles) remain the only passive sources | preserves the project's core privacy promise while enabling legitimate adoption measurement for the §48 device matrix |
 | ADR-038 | 2026-09-22 | Product naming (author-directed): launcher/app label = "iNWEB" (one-word, Chrome/Opera-style; avoids launcher truncation); full product name in store listings/legal = "iNWEB Browser" (master prompt #1); Android package id = com.inweb.android set via Chromium's supported rebranding GN argument chrome_public_manifest_package (declare_args in chrome/android/chrome_public_apk_tmpl.gni) — no upstream source patch, rebase-proof; permanent once released | professional brand identity: short iconic launcher name, product-domain package (DuckDuckGo-style .android suffix), traceable and reproducible |
+| ADR-039 | 2026-09-22 | Repository structure professionalization (author-directed): docs/ organized into phases/ (14 phase designs), design/ (BRAND.md + logo study assets), releases/ (per-version notes + template), verification/ (existing) with docs/README.md as the full index; brand masters under iNWEB_PATCHES/assets/; stale README/PROJECT_STATE build & test status reconciled with the recorded v1.0.0-alpha.1 release; src/, scripts/, tests/, config/, .github/, ci/ and all script-read data paths (docs/STORAGE-INVENTORY.yaml) unchanged — CI path triggers preserved and the local Python suite re-run green | navigability and a single truthful status picture without breaking any CI path contract; phase/design/release documents discoverable by group |
 
 ## Build status
 
-- **Not built.** No APK/AAB has been produced. `fetch_chromium.sh`, `build_android.sh`,
-  and the Docker container are authored but unexecuted (B-001). The Android UI sources
-  compile inside the Chromium build once integration patch 0001 lands (see
-  `docs/PHASE2-INTEGRATION-PLAN.md`).
+- **v1.0.0-alpha.1 RELEASED (2026-09-22)** — the pristine engine-baseline
+  APK (689 MB, sha256 098fff9c…c9799b, bit-for-bit verified
+  runner → artifact → release asset). Built on GitHub-hosted runners by
+  the 14-run resumable B-001 chain (hop 14 = run 35715711786; full ledger:
+  `docs/verification/B001-BUILD-CHAIN.md`). B-3 (real build completes) and
+  B-4 (real verified artifact) evidence recorded.
+- **Stage 2 in progress** — iNWEB patch series: 0001–0003 authored; the
+  series applied cleanly on the real pinned tree in b001-verify run
+  35739593282 (`PATCHES: PASS`). Patch 0003 reworked to the user-selected
+  v1 logo (local validation complete; rides the next batch verify). The
+  Android UI sources compile inside the Chromium build once the
+  integration patches land (see `docs/phases/PHASE2-INTEGRATION-PLAN.md`).
+- **Next build:** incremental resume from cached state-13 → first
+  iNWEB-branded APK → v1.0.0-alpha.2.
 
 ## Test status
 
-- **Python: 30/30 passing** — patch-series tooling, registry validation, baseline
-  parsing, string-resource validation (`python3 -m unittest discover -s tests -t .`).
-- **Kotlin: 302/302 passing** (`bash scripts/validate_kotlin_core.sh`, pinned
-  kotlinc 2.4.20 + JUnit 4.13.2, 8 modules):
-  - `src/core/browser-shell` — 115 tests: tab navigation stack, controller
-    (incl. `allTabs` switcher view), top-sites computation,
-    session round-trip/corruption + manager, omnibox parsing (incl. Bengali
-    queries and scheme edge cases), search engines, download state machine +
-    catalog, history store with private exclusion, file-backed persistent
-    history (round-trips, corruption fallback, sanitization, unique ids),
-    bookmark store semantics (dedupe, folders, rename/move) + file-backed
-    persistent bookmarks, settings.
-  - `src/core/sync` — 12 tests: monotonic revision log, successful
-    flush, exponential backoff gating + deferral, retry recovery with
-    state reset, permanent failure + exhausted-retry reporting, LWW
-    conflicts (later wins, deterministic local tie-break, tombstones
-    both ways), store round-trip with durable retry state.
-  - `src/core/backup` — 13 tests: build/parse/serialize round-trips
-    (multi-profile, empty payloads), checksum verification, secret-
-    safety whitelist (build rejection + parse skip), version gating
-    (newer refused, bad headers/manifests rejected), corruption
-    tolerance (tampered entry skipped, count mismatch warning, missing
-    end marker warning), preview counts.
-  - `src/core/profiles` — 12 tests: seeding (default profile, no
-    reseed of loaded stores), create/rename/activate semantics, blank
-    rejection, namespace routing, delete semantics (fallback active,
-    last-profile guard, no id reuse), store round-trip.
-  - `src/core/vpn` — 17 tests: config parsing (valid client configs,
-    multi-line list fields, optional-but-validated preshared key),
-    structural errors (missing/duplicate sections, unknown fields,
-    duplicate scalars, fail-fast-free issue collection), value
-    validation (key length, CIDR/IPv6 forms, endpoints, ports, DNS),
-    secret opacity (toString redaction, public-vs-private key).
-  - `src/core/offline` — 14 tests: library registry (insertion order,
-    same-URL replace, validation), access monotonicity, delete, quota
-    eviction order (LRU first, tie by creation, pinned skipped, atomic
-    failure), real byte accounting, store round-trip.
-  - `src/core/extensions` — 17 tests: registry state machine
-    (install/review/enable/disable/update/remove, upgrade consent,
-    never-reviewed stays pending), version model (numeric compare,
-    zero-padding, normalization, invalid rejection), insertion order,
-    real counts, store round-trip.
-  - `src/core/tracking-protection` — 102 tests: filter parsing (anchors,
-    options, exceptions, cosmetic/unsupported/invalid counting), pattern
-    matching (domain anchor, separators, wildcards, left/right anchors,
-    type/party/domain constraints), engine decisions (block/allow/pass,
-    per-site allowlist, statistics), domain classification (multi-part
-    suffixes, third-party); list management (HTTP fetch via real JDK
-    HttpServer, conditional revalidation + 304, size cap, atomic file
-    cache, version parsing, update policy, manager lifecycle with cached
-    fallback); Security Center model (§24 — real-state aggregation,
-    honest empty/bypass semantics, top-domain ranking); cosmetic
-    filtering (selector parsing, domain semantics, exception
-    cancellation, grouped CSS, manager integration); combined matcher
-    (token index, always-check bucket, substring lookup, order
-    preservation, decision-equivalence vs the v1 full scan).
-- **Live checks:** registry lint OK; string parity OK; baseline drift CURRENT.
-- CI runs the Python suite, string validation, and the Kotlin core suite on every
-  push/PR touching `scripts/`, `tests/`, `iNWEB_PATCHES/`, `src/`.
+- **Python: 80/80 passing** — patch-series tooling, registry
+  validation, baseline parsing, string-resource validation
+  (`python3 -m unittest discover -s tests -t .`); green in ci-authoring run
+  35739593180 (commit af5bc39) and re-run locally green after the ADR-039
+  restructure (tests/ untouched by it).
+- **Kotlin: 414/414 passing** (`bash scripts/validate_kotlin_core.sh`,
+  pinned kotlinc 2.4.20 + JUnit 4.13.2, 11 modules incl. cross-module
+  `--deps`); green in ci-authoring run 35739593180 (commit af5bc39):
+  browser-shell 150, tracking-protection 116, customization 25,
+  notifications 23, extensions 17, vpn 17, offline 15, clear-data 14,
+  backup 13, sync 12, profiles 12.
 
 ## Chromium baseline
 
@@ -1312,10 +1275,12 @@ Full record: `docs/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Phase 5 / Step 18 — combined matcher:** implement the token-index
-candidate selection designed in `docs/PHASE5-PERFORMANCE-DESIGN.md`
-§3 — required-token extraction at index time, candidate union per
-request, always-check bucket — with a decision-EQUIVALENCE test suite
-against the v1 matcher over the synthetic corpus and edge cases, then
-re-run the benchmark and append the v2 row to the log. Alternative
-next step if directed: downloads surface polish.
+**Stage 2 — iNWEB patch series (batch pipeline):** author patch 0004
+(Android 13+ monochrome themed icon from the v1 logo silhouette), then
+push the pending batch (0003 rework + 0004) for a single b001-verify run;
+continue with the adblock series (0005+) per
+`docs/phases/PHASE4-ADBLOCK-DESIGN.md`, then popup protection, extensions,
+offline, security, settings; after the full series verifies, dispatch the
+incremental build hop (resume from state-13) for the first iNWEB-branded
+APK → v1.0.0-alpha.2, then the B-5…B-8 device matrix and G-closure per
+`docs/DEVICE-VERIFICATION-MATRIX.md`.

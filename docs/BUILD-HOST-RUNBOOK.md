@@ -114,4 +114,4 @@ Direct script builds (§4) need no runner at all.
   the P-6 APK-size reference gets its first real number.
 - The pinned baseline may have drifted by the time the host is ready:
   `python3 scripts/check_baseline.py` reports it, and a rebase follows
-  docs/PHASE0-CHROMIUM-BASELINE.md before the first build.
+  docs/phases/PHASE0-CHROMIUM-BASELINE.md before the first build.

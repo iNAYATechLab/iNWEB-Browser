@@ -3,7 +3,7 @@ name: Upstream Watch
 # Weekly drift check: compares the pinned Chromium baseline
 # (build/config/inweb/BASELINE) against the current upstream Android stable
 # via the Chrome Version History API. On drift, opens (or updates) a tracking
-# issue so the rebase process of docs/PHASE0-CHROMIUM-BASELINE.md §3 starts.
+# issue so the rebase process of docs/phases/PHASE0-CHROMIUM-BASELINE.md §3 starts.
 
 on:
   schedule:
