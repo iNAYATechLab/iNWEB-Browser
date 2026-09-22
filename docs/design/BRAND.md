@@ -22,10 +22,9 @@ bounding box is `(237, 281, 1259, 1257)` → a `1022 × 976` subject.
 (A: faithful refinement, B: minimal two-hue redesign) were generated and
 compared against the author's design with programmatic launcher-legibility
 metrics (contrast, 48 px luminance spread, edge density, hue-family count).
-The author chose their own design as v1. The full study is preserved in
-[`assets/logo-study-comparison.png`](assets/logo-study-comparison.png)
-(variants: [`A`](assets/logo-study-variant-A.png),
-[`B`](assets/logo-study-variant-B.png)) as the decision record.
+The author chose their own design as v1. (The study's comparison images
+were removed from the repository on 2026-09-22 by author direction; this
+text is the decision record.)
 
 **Master.** The pixel master is preserved at
 `assets/logo/inweb_logo_master.png` (2.78 MB). It is the single

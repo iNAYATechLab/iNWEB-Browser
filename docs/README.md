@@ -67,7 +67,7 @@ this index is the authoritative navigation for everything under `docs/`.
 | Document | Purpose |
 |---|---|
 | [`design/BRAND.md`](design/BRAND.md) | Brand identity: naming (ADR-038), logo v1 provenance, asset-derivation spec, QA record, regeneration runbook |
-| [`design/assets/`](design/assets/) | Logo study record + final xxxhdpi icon renders (visual reference) |
+| [`design/assets/`](design/assets/) | Final icon renders + themed-icon silhouette preview (visual reference) |
 
 ## Releases — [`releases/`](releases/)
 
