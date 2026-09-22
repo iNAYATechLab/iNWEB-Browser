@@ -178,3 +178,40 @@ against the real pinned tree (§57).
   (isolated-world script + stylesheet hiding) ships as its own later patch.
 - `csp=`, `rewrite=`, `removeparam=` remain unsupported (ADR-013 subset).
 - `WEBSOCKET` and `POPUP` handling deferred (§3) — stated, not hidden.
+
+---
+
+## 10. Native-port amendment (2026-09-22, ADR-040)
+
+Verification against the pinned tree `154.0.8037.21` (Gitiles) settled the
+engine-language question with tree facts:
+
+- `build/android/gyp/` contains **no Kotlin compile step** (121 entries,
+  zero Kotlin scripts);
+- `third_party/kotlin_stdlib` is a **prebuilt runtime jar**
+  (`java_prebuilt` of a CIPD-downloaded `kotlin-stdlib-jdk8.jar`) consumed
+  by AAR dependencies — there is no vendored Kotlin compiler
+  (`third_party/kotlin` does not exist);
+- `chrome/android/BUILD.gn` (3,531 lines) references **zero `.kt`
+  sources**.
+
+The §5 JNI-into-Kotlin design is therefore not buildable on this
+baseline. The engine is **ported to native C++** (patch 0005), with the
+tested Kotlin implementation as the behavioral specification and its
+test suite mirrored at build time. Everything else in this design is
+unchanged — the `URLLoaderThrottle` interception point (§2; confirmed on
+the pinned tree as `ContentBrowserClient::CreateURLLoaderThrottles`),
+the resource-type mapping (§3), the main-frame policy (§4),
+provisioning/statistics (§6) and the honest boundaries (§9).
+
+Documented port deviations (see `src/native/adblock/README.md`): RE2
+instead of `java.util.regex`; Chromium's full Public Suffix List via
+`net::registry_controlled_domains` instead of the Kotlin suffix table
+(the documented integration intent); regexes compiled once at parse
+time; lock-guarded statistics (worker-thread decisions); v1 full-scan
+decide (combined matcher = patch 0012); an RE2 compile failure counts
+the rule invalid instead of throwing.
+
+Authoritative C++ sources: `src/native/adblock/` (synced into the patch
+at generation time; the patch series remains the single authority for
+the tree).
