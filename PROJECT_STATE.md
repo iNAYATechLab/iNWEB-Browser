@@ -1239,8 +1239,8 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   the 14-run resumable B-001 chain (hop 14 = run 35715711786; full ledger:
   `docs/verification/B001-BUILD-CHAIN.md`). B-3 (real build completes) and
   B-4 (real verified artifact) evidence recorded.
-- **Stage 2 in progress** — iNWEB patch series: **0001–0008 authored**
-  (8/24). CI-verified on the real pinned tree: 0001–0004 (b001-verify
+- **Stage 2 in progress** — iNWEB patch series: **0001–0009 authored**
+  (9/24). CI-verified on the real pinned tree: 0001–0004 (b001-verify
   35749687902 @75c71fa) and 0005–0006 — the native ad-block engine +
   URL-loader throttle wiring (b001-verify **35756172332 @4bb5024:
   `TAG: PASS`, `PATCHES: PASS`**; ci-authoring 35756172362 green).
@@ -1251,10 +1251,13 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   0008 (popup window guard at the WebContentsDelegate consent point —
   first real call site for $popup rules, §24 counters) CI-verified:
   b001-verify **35763178532 @d585887: `PATCHES: PASS` (8-patch series)**;
-  ci-authoring 35763178530 green. The ad-block core (0005–0007) and the
-  popup guard (0008) are complete and verified; the popup series
-  continues with the redirect throttle (0009), notification policy
-  (0010), and download guard (0011). The Android UI sources compile inside
+  ci-authoring 35763178530 green. 0009 (tab-takeover redirect throttle —
+  frame-context rule: gestureless cross-origin-initiator or ad-initiated
+  top-level navigations blocked with a script-free "redirect blocked"
+  error page; @@/allowlist exempt; host-rule blocking left to 0006) is
+  authored, harness-verified (92/92) and E2E-verified; CI verdict
+  pending (record when green). The popup series continues with the
+  notification policy (0010) and download guard (0011). The Android UI sources compile inside
   the Chromium build once the integration patches land (see
   `docs/phases/PHASE2-INTEGRATION-PLAN.md`).
 - **Next build:** incremental resume from cached state-13 → first
@@ -1287,10 +1290,14 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Stage 2 — continue the series (0008+):** the adblock core (0005–0007)
-is authored — 0005–0006 CI-verified (35756172332), 0007 pushed with its
-verify pending (record the 7-patch verdict lines here when green). Next:
-the popup-protection series (0008–0011) per the design docs, then
+**Stage 2 — continue the series (0010+):** the adblock core (0005–0007),
+the popup window guard (0008, CI-verified via b001-verify 35763178532
+@d585887) and the tab-takeover redirect throttle (0009, harness 92/92 +
+E2E clean; record its CI verdict when green) are authored. Next: the
+notification policy (0010 — quiet prompts + engagement-based
+autoblocking, no Safe-Browsing claims per §6) and the download guard
+(0011 — automatic-download confirmation + engine-backed host checks)
+per the PHASE4 design docs, then
 extensions, offline, security, settings; after the series verifies,
 dispatch the incremental build hop (resume from state-13) for the first
 iNWEB-branded APK **with working ad-block** → v1.0.0-alpha.2, then the

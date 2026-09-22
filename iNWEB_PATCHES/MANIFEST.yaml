@@ -314,3 +314,67 @@ patches:
       //chrome/android:jni_headers), chrome/test BUILD.gn (after the
       adblock :unittests line). Sources: src/native/popup/ (guard) +
       src/native/adblock/ (cumulative; holder delta).
+  - id: 0009-popup-redirect-throttle
+    file: popup_protection/0009-popup-redirect-throttle.patch
+    area: popup_protection
+    description: >-
+      Tab-takeover / tab-under redirect throttle (PHASE4-POPUP §2B, the
+      frame-context rule the engine cannot see): a renderer-initiated
+      top-level navigation without user activation (neither gesture nor
+      transient activation) is blocked when it was started by an ad
+      frame (NavigationHandle::StartedByAd) or by a cross-origin frame
+      (GetInitiatorOrigin differs from the main frame's last committed
+      origin). Exemptions before blocking: the site the user is on is
+      allowlisted (single shields list), or an @@ exception matches the
+      target document (engine consulted through the holder with
+      ResourceType::kDocument — identity-provider redirect flows). When
+      the engine already decides BLOCK the throttle stands down: the
+      URL-loader throttle (0006) owns host-based blocking, its counters,
+      and redirect re-evaluation (WillRedirectRequest always PROCEEDs
+      here). Same-tab same-origin gestureless script redirects and all
+      genuine user-activated navigations are never touched
+      (web-compatibility, §2B). Blocked takeovers load a script-free
+      "redirect blocked" error page (BLOCK_REQUEST +
+      net::ERR_BLOCKED_BY_CLIENT + static HTML; localization deferred to
+      PHASE10) and count into a real §24 counter
+      (blocked_redirect_count; zero until real events). The decision
+      core is the pure, harness-tested InwebRedirectGuard; the thin
+      content/ wrapper is InwebRedirectThrottle. Hooks:
+      chrome_content_browser_client.cc CreateThrottlesForNavigation
+      (after CreateAndAddChromeThrottlesForNavigation) + sorted
+      include; chrome/browser BUILD.gn deps (after the adblock
+      inweb deps). chrome/test BUILD.gn needs no change (the 0008
+      popup :unittests dep picks up the new test file).
+    upstream_files:
+      - chrome/browser/BUILD.gn
+      - chrome/browser/chrome_content_browser_client.cc
+    risk: medium
+    validation: >-
+      Host harness (scripts/native_harness): 92/92 tests pass (79 + 13
+      redirect guard: subframe-not-ours, browser-initiated proceed,
+      same-document/page-activation proceed, user-activation-never-
+      touched, gestureless cross-origin block, same-origin gestureless
+      proceed, unattributed proceed, started-by-ad blocks even
+      same-origin, allowlist exempt, @@ exception exempt through the
+      real holder with a $document rule, engine-BLOCK stands down for
+      0006, counter counts only real blocks, production decider path).
+      The exact NavigationThrottle/NavigationHandle/registry API at the
+      pinned tag (registry-based ctor, ThrottleCheckResult with
+      error-page content, StartedByAd/StartedWithTransientActivation/
+      GetInitiatorOrigin, CreateThrottlesForNavigation signature) was
+      verified against the pinned tree (sparse partial clone @154).
+      apply_patches E2E on the 9-patch series with byte-identical
+      applied files and PEEL idempotence; lint_manifest.py. Compile +
+      unit tests run in the b001-build-hop chain.
+    rebase_notes: >-
+      Two upstream hunks: chrome_content_browser_client.cc (sorted
+      include slot right after the adblock inweb includes; the
+      MaybeCreate call after CreateAndAddChromeThrottlesForNavigation
+      inside CreateThrottlesForNavigation) and chrome/browser BUILD.gn
+      (deps line after //chrome/android/inweb/adblock:inweb_adblock_
+      throttle). The "keep the original page" wording in the design doc
+      is approximated by the static error page plus the back button —
+      NavigationThrottle offers no preserve-document action; documented
+      honestly here. Error-page HTML is English-only until PHASE10
+      localization. Sources: src/native/popup/ (guard + throttle;
+      cumulative over the 0008-applied state).

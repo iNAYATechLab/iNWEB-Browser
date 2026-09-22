@@ -1,0 +1,722 @@
+diff --git a/chrome/android/inweb/popup/BUILD.gn b/chrome/android/inweb/popup/BUILD.gn
+index c22511e..c036f2a 100644
+--- a/chrome/android/inweb/popup/BUILD.gn
++++ b/chrome/android/inweb/popup/BUILD.gn
+@@ -1,4 +1,4 @@
+-# iNWEB Browser — popup protection build (patch 0008).
++# iNWEB Browser — popup protection build (patches 0008–0009).
+ #
+ # Sources are authored at src/native/popup/ in the iNWEB repository and
+ # synced into this patch; the patch series is the single authority for the
+@@ -17,14 +17,44 @@ source_set("inweb_popup_guard") {
+   ]
+ }
+ 
++source_set("inweb_redirect_guard") {
++  sources = [
++    "inweb_redirect_guard.cc",
++    "inweb_redirect_guard.h",
++  ]
++
++  deps = [
++    "//base",
++    "//chrome/android/inweb/adblock:inweb_adblock_throttle",
++    "//url",
++  ]
++}
++
++source_set("inweb_redirect_throttle") {
++  sources = [
++    "inweb_redirect_throttle.cc",
++    "inweb_redirect_throttle.h",
++  ]
++
++  deps = [
++    ":inweb_redirect_guard",
++    "//base",
++    "//content/public/browser",
++    "//net",
++    "//url",
++  ]
++}
++
+ source_set("unittests") {
+   testonly = true
+   sources = [
+     "inweb_popup_guard_unittest.cc",
++    "inweb_redirect_guard_unittest.cc",
+   ]
+ 
+   deps = [
+     ":inweb_popup_guard",
++    ":inweb_redirect_guard",
+     "//base",
+     "//chrome/android/inweb/adblock:inweb_adblock_engine",
+     "//testing/gtest",
+diff --git a/chrome/android/inweb/popup/inweb_redirect_guard.cc b/chrome/android/inweb/popup/inweb_redirect_guard.cc
+new file mode 100644
+index 0000000..c0fb4ec
+--- /dev/null
++++ b/chrome/android/inweb/popup/inweb_redirect_guard.cc
+@@ -0,0 +1,105 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/popup/inweb_redirect_guard.h"
++
++#include "base/functional/bind.h"
++#include "base/no_destructor.h"
++#include "chrome/android/inweb/adblock/inweb_adblock_engine_holder.h"
++#include "chrome/android/inweb/adblock/inweb_rule_matcher.h"
++
++namespace inweb::popup {
++
++namespace {
++
++// Extracts the registrable host of |url| through the same matcher the
++// engine uses (so allowlist semantics match the rest of the product).
++std::string HostOf(const GURL& url) {
++  return adblock::RuleMatcher::HostOf(url);
++}
++
++}  // namespace
++
++InwebRedirectGuard::InwebRedirectGuard(Decider decider,
++                                       AllowlistChecker allowlist_checker)
++    : decider_(std::move(decider)),
++      allowlist_checker_(std::move(allowlist_checker)) {}
++
++InwebRedirectGuard::~InwebRedirectGuard() = default;
++
++RedirectDecision InwebRedirectGuard::ShouldAllowNavigation(
++    const NavigationFacts& facts) const {
++  // Only renderer-initiated top-level navigations are ours to judge.
++  // Browser-initiated navigations (omnibox, bookmarks, UI buttons) carry
++  // explicit user intent by construction.
++  if (!facts.in_main_frame || !facts.renderer_initiated) {
++    return RedirectDecision::kProceed;
++  }
++  // Document-preserving transitions never reach a URL loader; the
++  // header contract says throttles may not even run for them.
++  if (facts.is_same_document || facts.is_page_activation) {
++    return RedirectDecision::kProceed;
++  }
++  // Genuine user activation on the initiating frame: never touched
++  // (§2B, web-compatibility).
++  if (facts.has_user_gesture || facts.started_with_transient_activation) {
++    return RedirectDecision::kProceed;
++  }
++  // No initiator attribution: cannot attribute the navigation to a
++  // subframe — do not block what we cannot see.
++  if (!facts.has_initiator) {
++    return RedirectDecision::kProceed;
++  }
++  // Frame-context rule: an ad frame or a cross-origin frame steering
++  // the top-level page is a takeover attempt.
++  const bool takeover =
++      facts.started_by_ad || facts.cross_origin_initiator;
++  if (!takeover) {
++    return RedirectDecision::kProceed;
++  }
++  // Exemption 1: the site the user is on is allowlisted (single shields
++  // list, PHASE4-POPUP §1 — SSO frames live on allowlisted sites).
++  if (allowlist_checker_ && allowlist_checker_.Run(facts.current_page_url)) {
++    return RedirectDecision::kProceed;
++  }
++  // Exemption 2 / layering: consult the engine for the target document.
++  if (decider_) {
++    const adblock::RequestContext context{
++        facts.target_url, facts.current_page_url,
++        adblock::ResourceType::kDocument};
++    const adblock::FilterDecision decision = decider_.Run(context);
++    // `@@` exception on the target (identity-provider redirect targets):
++    // allowed.
++    if (decision.action == adblock::FilterAction::kAllow) {
++      return RedirectDecision::kProceed;
++    }
++    // The engine already blocks this document by rule: the URL-loader
++    // throttle (0006) owns that decision and its counters — stay out.
++    if (decision.action == adblock::FilterAction::kBlock) {
++      return RedirectDecision::kProceed;
++    }
++    // kPass: no engine opinion; the frame-context rule decides.
++  }
++  blocked_redirects_.fetch_add(1, std::memory_order_relaxed);
++  return RedirectDecision::kBlockedTabTakeover;
++}
++
++InwebRedirectGuard* GetRedirectGuard() {
++  static base::NoDestructor<InwebRedirectGuard> guard(
++      base::BindRepeating([](const adblock::RequestContext& context) {
++        return adblock::InwebAdblockEngineHolder::GetInstance()->Decide(
++            context);
++      }),
++      base::BindRepeating([](const GURL& page_url) {
++        const std::string host = HostOf(page_url);
++        if (host.empty()) {
++          return false;
++        }
++        return adblock::InwebAdblockEngineHolder::GetInstance()
++            ->IsSiteAllowlisted(host);
++      }));
++  return guard.get();
++}
++
++}  // namespace inweb::popup
+diff --git a/chrome/android/inweb/popup/inweb_redirect_guard.h b/chrome/android/inweb/popup/inweb_redirect_guard.h
+new file mode 100644
+index 0000000..107dee9
+--- /dev/null
++++ b/chrome/android/inweb/popup/inweb_redirect_guard.h
+@@ -0,0 +1,105 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_POPUP_INWEB_REDIRECT_GUARD_H_
++#define CHROME_ANDROID_INWEB_POPUP_INWEB_REDIRECT_GUARD_H_
++
++#include <atomic>
++
++#include "base/functional/callback.h"
++#include "chrome/android/inweb/adblock/inweb_request_context.h"
++#include "chrome/android/inweb/adblock/inweb_resource_type.h"
++#include "url/gurl.h"
++
++namespace inweb::popup {
++
++// Tab-takeover / tab-under decision, PHASE4-POPUP-PROTECTION §2B.
++//
++// The abuse pattern: a hidden or ad subframe navigates the top-level page
++// without user activation, hijacking the tab. The engine (0005–0007)
++// cannot see frame context — it re-evaluates redirects by host in the
++// URL-loader throttle (0006, WillRedirectRequest) — so this guard adds
++// the frame-context rule.
++//
++// Policy: a renderer-initiated top-level navigation is a tab takeover and
++// is blocked when it has NO user activation (neither a gesture nor a
++// transient activation) AND the navigation was started by an ad frame or
++// by a frame from a different origin than the page the user is reading.
++// Exemptions before blocking (SSO/login flows and friends): the site the
++// user is on is allowlisted, or an `@@` exception matches the target.
++// Same-tab, same-origin, gestureless script redirects are never touched
++// (web-compatibility, §2B); navigations with a genuine user gesture are
++// never touched either.
++//
++// When the engine already decides BLOCK for the target document the guard
++// stays out of the way (kProceed): the URL-loader throttle (0006) owns
++// host-based blocking and its counters — this guard only owns the
++// frame-context rule. When tracking protection is disabled the engine
++// reports kPass for everything; the frame-context policy still applies,
++// with the allowlist honored (tab-takeover protection is a browser
++// policy, not an ad-block feature — same philosophy as the popup guard).
++enum class RedirectDecision {
++  kProceed,
++  kBlockedTabTakeover,
++};
++
++// Facts extracted from content::NavigationHandle by the thin throttle
++// wrapper (inweb_redirect_throttle.cc). Kept out of the core so the core
++// builds and unit-tests on the host harness without content/ headers.
++struct NavigationFacts {
++  // Navigation target context.
++  bool in_main_frame = false;    // top-level navigation only.
++  bool renderer_initiated = false;  // excludes omnibox/bookmarks/UI.
++  bool is_same_document = false;    // never blocked (no loader anyway).
++  bool is_page_activation = false;  // BFCache/prerender activation.
++  // Activation state at navigation start.
++  bool has_user_gesture = false;
++  bool started_with_transient_activation = false;
++  // Initiator attribution.
++  bool started_by_ad = false;         // Chromium ad-frame tagging.
++  bool has_initiator = false;         // GetInitiatorOrigin() present.
++  bool cross_origin_initiator = false;  // initiator origin differs from
++                                        // the current main frame's.
++  // URLs. |current_page_url| is the main frame's last committed URL (the
++  // page the user is reading when the takeover attempt happens).
++  GURL target_url;
++  GURL current_page_url;
++};
++
++// Tab-takeover guard. The decision core is pure and unit-tested with
++// scriptable callbacks; the production instance consults the native
++// ad-block engine holder (patch 0005–0007) with ResourceType::kDocument
++// for the `@@` exception path.
++class InwebRedirectGuard {
++ public:
++  using Decider =
++      base::RepeatingCallback<adblock::FilterDecision(const adblock::RequestContext&)>;
++  using AllowlistChecker = base::RepeatingCallback<bool(const GURL& page_url)>;
++
++  InwebRedirectGuard(Decider decider, AllowlistChecker allowlist_checker);
++  ~InwebRedirectGuard();
++
++  InwebRedirectGuard(const InwebRedirectGuard&) = delete;
++  InwebRedirectGuard& operator=(const InwebRedirectGuard&) = delete;
++
++  RedirectDecision ShouldAllowNavigation(const NavigationFacts& facts) const;
++
++  // Real counter for the Security Center (§24) and the blocked-redirect
++  // signal. Never fabricated: zero until a real takeover is blocked.
++  int blocked_redirect_count() const { return blocked_redirects_.load(); }
++
++ private:
++  mutable std::atomic<int> blocked_redirects_{0};
++  Decider decider_;
++  AllowlistChecker allowlist_checker_;
++};
++
++// Process-wide production instance: decider and allowlist checker bound
++// to the ad-block engine holder. Lazily created on first use and never
++// destroyed.
++InwebRedirectGuard* GetRedirectGuard();
++
++}  // namespace inweb::popup
++
++#endif  // CHROME_ANDROID_INWEB_POPUP_INWEB_REDIRECT_GUARD_H_
+diff --git a/chrome/android/inweb/popup/inweb_redirect_guard_unittest.cc b/chrome/android/inweb/popup/inweb_redirect_guard_unittest.cc
+new file mode 100644
+index 0000000..d0cc798
+--- /dev/null
++++ b/chrome/android/inweb/popup/inweb_redirect_guard_unittest.cc
+@@ -0,0 +1,230 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — redirect guard unit tests (PHASE4-POPUP §2B policy),
++// scriptable decider + allowlist checker; plus the production-decider
++// path through the real engine holder with an @@ exception rule.
++
++#include "chrome/android/inweb/popup/inweb_redirect_guard.h"
++
++#include <string>
++#include <vector>
++
++#include "base/functional/bind.h"
++#include "chrome/android/inweb/adblock/inweb_adblock_engine_holder.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_parser.h"
++#include "testing/gtest/include/gtest/gtest.h"
++
++namespace inweb::popup {
++
++namespace {
++
++using adblock::FilterAction;
++using adblock::FilterDecision;
++using adblock::RequestContext;
++using adblock::ResourceType;
++
++struct ScriptedState {
++  FilterAction action = FilterAction::kPass;
++  std::vector<RequestContext> seen;
++  bool allowlisted = false;
++};
++
++InwebRedirectGuard GuardFrom(ScriptedState* state) {
++  return InwebRedirectGuard(
++      base::BindRepeating(
++          [](ScriptedState* state, const RequestContext& context) {
++            state->seen.push_back(context);
++            FilterDecision decision;
++            decision.action = state->action;
++            return decision;
++          },
++          state),
++      base::BindRepeating(
++          [](ScriptedState* state, const GURL&) {
++            return state->allowlisted;
++          },
++          state));
++}
++
++// The canonical tab-takeover attempt: hidden ad subframe on another
++// origin steers the top-level page, no activation anywhere.
++NavigationFacts TakeoverFacts() {
++  NavigationFacts facts;
++  facts.in_main_frame = true;
++  facts.renderer_initiated = true;
++  facts.has_user_gesture = false;
++  facts.started_with_transient_activation = false;
++  facts.started_by_ad = false;
++  facts.has_initiator = true;
++  facts.cross_origin_initiator = true;
++  facts.target_url = GURL("https://tracker-redirect.example.net/landing");
++  facts.current_page_url = GURL("https://news.example.com/story");
++  return facts;
++}
++
++}  // namespace
++
++TEST(InwebRedirectGuardTest, SubframeNavigationIsNotOurs) {
++  ScriptedState state;
++  auto guard = GuardFrom(&state);
++  NavigationFacts facts = TakeoverFacts();
++  facts.in_main_frame = false;  // subframe target: engine rules apply.
++  EXPECT_EQ(guard.ShouldAllowNavigation(facts), RedirectDecision::kProceed);
++  EXPECT_EQ(guard.blocked_redirect_count(), 0);
++  EXPECT_TRUE(state.seen.empty());  // engine never consulted
++}
++
++TEST(InwebRedirectGuardTest, BrowserInitiatedNavigationProceeds) {
++  ScriptedState state;
++  auto guard = GuardFrom(&state);
++  NavigationFacts facts = TakeoverFacts();
++  facts.renderer_initiated = false;  // omnibox / bookmark / UI button.
++  EXPECT_EQ(guard.ShouldAllowNavigation(facts), RedirectDecision::kProceed);
++  EXPECT_TRUE(state.seen.empty());
++}
++
++TEST(InwebRedirectGuardTest, SameDocumentAndPageActivationsProceed) {
++  ScriptedState state;
++  auto guard = GuardFrom(&state);
++  NavigationFacts same_document = TakeoverFacts();
++  same_document.is_same_document = true;
++  NavigationFacts activation = TakeoverFacts();
++  activation.is_page_activation = true;
++  EXPECT_EQ(guard.ShouldAllowNavigation(same_document),
++            RedirectDecision::kProceed);
++  EXPECT_EQ(guard.ShouldAllowNavigation(activation),
++            RedirectDecision::kProceed);
++  EXPECT_TRUE(state.seen.empty());
++}
++
++TEST(InwebRedirectGuardTest, UserActivationIsNeverTouched) {
++  ScriptedState state;
++  auto guard = GuardFrom(&state);
++  NavigationFacts gesture = TakeoverFacts();
++  gesture.has_user_gesture = true;
++  NavigationFacts transient = TakeoverFacts();
++  transient.started_with_transient_activation = true;
++  EXPECT_EQ(guard.ShouldAllowNavigation(gesture), RedirectDecision::kProceed);
++  EXPECT_EQ(guard.ShouldAllowNavigation(transient),
++            RedirectDecision::kProceed);
++  EXPECT_TRUE(state.seen.empty());
++}
++
++TEST(InwebRedirectGuardTest, GesturelessCrossOriginInitiatorIsBlocked) {
++  ScriptedState state;  // engine kPass: frame-context rule decides alone.
++  auto guard = GuardFrom(&state);
++  EXPECT_EQ(guard.ShouldAllowNavigation(TakeoverFacts()),
++            RedirectDecision::kBlockedTabTakeover);
++  EXPECT_EQ(guard.blocked_redirect_count(), 1);
++  ASSERT_EQ(state.seen.size(), 1u);
++  EXPECT_EQ(state.seen[0].resource_type, ResourceType::kDocument);
++  EXPECT_EQ(state.seen[0].request_url.possibly_invalid_spec(),
++            "https://tracker-redirect.example.net/landing");
++}
++
++TEST(InwebRedirectGuardTest, SameOriginGesturelessRedirectProceeds) {
++  ScriptedState state;
++  auto guard = GuardFrom(&state);
++  NavigationFacts facts = TakeoverFacts();
++  facts.cross_origin_initiator = false;  // same-site script redirect.
++  EXPECT_EQ(guard.ShouldAllowNavigation(facts), RedirectDecision::kProceed);
++  EXPECT_TRUE(state.seen.empty());  // not a takeover: engine not asked.
++}
++
++TEST(InwebRedirectGuardTest, UnattributedNavigationProceeds) {
++  ScriptedState state;
++  auto guard = GuardFrom(&state);
++  NavigationFacts facts = TakeoverFacts();
++  facts.has_initiator = false;  // no initiator origin: cannot attribute.
++  EXPECT_EQ(guard.ShouldAllowNavigation(facts), RedirectDecision::kProceed);
++  EXPECT_TRUE(state.seen.empty());
++}
++
++TEST(InwebRedirectGuardTest, StartedByAdBlocksEvenSameOrigin) {
++  ScriptedState state;
++  auto guard = GuardFrom(&state);
++  NavigationFacts facts = TakeoverFacts();
++  facts.cross_origin_initiator = false;
++  facts.started_by_ad = true;  // Chromium ad-frame tagging.
++  EXPECT_EQ(guard.ShouldAllowNavigation(facts),
++            RedirectDecision::kBlockedTabTakeover);
++  EXPECT_EQ(guard.blocked_redirect_count(), 1);
++}
++
++TEST(InwebRedirectGuardTest, AllowlistedSiteIsExempt) {
++  ScriptedState state;
++  state.allowlisted = true;
++  auto guard = GuardFrom(&state);
++  EXPECT_EQ(guard.ShouldAllowNavigation(TakeoverFacts()),
++            RedirectDecision::kProceed);
++  EXPECT_EQ(guard.blocked_redirect_count(), 0);
++}
++
++TEST(InwebRedirectGuardTest, EngineExceptionUnblocks) {
++  ScriptedState state;
++  state.action = FilterAction::kAllow;  // @@ rule matched the target.
++  auto guard = GuardFrom(&state);
++  EXPECT_EQ(guard.ShouldAllowNavigation(TakeoverFacts()),
++            RedirectDecision::kProceed);
++  ASSERT_EQ(state.seen.size(), 1u);
++  EXPECT_EQ(guard.blocked_redirect_count(), 0);
++}
++
++TEST(InwebRedirectGuardTest, EngineBlockIsLeftToUrlLoaderThrottle) {
++  ScriptedState state;
++  state.action = FilterAction::kBlock;  // 0006 owns host-based blocking.
++  auto guard = GuardFrom(&state);
++  EXPECT_EQ(guard.ShouldAllowNavigation(TakeoverFacts()),
++            RedirectDecision::kProceed);
++  EXPECT_EQ(guard.blocked_redirect_count(), 0);
++}
++
++TEST(InwebRedirectGuardTest, CounterCountsOnlyRealBlocks) {
++  ScriptedState state;
++  auto guard = GuardFrom(&state);
++  NavigationFacts benign = TakeoverFacts();
++  benign.cross_origin_initiator = false;
++  EXPECT_EQ(guard.ShouldAllowNavigation(benign), RedirectDecision::kProceed);
++  EXPECT_EQ(guard.ShouldAllowNavigation(TakeoverFacts()),
++            RedirectDecision::kBlockedTabTakeover);
++  EXPECT_EQ(guard.ShouldAllowNavigation(TakeoverFacts()),
++            RedirectDecision::kBlockedTabTakeover);
++  EXPECT_EQ(guard.blocked_redirect_count(), 2);
++}
++
++TEST(InwebRedirectGuardTest, ProductionDeciderExceptionThroughHolder) {
++  // A real holder with an @@ exception for the redirect target: the
++  // production decider path must honor it (identity-provider flows).
++  adblock::InwebAdblockEngineHolder holder;
++  adblock::TrackingProtectionSettings settings(
++      /*enabled=*/true, adblock::CookiePolicy::kAllowAll,
++      /*allowlisted_sites=*/{});
++  std::vector<adblock::ParsedFilterList> lists;
++  lists.push_back(adblock::FilterListParser::Parse(
++      "@@||idp-redirect.example.net^$document", "redirect-test"));
++  holder.SetFilterLists(std::move(lists));
++  holder.UpdateSettings(settings);
++
++  InwebRedirectGuard exception_guard(
++      base::BindRepeating(
++          [](adblock::InwebAdblockEngineHolder* holder,
++             const RequestContext& context) { return holder->Decide(context); },
++          &holder),
++      base::BindRepeating([](const GURL&) { return false; }));
++  NavigationFacts facts = TakeoverFacts();
++  facts.target_url = GURL("https://idp-redirect.example.net/sso-return");
++  EXPECT_EQ(exception_guard.ShouldAllowNavigation(facts),
++            RedirectDecision::kProceed);
++
++  // Sanity on the same holder: a target with no matching rule gives
++  // kPass, so the frame-context rule blocks it — proves the @@ result
++  // above is the rule's doing, not a stale default.
++  NavigationFacts unmatched = TakeoverFacts();
++  unmatched.target_url = GURL("https://plain-redirect.example.net/x");
++  EXPECT_EQ(exception_guard.ShouldAllowNavigation(unmatched),
++            RedirectDecision::kBlockedTabTakeover);
++}
++
++}  // namespace inweb::popup
+diff --git a/chrome/android/inweb/popup/inweb_redirect_throttle.cc b/chrome/android/inweb/popup/inweb_redirect_throttle.cc
+new file mode 100644
+index 0000000..0a3cbef
+--- /dev/null
++++ b/chrome/android/inweb/popup/inweb_redirect_throttle.cc
+@@ -0,0 +1,115 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/popup/inweb_redirect_throttle.h"
++
++#include <string>
++#include <utility>
++
++#include "chrome/android/inweb/popup/inweb_redirect_guard.h"
++#include "content/public/browser/navigation_handle.h"
++#include "content/public/browser/render_frame_host.h"
++#include "content/public/browser/web_contents.h"
++#include "net/base/net_errors.h"
++#include "url/gurl.h"
++#include "url/origin.h"
++
++namespace inweb::popup {
++
++namespace {
++
++// Static, script-free error page for blocked tab takeovers. Localization
++// is deferred to the PHASE10 localization patch; the page intentionally
++// avoids script so it renders identically in every error-page mode.
++const char kBlockedRedirectErrorPage[] =
++    "<!DOCTYPE html><html><head><meta charset=\"utf-8\">"
++    "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
++    "<title>Redirect blocked</title></head>"
++    "<body style=\"font-family:Roboto,system-ui,Arial,sans-serif;"
++    "background:#fafafa;color:#202124;margin:0;padding:48px 24px;"
++    "text-align:center;\">"
++    "<div style=\"font-size:56px;line-height:1;\">&#128737;&#65039;</div>"
++    "<h1 style=\"font-size:20px;font-weight:500;margin:16px 0 8px;\">"
++    "Redirect blocked</h1>"
++    "<p style=\"font-size:14px;color:#5f6368;margin:0 0 8px;\">"
++    "iNWEB stopped a page from redirecting you without your permission."
++    "</p>"
++    "<p style=\"font-size:14px;color:#5f6368;margin:0;\">"
++    "Use the back button to return to the page you were reading.</p>"
++    "</body></html>";
++
++// Extracts the guard's decision facts from a NavigationHandle.
++NavigationFacts FactsFromNavigation(content::NavigationHandle* handle) {
++  NavigationFacts facts;
++  facts.in_main_frame = handle->IsInMainFrame();
++  facts.renderer_initiated = handle->IsRendererInitiated();
++  facts.is_same_document = handle->IsSameDocument();
++  facts.is_page_activation = handle->IsPageActivation();
++  facts.has_user_gesture = handle->HasUserGesture();
++  facts.started_with_transient_activation =
++      handle->StartedWithTransientActivation();
++  facts.started_by_ad = handle->StartedByAd();
++  facts.target_url = handle->GetURL();
++
++  const std::optional<url::Origin>& initiator = handle->GetInitiatorOrigin();
++  facts.has_initiator = initiator.has_value();
++
++  content::WebContents* web_contents = handle->GetWebContents();
++  content::RenderFrameHost* main_frame =
++      web_contents ? web_contents->GetPrimaryMainFrame() : nullptr;
++  if (main_frame) {
++    facts.current_page_url = main_frame->GetLastCommittedURL();
++    // Frame-context rule: an initiator whose origin differs from the
++    // page the user is reading is steering the tab from outside it.
++    facts.cross_origin_initiator =
++        initiator.has_value() && (*initiator != main_frame->GetLastCommittedOrigin());
++  }
++  return facts;
++}
++
++}  // namespace
++
++void InwebRedirectThrottle::MaybeCreate(
++    content::NavigationThrottleRegistry& registry) {
++  // The frame-context rule applies exclusively to top-level navigations;
++  // subframe loads are the engine's territory (0005–0007).
++  if (!registry.GetNavigationHandle().IsInMainFrame()) {
++    return;
++  }
++  registry.AddThrottle(
++      std::make_unique<InwebRedirectThrottle>(registry));
++}
++
++InwebRedirectThrottle::InwebRedirectThrottle(
++    content::NavigationThrottleRegistry& registry)
++    : content::NavigationThrottle(registry) {}
++
++InwebRedirectThrottle::~InwebRedirectThrottle() = default;
++
++content::NavigationThrottle::ThrottleCheckResult
++InwebRedirectThrottle::WillStartRequest() {
++  if (GetRedirectGuard()->ShouldAllowNavigation(
++          FactsFromNavigation(navigation_handle())) ==
++      RedirectDecision::kProceed) {
++    return content::NavigationThrottle::PROCEED;
++  }
++  return content::NavigationThrottle::ThrottleCheckResult(
++      content::NavigationThrottle::BLOCK_REQUEST,
++      net::ERR_BLOCKED_BY_CLIENT,
++      std::string(kBlockedRedirectErrorPage));
++}
++
++content::NavigationThrottle::ThrottleCheckResult
++InwebRedirectThrottle::WillRedirectRequest() {
++  // Redirect re-evaluation toward engine-blocked hosts is owned by the
++  // URL-loader throttle (0006, WillRedirectRequest) — nothing to do
++  // here; the frame-context verdict was already rendered at start.
++  return content::NavigationThrottle::PROCEED;
++}
++
++const char* InwebRedirectThrottle::GetNameForLogging() {
++  return "InwebRedirectThrottle";
++}
++
++}  // namespace inweb::popup
+diff --git a/chrome/android/inweb/popup/inweb_redirect_throttle.h b/chrome/android/inweb/popup/inweb_redirect_throttle.h
+new file mode 100644
+index 0000000..b80292d
+--- /dev/null
++++ b/chrome/android/inweb/popup/inweb_redirect_throttle.h
+@@ -0,0 +1,47 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_POPUP_INWEB_REDIRECT_THROTTLE_H_
++#define CHROME_ANDROID_INWEB_POPUP_INWEB_REDIRECT_THROTTLE_H_
++
++#include "content/public/browser/navigation_throttle.h"
++#include "content/public/browser/navigation_throttle_registry.h"
++
++namespace content {
++class NavigationHandle;
++}  // namespace content
++
++namespace inweb::popup {
++
++// Thin content/ wrapper around InwebRedirectGuard (PHASE4-POPUP §2B):
++// extracts navigation facts from the NavigationHandle at
++// WillStartRequest time and turns a takeover verdict into
++// BLOCK_REQUEST with a "redirect blocked" error page. The decision core
++// (and all policy) lives in inweb_redirect_guard.cc, which builds and
++// unit-tests on the host harness without content/ headers.
++//
++// Redirect re-evaluation by host is intentionally NOT done here — the
++// URL-loader throttle (0006) owns it and its counters.
++class InwebRedirectThrottle : public content::NavigationThrottle {
++ public:
++  // Registers a throttle for top-level navigations only (the guard's
++  // frame-context rule applies exclusively to the main frame).
++  static void MaybeCreate(content::NavigationThrottleRegistry& registry);
++
++  explicit InwebRedirectThrottle(
++      content::NavigationThrottleRegistry& registry);
++  ~InwebRedirectThrottle() override;
++
++  InwebRedirectThrottle(const InwebRedirectThrottle&) = delete;
++  InwebRedirectThrottle& operator=(const InwebRedirectThrottle&) = delete;
++
++  // content::NavigationThrottle:
++  ThrottleCheckResult WillStartRequest() override;
++  ThrottleCheckResult WillRedirectRequest() override;
++  const char* GetNameForLogging() override;
++};
++
++}  // namespace inweb::popup
++
++#endif  // CHROME_ANDROID_INWEB_POPUP_INWEB_REDIRECT_THROTTLE_H_
+diff --git a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
+index 4a877c1..4f7011c 100644
+--- a/chrome/browser/BUILD.gn
++++ b/chrome/browser/BUILD.gn
+@@ -1665,6 +1665,7 @@ source_set("core") {
+       "//chrome/android:jni_headers",
+       "//chrome/android/inweb/adblock:inweb_adblock_engine",
+       "//chrome/android/inweb/adblock:inweb_adblock_throttle",
++      "//chrome/android/inweb/popup:inweb_redirect_throttle",
+       "//chrome/browser/android",
+       "//chrome/browser/autocomplete",
+       "//chrome/browser/bookmarks",
+diff --git a/chrome/browser/chrome_content_browser_client.cc b/chrome/browser/chrome_content_browser_client.cc
+index baa5f31..b8dd9d5 100644
+--- a/chrome/browser/chrome_content_browser_client.cc
++++ b/chrome/browser/chrome_content_browser_client.cc
+@@ -535,6 +535,7 @@
+ #include "base/feature_list.h"
+ #include "chrome/android/inweb/adblock/inweb_adblock_engine_holder.h"
+ #include "chrome/android/inweb/adblock/inweb_adblock_url_loader_throttle.h"
++#include "chrome/android/inweb/popup/inweb_redirect_throttle.h"
+ #include "chrome/browser/android/customtabs/client_data_header_web_contents_observer.h"  // nogncheck crbug.com/40147906
+ #include "chrome/browser/android/devtools_manager_delegate_android.h"  // nogncheck crbug.com/40147906
+ #include "chrome/browser/android/ntp/new_tab_page_url_handler.h"  // nogncheck crbug.com/40147906
+@@ -5514,6 +5515,10 @@ void ChromeContentBrowserClient::RemovePresentationObserver(
+ void ChromeContentBrowserClient::CreateThrottlesForNavigation(
+     content::NavigationThrottleRegistry& registry) {
+   CreateAndAddChromeThrottlesForNavigation(registry);
++  // iNWEB: tab-takeover / tab-under protection (patch 0009). Registers
++  // for top-level navigations only; the decision core is the pure,
++  // harness-tested InwebRedirectGuard.
++  inweb::popup::InwebRedirectThrottle::MaybeCreate(registry);
+ }
+ 
+ void ChromeContentBrowserClient::CreateThrottlesForCommitWithoutUrlLoader(
