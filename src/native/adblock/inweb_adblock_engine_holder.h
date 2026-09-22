@@ -33,6 +33,10 @@ class InwebAdblockEngineHolder {
   // per-request work while tracking protection is off.
   bool IsEnabled() const;
 
+  // True when |host| is on the per-site allowlist (single shields list —
+  // also the popup exemption list, PHASE4-POPUP §1).
+  bool IsSiteAllowlisted(const std::string& host) const;
+
   // Thread-safe; callable from any sequence. Holds the holder lock for the
   // duration of the (v1 full-scan) decision — see ADR-013/ADR-040 notes.
   FilterDecision Decide(const RequestContext& request) const;

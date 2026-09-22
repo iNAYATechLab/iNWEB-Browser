@@ -266,3 +266,50 @@ patches:
       download_url optional for embedded lists; SimpleURLLoader
       subscription transport deferred (interface + decision logic ported);
       parsed_lists() replaced by move-semantics TakeParsedLists().
+  - id: 0008-popup-window-guard
+    file: popup_protection/0008-popup-window-guard.patch
+    area: popup_protection
+    description: >-
+      Popup window guard (PHASE4-POPUP §2A, first real call site for the
+      $popup rule type): InwebPopupGuard decides at the Android
+      WebContentsDelegate window-open consent point
+      (TabWebContentsDelegateAndroid::AddNewContents). Without a user
+      gesture a popup is blocked by default (Chrome-parity browser
+      policy) unless the opener site is allowlisted or an @@ exception
+      matches; with a gesture the native engine's $popup / host rules
+      still block tracker popups. The engine is consulted with
+      ResourceType::kPopup through the process-wide holder; the holder
+      gains IsSiteAllowlisted (single shields list = popup exemption
+      list). Blocked popups set the standard was_blocked signal
+      (content-side popup-blocked UI path) and count into real §24
+      counters (blocked_popup_count / engine_blocked_count; zero until
+      real events). Hooks: chrome/browser/android BUILD.gn target
+      "android" gains the inweb_popup_guard dep; chrome/test BUILD.gn
+      gains :unittests; the guard block + include in
+      tab_web_contents_delegate_android.cc. The blocked-popup UI chip +
+      open-once flow is a later UI patch (guard exposes the counters).
+    upstream_files:
+      - chrome/browser/android/BUILD.gn
+      - chrome/browser/android/tab_web_contents_delegate_android.cc
+      - chrome/test/BUILD.gn
+    risk: medium
+    validation: >-
+      Host harness (scripts/native_harness): 79/79 tests pass (73 adblock
+      + 6 popup guard: default-deny gestureless, gesture-allow,
+      allowlist exemption, @@ exception, engine-block-with-gesture,
+      production-decider $popup rule through the real holder). The
+      harness caught two real defects pre-build (missing bind.h include;
+      HostOf lives on RuleMatcher, not DomainClassifier). The exact
+      AddNewContents signature + the "beyond the popup blocker" consent
+      comment were verified against the pinned tree (sparse partial
+      clone). apply_patches E2E on the 8-patch series with byte-identical
+      applied files and PEEL idempotence; lint_manifest.py. Compile +
+      unit tests run in the b001-build-hop chain.
+    rebase_notes: >-
+      Three upstream hunks: tab_web_contents_delegate_android.cc (sorted
+      include slot before chrome/browser/actor/actor_util.h; guard block
+      after the disposition DCHECKs in AddNewContents),
+      chrome/browser/android BUILD.gn deps slot (after
+      //chrome/android:jni_headers), chrome/test BUILD.gn (after the
+      adblock :unittests line). Sources: src/native/popup/ (guard) +
+      src/native/adblock/ (cumulative; holder delta).

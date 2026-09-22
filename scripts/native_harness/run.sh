@@ -15,13 +15,14 @@ REPO="$(cd "$HERE/../.." && pwd)"
 ROOT="$HERE/root"
 mkdir -p "$ROOT/chrome/android/inweb"
 ln -sfn "$REPO/src/native/adblock" "$ROOT/chrome/android/inweb/adblock"
+ln -sfn "$REPO/src/native/popup" "$ROOT/chrome/android/inweb/popup" 2>/dev/null || true
 LIBRE2="$(find /usr/lib -name 'libre2.so' 2>/dev/null | head -1)"
 if [ -z "$LIBRE2" ]; then
   echo "libre2.so not found — apt-get install libre2-dev" >&2
   exit 1
 fi
-mapfile -t ENGINE < <(ls "$REPO"/src/native/adblock/*.cc | grep -v _unittest || true)
-mapfile -t TESTS < <(ls "$REPO"/src/native/adblock/*_unittest.cc)
+mapfile -t ENGINE < <(ls "$REPO"/src/native/adblock/*.cc "$REPO"/src/native/popup/*.cc 2>/dev/null | grep -v _unittest || true)
+mapfile -t TESTS < <(ls "$REPO"/src/native/adblock/*_unittest.cc "$REPO"/src/native/popup/*_unittest.cc 2>/dev/null)
 g++ -std=c++20 -I"$HERE/shims" -I"$ROOT" \
   "$HERE/shims/url/gurl.cc" "$HERE/shims/base/strings/string_util.cc" \
   "$HERE/shims/net/base/registry_controlled_domains.cc" \

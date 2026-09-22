@@ -55,6 +55,12 @@ bool InwebAdblockEngineHolder::IsEnabled() const {
   return settings_.enabled();
 }
 
+bool InwebAdblockEngineHolder::IsSiteAllowlisted(
+    const std::string& host) const {
+  base::AutoLock lock(lock_);
+  return settings_.IsSiteAllowlisted(host);
+}
+
 FilterDecision InwebAdblockEngineHolder::Decide(
     const RequestContext& request) const {
   base::AutoLock lock(lock_);

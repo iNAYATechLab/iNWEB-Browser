@@ -1,0 +1,33 @@
+# iNWEB Browser — popup protection build (patch 0008).
+#
+# Sources are authored at src/native/popup/ in the iNWEB repository and
+# synced into this patch; the patch series is the single authority for the
+# Chromium tree.
+
+source_set("inweb_popup_guard") {
+  sources = [
+    "inweb_popup_guard.cc",
+    "inweb_popup_guard.h",
+  ]
+
+  deps = [
+    "//base",
+    "//chrome/android/inweb/adblock:inweb_adblock_throttle",
+    "//url",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+  sources = [
+    "inweb_popup_guard_unittest.cc",
+  ]
+
+  deps = [
+    ":inweb_popup_guard",
+    "//base",
+    "//chrome/android/inweb/adblock:inweb_adblock_engine",
+    "//testing/gtest",
+    "//testing/gmock",
+  ]
+}
