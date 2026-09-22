@@ -54,4 +54,29 @@ patches:
     rebase_notes: >-
       channel_constants.xml moved from res/values to res_chromium_base/values
       in recent Chromium; on rebase, re-check the path and the string list.
-
+  - id: 0002-in-app-strings
+    file: ui/0002-in-app-strings.patch
+    area: ui
+    description: >-
+      In-app self-identification strings rebranded: 212 messages in
+      android_chrome_strings.grd change literal Google Chrome / Chrome /
+      Chromium in displayed text to iNWEB. Third-party compound names are
+      deliberately preserved (Chrome Web Store, Chromebook, ChromeOS,
+      Chromecast, Chrome Remote Desktop, Gemini-in-Chrome promo strings,
+      Google legal document titles) - 17 messages skipped. Message IDs and
+      desc attributes unchanged (code references intact).
+    upstream_files:
+      - chrome/browser/ui/android/strings/android_chrome_strings.grd
+    risk: low
+    validation: >-
+      Script-assisted rebrand with exclusion rules; git apply/--reverse
+      round-trip; apply_patches.py E2E (apply, verify, PEEL-idempotence);
+      b001-verify (patches mode) on a real fetched tree. KNOWN EFFECT:
+      changed English source text invalidates upstream .xtb translations
+      for these messages until iNWEB provides its own localized strings
+      (planned) - affected strings fall back to English in non-en locales.
+    rebase_notes: >-
+      Mechanical rebrand; on rebase, re-run the same rules (Google Chrome ->
+      iNWEB, Chrome -> iNWEB, Chromium -> iNWEB outside <ex>, with the
+      exclusion list) against the new grd. Promo strings tied to Google
+      services may be removed entirely by later privacy/security patches.
