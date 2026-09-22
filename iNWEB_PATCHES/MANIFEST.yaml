@@ -364,8 +364,10 @@ patches:
       GetInitiatorOrigin, CreateThrottlesForNavigation signature) was
       verified against the pinned tree (sparse partial clone @154).
       apply_patches E2E on the 9-patch series with byte-identical
-      applied files and PEEL idempotence; lint_manifest.py. Compile +
-      unit tests run in the b001-build-hop chain.
+      applied files and PEEL idempotence; lint_manifest.py; b001-verify
+      (patches mode) PASS on the real fetched tree (run 35770417844,
+      commit 3a457fc). Compile + unit tests run in the b001-build-hop
+      chain.
     rebase_notes: >-
       Two upstream hunks: chrome_content_browser_client.cc (sorted
       include slot right after the adblock inweb includes; the
@@ -378,3 +380,60 @@ patches:
       honestly here. Error-page HTML is English-only until PHASE10
       localization. Sources: src/native/popup/ (guard + throttle;
       cumulative over the 0008-applied state).
+  - id: 0010-popup-notification-policy
+    file: popup_protection/0010-popup-notification-policy.patch
+    area: popup_protection
+    description: >-
+      Abusive-notification quieting policy (PHASE4-POPUP §2C, risk
+      "low"): notification permission prompts are quieted by default —
+      no modal; the request surfaces as Chromium's existing quiet chip
+      (PermissionRequestManager quiet-UI path + the Android quiet
+      prompt model, untouched) which the user can expand. Never
+      auto-granted: a grant requires an explicit user action on the
+      expanded prompt. Repeated-deny auto-blocking stays Chromium's
+      PermissionDecisionAutoBlocker (untouched). v1 honest scope: ALL
+      ASK-state notification prompts are quieted — the
+      engagement-exemption slot exists in the policy core but is
+      unwired (no engagement signal fabricated; conservative superset
+      of "sites without meaningful engagement"). iNWEB makes NO
+      Safe-Browsing-class reputation claim (§2C/§6): quieting is
+      policy-based only. The pure InwebNotificationPolicy core owns
+      the decision table + a real §24 counter (quieted_prompt_count,
+      zero until real events); the thin wrapper
+      InwebNotificationPolicyUiSelector (permissions::PermissionUiSelector,
+      synchronous, Cancel no-op, kEnabledInPrefs as the honest
+      QuietUiReason) is registered FIRST in
+      ChromePermissionsClient::CreatePermissionUiSelectors so iNWEB
+      policy takes precedence. Hooks: chrome_permissions_client.cc
+      (sorted include before chrome/browser/actor/...; selector
+      emplace first in the vector) and chrome/browser/permissions
+      BUILD.gn (deps line after :permissions_proto).
+    upstream_files:
+      - chrome/browser/permissions/BUILD.gn
+      - chrome/browser/permissions/chrome_permissions_client.cc
+    risk: low
+    validation: >-
+      Host harness (scripts/native_harness): 97/97 tests pass (92 + 5
+      notification policy: quieted-by-default, other-permissions
+      untouched, engagement-exemption slot wired-but-unset, counter
+      counts only real quiets, production singleton stable + counter
+      accumulates). The exact PermissionUiSelector interface at the
+      pinned tag (Decision::UseQuietUi, QuietUiReason::kEnabledInPrefs,
+      SelectUiToUse/Cancel/IsPermissionRequestSupported, the
+      PrefBasedQuietPermissionUiSelector precedent, Android quiet
+      prompt model files) was verified against the pinned tree (sparse
+      partial clone @154). apply_patches E2E on the 10-patch series
+      with byte-identical applied files and PEEL idempotence;
+      lint_manifest.py. Compile + unit tests run in the
+      b001-build-hop chain.
+    rebase_notes: >-
+      Two upstream hunks: chrome_permissions_client.cc (include slot
+      between build/build_config.h and chrome/browser/actor/
+      actor_keyed_service.h; the emplace line right after the
+      selectors vector declaration, before the SAFE_BROWSING_AVAILABLE
+      block) and chrome/browser/permissions BUILD.gn (deps line after
+      ":permissions_proto"). Sources: src/native/popup/ (policy core +
+      selector; cumulative over the 0009-applied state). The quiet chip
+      text/explanation surface is Chromium's; the "exactly once
+      explained" education surface beyond the chip is deferred to the
+      settings/UI patch and documented, not claimed.

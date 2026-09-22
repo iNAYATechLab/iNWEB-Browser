@@ -21,9 +21,9 @@ if [ -z "$LIBRE2" ]; then
   echo "libre2.so not found — apt-get install libre2-dev" >&2
   exit 1
 fi
-# The redirect *throttle* wrapper needs content/ headers (Chromium-only);
-# its pure decision core (inweb_redirect_guard.cc) is what we test here.
-mapfile -t ENGINE < <(ls "$REPO"/src/native/adblock/*.cc "$REPO"/src/native/popup/*.cc 2>/dev/null | grep -v _unittest | grep -v inweb_redirect_throttle.cc || true)
+# Chromium-only wrappers (need content/ or components/ headers) are
+# excluded; their pure decision cores are what we test here.
+mapfile -t ENGINE < <(ls "$REPO"/src/native/adblock/*.cc "$REPO"/src/native/popup/*.cc 2>/dev/null | grep -v _unittest | grep -Ev 'inweb_redirect_throttle\.cc|inweb_notification_policy_ui_selector\.cc' || true)
 mapfile -t TESTS < <(ls "$REPO"/src/native/adblock/*_unittest.cc "$REPO"/src/native/popup/*_unittest.cc 2>/dev/null)
 g++ -std=c++20 -I"$HERE/shims" -I"$ROOT" \
   "$HERE/shims/url/gurl.cc" "$HERE/shims/base/strings/string_util.cc" \

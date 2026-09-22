@@ -1,4 +1,4 @@
-# iNWEB Browser — popup protection build (patches 0008–0009).
+# iNWEB Browser — popup protection build (patches 0008–0010).
 #
 # Sources are authored at src/native/popup/ in the iNWEB repository and
 # synced into this patch; the patch series is the single authority for the
@@ -30,6 +30,32 @@ source_set("inweb_redirect_guard") {
   ]
 }
 
+source_set("inweb_notification_policy") {
+  sources = [
+    "inweb_notification_policy.cc",
+    "inweb_notification_policy.h",
+  ]
+
+  deps = [
+    "//base",
+    "//url",
+  ]
+}
+
+source_set("inweb_notification_policy_ui_selector") {
+  sources = [
+    "inweb_notification_policy_ui_selector.cc",
+    "inweb_notification_policy_ui_selector.h",
+  ]
+
+  deps = [
+    ":inweb_notification_policy",
+    "//base",
+    "//components/permissions",
+    "//components/content_settings/core/common",
+  ]
+}
+
 source_set("inweb_redirect_throttle") {
   sources = [
     "inweb_redirect_throttle.cc",
@@ -48,6 +74,7 @@ source_set("inweb_redirect_throttle") {
 source_set("unittests") {
   testonly = true
   sources = [
+    "inweb_notification_policy_unittest.cc",
     "inweb_popup_guard_unittest.cc",
     "inweb_redirect_guard_unittest.cc",
   ]

@@ -1,0 +1,391 @@
+diff --git a/chrome/android/inweb/popup/BUILD.gn b/chrome/android/inweb/popup/BUILD.gn
+index c036f2a..28d7797 100644
+--- a/chrome/android/inweb/popup/BUILD.gn
++++ b/chrome/android/inweb/popup/BUILD.gn
+@@ -1,4 +1,4 @@
+-# iNWEB Browser — popup protection build (patches 0008–0009).
++# iNWEB Browser — popup protection build (patches 0008–0010).
+ #
+ # Sources are authored at src/native/popup/ in the iNWEB repository and
+ # synced into this patch; the patch series is the single authority for the
+@@ -30,6 +30,32 @@ source_set("inweb_redirect_guard") {
+   ]
+ }
+ 
++source_set("inweb_notification_policy") {
++  sources = [
++    "inweb_notification_policy.cc",
++    "inweb_notification_policy.h",
++  ]
++
++  deps = [
++    "//base",
++    "//url",
++  ]
++}
++
++source_set("inweb_notification_policy_ui_selector") {
++  sources = [
++    "inweb_notification_policy_ui_selector.cc",
++    "inweb_notification_policy_ui_selector.h",
++  ]
++
++  deps = [
++    ":inweb_notification_policy",
++    "//base",
++    "//components/permissions",
++    "//components/content_settings/core/common",
++  ]
++}
++
+ source_set("inweb_redirect_throttle") {
+   sources = [
+     "inweb_redirect_throttle.cc",
+@@ -48,6 +74,7 @@ source_set("inweb_redirect_throttle") {
+ source_set("unittests") {
+   testonly = true
+   sources = [
++    "inweb_notification_policy_unittest.cc",
+     "inweb_popup_guard_unittest.cc",
+     "inweb_redirect_guard_unittest.cc",
+   ]
+diff --git a/chrome/android/inweb/popup/inweb_notification_policy.cc b/chrome/android/inweb/popup/inweb_notification_policy.cc
+new file mode 100644
+index 0000000..85f4ec9
+--- /dev/null
++++ b/chrome/android/inweb/popup/inweb_notification_policy.cc
+@@ -0,0 +1,34 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/popup/inweb_notification_policy.h"
++
++#include "base/no_destructor.h"
++
++namespace inweb::popup {
++
++NotificationPromptDecision InwebNotificationPolicy::ShouldQuietPrompt(
++    const NotificationPromptFacts& facts) const {
++  // Only notification prompts are ours to quiet; every other
++  // permission keeps Chromium's default prompt behavior.
++  if (!facts.is_notifications_request) {
++    return NotificationPromptDecision::kNormalPrompt;
++  }
++  // Engagement exemption (unwired in v1 — conservative superset: all
++  // ASK-state notification prompts quieted). The flag exists so the
++  // settings/engagement patch can loosen the default deliberately,
++  // never silently.
++  if (facts.has_meaningful_engagement) {
++    return NotificationPromptDecision::kNormalPrompt;
++  }
++  quieted_prompts_.fetch_add(1, std::memory_order_relaxed);
++  return NotificationPromptDecision::kQuietPrompt;
++}
++
++InwebNotificationPolicy* GetNotificationPolicy() {
++  static base::NoDestructor<InwebNotificationPolicy> policy;
++  return policy.get();
++}
++
++}  // namespace inweb::popup
+diff --git a/chrome/android/inweb/popup/inweb_notification_policy.h b/chrome/android/inweb/popup/inweb_notification_policy.h
+new file mode 100644
+index 0000000..e47ca81
+--- /dev/null
++++ b/chrome/android/inweb/popup/inweb_notification_policy.h
+@@ -0,0 +1,77 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_POPUP_INWEB_NOTIFICATION_POLICY_H_
++#define CHROME_ANDROID_INWEB_POPUP_INWEB_NOTIFICATION_POLICY_H_
++
++#include <atomic>
++
++namespace inweb::popup {
++
++// Abusive-notification-quieting policy, PHASE4-POPUP-PROTECTION §2C.
++//
++// Policy: notification permission prompts are QUIETED (no modal — the
++// request surfaces as a quiet chip the user can expand) on sites
++// without meaningful engagement, are explained by the quiet chip
++// itself, and are NEVER auto-granted: a grant requires an explicit
++// user action on the expanded prompt.
++//
++// v1 honest scope (stricter default, conservative superset): every
++// notification prompt in the ASK state is quieted. No engagement
++// signal is wired yet, so no site is treated as "meaningfully
++// engaged" — the engagement-exemption slot below is the documented
++// extension point for the settings/engagement patch, and until it
++// exists this policy never loosens the default. Chromium's own
++// quiet-messaging infrastructure carries the UI
++// (PermissionRequestManager quiet chip + the Android quiet prompt
++// model); this class owns only the decision table and the real §24
++// counter. Repeated-deny auto-blocking is Chromium's existing
++// PermissionDecisionAutoBlocker and is left untouched.
++//
++// Honest boundary (§2C/§6): iNWEB makes NO Safe-Browsing-class
++// reputation claim — quieting is policy-based only.
++enum class NotificationPromptDecision {
++  kNormalPrompt,
++  kQuietPrompt,
++};
++
++// Facts about a permission request reaching the prompt stage, as seen
++// by the policy. Kept free of content/ types so the core builds and
++// unit-tests on the host harness.
++struct NotificationPromptFacts {
++  // True when the request is the Web Notifications permission
++  // (RequestType::kNotifications / ContentSettingsType::NOTIFICATIONS).
++  bool is_notifications_request = false;
++  // Extension point (documented, unwired in v1): true would mean the
++  // site has meaningful engagement and may get the normal prompt.
++  bool has_meaningful_engagement = false;
++};
++
++// Notification-prompt policy core. Pure table + real counter; the thin
++// permissions/ wrapper is inweb_notification_policy_ui_selector.cc.
++class InwebNotificationPolicy {
++ public:
++  InwebNotificationPolicy() = default;
++  ~InwebNotificationPolicy() = default;
++
++  InwebNotificationPolicy(const InwebNotificationPolicy&) = delete;
++  InwebNotificationPolicy& operator=(const InwebNotificationPolicy&) = delete;
++
++  NotificationPromptDecision ShouldQuietPrompt(
++      const NotificationPromptFacts& facts) const;
++
++  // Real counter for the Security Center (§24). Never fabricated:
++  // zero until a real notification prompt is quieted.
++  int quieted_prompt_count() const { return quieted_prompts_.load(); }
++
++ private:
++  mutable std::atomic<int> quieted_prompts_{0};
++};
++
++// Process-wide production instance.
++InwebNotificationPolicy* GetNotificationPolicy();
++
++}  // namespace inweb::popup
++
++#endif  // CHROME_ANDROID_INWEB_POPUP_INWEB_NOTIFICATION_POLICY_H_
+diff --git a/chrome/android/inweb/popup/inweb_notification_policy_ui_selector.cc b/chrome/android/inweb/popup/inweb_notification_policy_ui_selector.cc
+new file mode 100644
+index 0000000..5e94005
+--- /dev/null
++++ b/chrome/android/inweb/popup/inweb_notification_policy_ui_selector.cc
+@@ -0,0 +1,46 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/popup/inweb_notification_policy_ui_selector.h"
++
++#include <utility>
++
++#include "chrome/android/inweb/popup/inweb_notification_policy.h"
++#include "components/content_settings/core/common/content_settings_types.h"
++#include "components/permissions/permission_request.h"
++
++namespace inweb::popup {
++
++InwebNotificationPolicyUiSelector::InwebNotificationPolicyUiSelector() =
++    default;
++
++InwebNotificationPolicyUiSelector::~InwebNotificationPolicyUiSelector() =
++    default;
++
++void InwebNotificationPolicyUiSelector::SelectUiToUse(
++    content::WebContents* web_contents,
++    permissions::PermissionRequest* request,
++    DecisionMadeCallback callback) {
++  NotificationPromptFacts facts;
++  facts.is_notifications_request =
++      request->GetContentSettingsType() ==
++      ContentSettingsType::NOTIFICATIONS;
++
++  if (GetNotificationPolicy()->ShouldQuietPrompt(facts) ==
++      NotificationPromptDecision::kQuietPrompt) {
++    std::move(callback).Run(Decision::UseQuietUi(
++        QuietUiReason::kEnabledInPrefs, Decision::ShowNoWarning()));
++    return;
++  }
++  std::move(callback).Run(Decision::UseNormalUiAndShowNoWarning());
++}
++
++void InwebNotificationPolicyUiSelector::Cancel() {}
++
++bool InwebNotificationPolicyUiSelector::IsPermissionRequestSupported(
++    permissions::RequestType request_type) {
++  return request_type == permissions::RequestType::kNotifications;
++}
++
++}  // namespace inweb::popup
+diff --git a/chrome/android/inweb/popup/inweb_notification_policy_ui_selector.h b/chrome/android/inweb/popup/inweb_notification_policy_ui_selector.h
+new file mode 100644
+index 0000000..5e4a1e1
+--- /dev/null
++++ b/chrome/android/inweb/popup/inweb_notification_policy_ui_selector.h
+@@ -0,0 +1,41 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_POPUP_INWEB_NOTIFICATION_POLICY_UI_SELECTOR_H_
++#define CHROME_ANDROID_INWEB_POPUP_INWEB_NOTIFICATION_POLICY_UI_SELECTOR_H_
++
++#include "components/permissions/prediction_service/permission_ui_selector.h"
++
++namespace inweb::popup {
++
++// Thin permissions/ wrapper around InwebNotificationPolicy
++// (PHASE4-POPUP §2C): turns the policy verdict into a
++// PermissionUiSelector::Decision. Registered first in
++// ChromePermissionsClient::CreatePermissionUiSelectors so iNWEB policy
++// takes precedence; decisions are synchronous, so Cancel() is a no-op.
++// kEnabledInPrefs is the honest QuietUiReason — the quiet messaging
++// behavior Chromium already ships, enabled as iNWEB's default policy.
++class InwebNotificationPolicyUiSelector
++    : public permissions::PermissionUiSelector {
++ public:
++  InwebNotificationPolicyUiSelector();
++  ~InwebNotificationPolicyUiSelector() override;
++
++  InwebNotificationPolicyUiSelector(const InwebNotificationPolicyUiSelector&) =
++      delete;
++  InwebNotificationPolicyUiSelector& operator=(
++      const InwebNotificationPolicyUiSelector&) = delete;
++
++  // permissions::PermissionUiSelector:
++  void SelectUiToUse(content::WebContents* web_contents,
++                     permissions::PermissionRequest* request,
++                     DecisionMadeCallback callback) override;
++  void Cancel() override;
++  bool IsPermissionRequestSupported(
++      permissions::RequestType request_type) override;
++};
++
++}  // namespace inweb::popup
++
++#endif  // CHROME_ANDROID_INWEB_POPUP_INWEB_NOTIFICATION_POLICY_UI_SELECTOR_H_
+diff --git a/chrome/android/inweb/popup/inweb_notification_policy_unittest.cc b/chrome/android/inweb/popup/inweb_notification_policy_unittest.cc
+new file mode 100644
+index 0000000..92c2b74
+--- /dev/null
++++ b/chrome/android/inweb/popup/inweb_notification_policy_unittest.cc
+@@ -0,0 +1,77 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — notification policy unit tests (PHASE4-POPUP §2C
++// policy table): notification prompts quieted by default, never
++// auto-granted (the quiet UI requires explicit user action), other
++// permissions untouched, real §24 counter.
++
++#include "chrome/android/inweb/popup/inweb_notification_policy.h"
++
++#include "testing/gtest/include/gtest/gtest.h"
++
++namespace inweb::popup {
++
++namespace {
++
++NotificationPromptFacts NotificationRequest() {
++  NotificationPromptFacts facts;
++  facts.is_notifications_request = true;
++  return facts;
++}
++
++}  // namespace
++
++TEST(InwebNotificationPolicyTest, NotificationPromptsAreQuietedByDefault) {
++  InwebNotificationPolicy policy;
++  EXPECT_EQ(policy.ShouldQuietPrompt(NotificationRequest()),
++            NotificationPromptDecision::kQuietPrompt);
++  EXPECT_EQ(policy.quieted_prompt_count(), 1);
++}
++
++TEST(InwebNotificationPolicyTest, OtherPermissionsAreNotOursToQuiet) {
++  InwebNotificationPolicy policy;
++  NotificationPromptFacts facts;  // geolocation, camera, mic, ...
++  facts.is_notifications_request = false;
++  EXPECT_EQ(policy.ShouldQuietPrompt(facts),
++            NotificationPromptDecision::kNormalPrompt);
++  EXPECT_EQ(policy.quieted_prompt_count(), 0);
++}
++
++TEST(InwebNotificationPolicyTest, EngagementExemptionSlotIsWiredButUnset) {
++  // The engagement exemption is the documented extension point; until
++  // the settings/engagement patch sets it from a real signal, the
++  // default stays strict (no fabricated engagement).
++  InwebNotificationPolicy policy;
++  NotificationPromptFacts facts = NotificationRequest();
++  facts.has_meaningful_engagement = true;
++  EXPECT_EQ(policy.ShouldQuietPrompt(facts),
++            NotificationPromptDecision::kNormalPrompt);
++  EXPECT_EQ(policy.quieted_prompt_count(), 0);
++}
++
++TEST(InwebNotificationPolicyTest, CounterCountsOnlyRealQuiets) {
++  InwebNotificationPolicy policy;
++  NotificationPromptFacts other;
++  EXPECT_EQ(policy.ShouldQuietPrompt(other), NotificationPromptDecision::kNormalPrompt);
++  EXPECT_EQ(policy.ShouldQuietPrompt(NotificationRequest()),
++            NotificationPromptDecision::kQuietPrompt);
++  EXPECT_EQ(policy.ShouldQuietPrompt(NotificationRequest()),
++            NotificationPromptDecision::kQuietPrompt);
++  EXPECT_EQ(policy.quieted_prompt_count(), 2);
++}
++
++TEST(InwebNotificationPolicyTest, ProductionInstanceIsUsable) {
++  // The process-wide instance answers with the same policy; the real
++  // counter lives there and starts at zero (§24 — no fabricated
++  // numbers). Repeated calls with the same instance accumulate.
++  InwebNotificationPolicy* policy = GetNotificationPolicy();
++  const int before = policy->quieted_prompt_count();
++  EXPECT_EQ(policy->ShouldQuietPrompt(NotificationRequest()),
++            NotificationPromptDecision::kQuietPrompt);
++  EXPECT_EQ(policy->quieted_prompt_count(), before + 1);
++  EXPECT_EQ(policy, GetNotificationPolicy());  // stable singleton
++}
++
++}  // namespace inweb::popup
+diff --git a/chrome/browser/permissions/BUILD.gn b/chrome/browser/permissions/BUILD.gn
+index fcfee40..7cdbd84 100644
+--- a/chrome/browser/permissions/BUILD.gn
++++ b/chrome/browser/permissions/BUILD.gn
+@@ -70,6 +70,7 @@ source_set("permissions") {
+ 
+   deps = [
+     ":permissions_proto",
++    "//chrome/android/inweb/popup:inweb_notification_policy_ui_selector",
+     "//chrome/browser:browser_process",
+     "//chrome/browser/actor",
+     "//chrome/browser/app_mode",
+diff --git a/chrome/browser/permissions/chrome_permissions_client.cc b/chrome/browser/permissions/chrome_permissions_client.cc
+index f8e1ac4..40e9654 100644
+--- a/chrome/browser/permissions/chrome_permissions_client.cc
++++ b/chrome/browser/permissions/chrome_permissions_client.cc
+@@ -15,6 +15,7 @@
+ #include "base/strings/string_util.h"
+ #include "base/time/time.h"
+ #include "build/build_config.h"
++#include "chrome/android/inweb/popup/inweb_notification_policy_ui_selector.h"
+ #include "chrome/browser/actor/actor_keyed_service.h"
+ #include "chrome/browser/app_mode/app_mode_utils.h"
+ #include "chrome/browser/bluetooth/bluetooth_chooser_context_factory.h"
+@@ -545,6 +546,10 @@ std::vector<std::unique_ptr<permissions::PermissionUiSelector>>
+ ChromePermissionsClient::CreatePermissionUiSelectors(
+     content::BrowserContext* browser_context) {
+   std::vector<std::unique_ptr<permissions::PermissionUiSelector>> selectors;
++  // iNWEB: notification prompts quieted by default (patch 0010) — our
++  // selector runs first so iNWEB policy takes precedence.
++  selectors.emplace_back(
++      std::make_unique<inweb::popup::InwebNotificationPolicyUiSelector>());
+ #if BUILDFLAG(SAFE_BROWSING_AVAILABLE)
+   selectors.emplace_back(
+       std::make_unique<ContextualNotificationPermissionUiSelector>());
