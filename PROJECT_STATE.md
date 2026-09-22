@@ -1239,8 +1239,8 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   the 14-run resumable B-001 chain (hop 14 = run 35715711786; full ledger:
   `docs/verification/B001-BUILD-CHAIN.md`). B-3 (real build completes) and
   B-4 (real verified artifact) evidence recorded.
-- **Stage 2 in progress** — iNWEB patch series: **0001–0010 authored**
-  (10/24). CI-verified on the real pinned tree: 0001–0004 (b001-verify
+- **Stage 2 in progress** — iNWEB patch series: **0001–0011 authored**
+  (11/24; the popup_protection series 0008–0011 is complete). CI-verified on the real pinned tree: 0001–0004 (b001-verify
   35749687902 @75c71fa) and 0005–0006 — the native ad-block engine +
   URL-loader throttle wiring (b001-verify **35756172332 @4bb5024:
   `TAG: PASS`, `PATCHES: PASS`**; ci-authoring 35756172362 green).
@@ -1261,8 +1261,14 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   prompts quieted to Chromium's existing quiet chip via our own
   PermissionUiSelector registered first; never auto-granted; real §24
   counter; no Safe-Browsing claims) is authored, harness-verified
-  (97/97) and E2E-verified; CI verdict pending (record when green).
-  The popup series finishes with the download guard (0011). The Android UI sources compile inside
+  (97/97) and E2E-verified; ci-authoring 35773256032 green, b001-verify
+  35773256003 in progress (record verdict when green). 0011 (download
+  guard — engine-backed host checks decline engine-BLOCKed download
+  URLs at InterceptDownloadIfApplicable with ResourceType::kObject +
+  real §24 counter; automatic-download confirmation stays Chromium's
+  DownloadRequestLimiter default, unchanged; no reputation-service
+  claims) is authored, harness-verified (103/103) and E2E-verified;
+  CI verdict pending (record when green). The Android UI sources compile inside
   the Chromium build once the integration patches land (see
   `docs/phases/PHASE2-INTEGRATION-PLAN.md`).
 - **Next build:** incremental resume from cached state-13 → first
@@ -1295,14 +1301,17 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Stage 2 — continue the series (0011+):** the adblock core (0005–0007),
+**Stage 2 — continue the series (0012+):** the adblock core (0005–0007),
 the popup window guard (0008) and the tab-takeover redirect throttle
 (0009) are CI-verified (9-patch series: b001-verify 35770417844
-@3a457fc); the notification quieting policy (0010) is authored,
-harness-verified (97/97) + E2E clean — record its CI verdict when
-green. Next: the download guard (0011 — automatic-download
-confirmation + engine-backed host checks on OBJECT/OTHER downloads)
-per the PHASE4 design docs, then
+@3a457fc); the notification quieting policy (0010, b001-verify
+35773256003 in progress) and the download guard (0011, harness
+103/103 + E2E clean) are authored — record both CI verdicts when
+green. The popup_protection series (0008–0011) is complete. Next:
+adblock/0012 (cosmetic filtering — element hiding per PHASE4-COSMETIC),
+then the extension series (0013–0016), offline (0017–0019), security
+(0020–0021), ui (0022) and settings (0023) per the PHASE4–PHASE9
+design docs, then
 extensions, offline, security, settings; after the series verifies,
 dispatch the incremental build hop (resume from state-13) for the first
 iNWEB-branded APK **with working ad-block** → v1.0.0-alpha.2, then the

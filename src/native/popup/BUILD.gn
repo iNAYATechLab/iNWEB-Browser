@@ -1,4 +1,4 @@
-# iNWEB Browser — popup protection build (patches 0008–0010).
+# iNWEB Browser — popup protection build (patches 0008–0011).
 #
 # Sources are authored at src/native/popup/ in the iNWEB repository and
 # synced into this patch; the patch series is the single authority for the
@@ -21,6 +21,19 @@ source_set("inweb_redirect_guard") {
   sources = [
     "inweb_redirect_guard.cc",
     "inweb_redirect_guard.h",
+  ]
+
+  deps = [
+    "//base",
+    "//chrome/android/inweb/adblock:inweb_adblock_throttle",
+    "//url",
+  ]
+}
+
+source_set("inweb_download_guard") {
+  sources = [
+    "inweb_download_guard.cc",
+    "inweb_download_guard.h",
   ]
 
   deps = [
@@ -74,6 +87,7 @@ source_set("inweb_redirect_throttle") {
 source_set("unittests") {
   testonly = true
   sources = [
+    "inweb_download_guard_unittest.cc",
     "inweb_notification_policy_unittest.cc",
     "inweb_popup_guard_unittest.cc",
     "inweb_redirect_guard_unittest.cc",

@@ -1,0 +1,360 @@
+diff --git a/chrome/android/inweb/popup/BUILD.gn b/chrome/android/inweb/popup/BUILD.gn
+index 28d7797..7cd32b9 100644
+--- a/chrome/android/inweb/popup/BUILD.gn
++++ b/chrome/android/inweb/popup/BUILD.gn
+@@ -1,4 +1,4 @@
+-# iNWEB Browser — popup protection build (patches 0008–0010).
++# iNWEB Browser — popup protection build (patches 0008–0011).
+ #
+ # Sources are authored at src/native/popup/ in the iNWEB repository and
+ # synced into this patch; the patch series is the single authority for the
+@@ -30,6 +30,19 @@ source_set("inweb_redirect_guard") {
+   ]
+ }
+ 
++source_set("inweb_download_guard") {
++  sources = [
++    "inweb_download_guard.cc",
++    "inweb_download_guard.h",
++  ]
++
++  deps = [
++    "//base",
++    "//chrome/android/inweb/adblock:inweb_adblock_throttle",
++    "//url",
++  ]
++}
++
+ source_set("inweb_notification_policy") {
+   sources = [
+     "inweb_notification_policy.cc",
+@@ -74,6 +87,7 @@ source_set("inweb_redirect_throttle") {
+ source_set("unittests") {
+   testonly = true
+   sources = [
++    "inweb_download_guard_unittest.cc",
+     "inweb_notification_policy_unittest.cc",
+     "inweb_popup_guard_unittest.cc",
+     "inweb_redirect_guard_unittest.cc",
+diff --git a/chrome/android/inweb/popup/inweb_download_guard.cc b/chrome/android/inweb/popup/inweb_download_guard.cc
+new file mode 100644
+index 0000000..46160c7
+--- /dev/null
++++ b/chrome/android/inweb/popup/inweb_download_guard.cc
+@@ -0,0 +1,49 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/popup/inweb_download_guard.h"
++
++#include <utility>
++
++#include "base/functional/bind.h"
++#include "base/no_destructor.h"
++#include "chrome/android/inweb/adblock/inweb_adblock_engine_holder.h"
++
++namespace inweb::popup {
++
++InwebDownloadGuard::InwebDownloadGuard(Decider decider)
++    : decider_(std::move(decider)) {}
++
++InwebDownloadGuard::~InwebDownloadGuard() = default;
++
++DownloadDecision InwebDownloadGuard::ShouldDeclineDownload(
++    const GURL& download_url,
++    const GURL& document_url) const {
++  if (!decider_) {
++    return DownloadDecision::kAllow;
++  }
++  // §2D: engine BLOCK decisions on OBJECT/OTHER downloads are
++  // declined. The engine's own decision order (disabled → PASS,
++  // allowlisted → ALLOW, first @@ → ALLOW, first block → BLOCK) makes
++  // this safe: exceptions and the site allowlist win, tracking
++  // protection off means kPass, and only a real matching rule blocks.
++  const adblock::RequestContext context{download_url, document_url,
++                                        adblock::ResourceType::kObject};
++  if (decider_.Run(context).action == adblock::FilterAction::kBlock) {
++    declined_downloads_.fetch_add(1, std::memory_order_relaxed);
++    return DownloadDecision::kDeclinedByEngine;
++  }
++  return DownloadDecision::kAllow;
++}
++
++InwebDownloadGuard* GetDownloadGuard() {
++  static base::NoDestructor<InwebDownloadGuard> guard(
++      base::BindRepeating([](const adblock::RequestContext& context) {
++        return adblock::InwebAdblockEngineHolder::GetInstance()->Decide(
++            context);
++      }));
++  return guard.get();
++}
++
++}  // namespace inweb::popup
+diff --git a/chrome/android/inweb/popup/inweb_download_guard.h b/chrome/android/inweb/popup/inweb_download_guard.h
+new file mode 100644
+index 0000000..c99c017
+--- /dev/null
++++ b/chrome/android/inweb/popup/inweb_download_guard.h
+@@ -0,0 +1,78 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_POPUP_INWEB_DOWNLOAD_GUARD_H_
++#define CHROME_ANDROID_INWEB_POPUP_INWEB_DOWNLOAD_GUARD_H_
++
++#include <atomic>
++
++#include "base/functional/callback.h"
++#include "chrome/android/inweb/adblock/inweb_request_context.h"
++#include "chrome/android/inweb/adblock/inweb_resource_type.h"
++#include "url/gurl.h"
++
++namespace inweb::popup {
++
++// Download-protection decision, PHASE4-POPUP-PROTECTION §2D.
++//
++// Two layers, honestly scoped (§6: no remote reputation or scan
++// service is claimed or bundled):
++//
++// 1. Automatic-download limiting — Chromium's existing
++//    DownloadRequestLimiter + the AUTOMATIC_DOWNLOADS content setting
++//    (default ASK) already require explicit user confirmation when a
++//    site triggers multiple automatic (non-gesture) downloads. iNWEB
++//    keeps that default, unchanged — no new code, no claim beyond it.
++//
++// 2. Engine-backed host checks — this guard: a download whose URL the
++//    filter engine BLOCKs (host/object rules, consulted with
++//    ResourceType::kObject through the process-wide holder) is
++//    declined at the download-interception point
++//    (ChromeDownloadManagerDelegate::InterceptDownloadIfApplicable).
++//    Engine exceptions (@@) and the site allowlist are honored by the
++//    engine's own decision order; when tracking protection is off the
++//    engine reports kPass and every download proceeds.
++enum class DownloadDecision {
++  kAllow,
++  kDeclinedByEngine,
++};
++
++// Download guard. The decision core is pure and unit-tested with a
++// scriptable decider; the production instance consults the native
++// ad-block engine holder (patches 0005–0007) with
++// ResourceType::kObject, per the §2D "BLOCK decisions on OBJECT/OTHER
++// downloads" rule.
++class InwebDownloadGuard {
++ public:
++  using Decider =
++      base::RepeatingCallback<adblock::FilterDecision(const adblock::RequestContext&)>;
++
++  explicit InwebDownloadGuard(Decider decider);
++  ~InwebDownloadGuard();
++
++  InwebDownloadGuard(const InwebDownloadGuard&) = delete;
++  InwebDownloadGuard& operator=(const InwebDownloadGuard&) = delete;
++
++  // |download_url|: the URL of the file being downloaded.
++  // |document_url|: the page that initiated the download (may be empty
++  // for downloads without an initiating document).
++  DownloadDecision ShouldDeclineDownload(const GURL& download_url,
++                                         const GURL& document_url) const;
++
++  // Real counter for the Security Center (§24). Never fabricated:
++  // zero until a real download is declined.
++  int declined_download_count() const { return declined_downloads_.load(); }
++
++ private:
++  mutable std::atomic<int> declined_downloads_{0};
++  Decider decider_;
++};
++
++// Process-wide production instance: decider bound to the ad-block
++// engine holder. Lazily created on first use and never destroyed.
++InwebDownloadGuard* GetDownloadGuard();
++
++}  // namespace inweb::popup
++
++#endif  // CHROME_ANDROID_INWEB_POPUP_INWEB_DOWNLOAD_GUARD_H_
+diff --git a/chrome/android/inweb/popup/inweb_download_guard_unittest.cc b/chrome/android/inweb/popup/inweb_download_guard_unittest.cc
+new file mode 100644
+index 0000000..20c2f4a
+--- /dev/null
++++ b/chrome/android/inweb/popup/inweb_download_guard_unittest.cc
+@@ -0,0 +1,134 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — download guard unit tests (PHASE4-POPUP §2D policy):
++// engine BLOCK on the download URL declines the download; exceptions,
++// allowlist and tracking-protection-off all allow; the real §24
++// counter counts only real declines. Includes the production-decider
++// path through the real engine holder with an object rule.
++
++#include "chrome/android/inweb/popup/inweb_download_guard.h"
++
++#include <vector>
++
++#include "base/functional/bind.h"
++#include "chrome/android/inweb/adblock/inweb_adblock_engine_holder.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_parser.h"
++#include "testing/gtest/include/gtest/gtest.h"
++
++namespace inweb::popup {
++
++namespace {
++
++using adblock::FilterAction;
++using adblock::FilterDecision;
++using adblock::RequestContext;
++using adblock::ResourceType;
++
++struct ScriptedState {
++  FilterAction action = FilterAction::kPass;
++  std::vector<RequestContext> seen;
++};
++
++InwebDownloadGuard GuardFrom(ScriptedState* state) {
++  return InwebDownloadGuard(base::BindRepeating(
++      [](ScriptedState* state, const RequestContext& context) {
++        state->seen.push_back(context);
++        FilterDecision decision;
++        decision.action = state->action;
++        return decision;
++      },
++      state));
++}
++
++const GURL kDownloadUrl = GURL("https://cdn.tracker.example.net/payload.apk");
++const GURL kDocumentUrl = GURL("https://sketchy.example.com/free-stuff");
++
++}  // namespace
++
++TEST(InwebDownloadGuardTest, EngineBlockDeclinesTheDownload) {
++  ScriptedState state;
++  state.action = FilterAction::kBlock;
++  auto guard = GuardFrom(&state);
++  EXPECT_EQ(guard.ShouldDeclineDownload(kDownloadUrl, kDocumentUrl),
++            DownloadDecision::kDeclinedByEngine);
++  EXPECT_EQ(guard.declined_download_count(), 1);
++  ASSERT_EQ(state.seen.size(), 1u);
++  EXPECT_EQ(state.seen[0].resource_type, ResourceType::kObject);
++  EXPECT_EQ(state.seen[0].request_url, kDownloadUrl);
++  EXPECT_EQ(state.seen[0].document_url, kDocumentUrl);
++}
++
++TEST(InwebDownloadGuardTest, EnginePassAllowsTheDownload) {
++  ScriptedState state;  // kPass: tracking protection off or no rule.
++  auto guard = GuardFrom(&state);
++  EXPECT_EQ(guard.ShouldDeclineDownload(kDownloadUrl, kDocumentUrl),
++            DownloadDecision::kAllow);
++  EXPECT_EQ(guard.declined_download_count(), 0);
++}
++
++TEST(InwebDownloadGuardTest, EngineExceptionAllowsTheDownload) {
++  ScriptedState state;
++  state.action = FilterAction::kAllow;  // @@ exception matched.
++  auto guard = GuardFrom(&state);
++  EXPECT_EQ(guard.ShouldDeclineDownload(kDownloadUrl, kDocumentUrl),
++            DownloadDecision::kAllow);
++  EXPECT_EQ(guard.declined_download_count(), 0);
++}
++
++TEST(InwebDownloadGuardTest, EmptyDocumentUrlStillChecksTheHost) {
++  // Downloads without an initiating document still get the host check;
++  // the engine treats an empty document as third-party context.
++  ScriptedState state;
++  state.action = FilterAction::kBlock;
++  auto guard = GuardFrom(&state);
++  EXPECT_EQ(guard.ShouldDeclineDownload(kDownloadUrl, GURL()),
++            DownloadDecision::kDeclinedByEngine);
++  ASSERT_EQ(state.seen.size(), 1u);
++  EXPECT_TRUE(state.seen[0].document_url.is_empty());
++}
++
++TEST(InwebDownloadGuardTest, CounterCountsOnlyRealDeclines) {
++  ScriptedState state;
++  auto guard = GuardFrom(&state);
++  EXPECT_EQ(guard.ShouldDeclineDownload(kDownloadUrl, kDocumentUrl),
++            DownloadDecision::kAllow);
++  state.action = FilterAction::kBlock;
++  EXPECT_EQ(guard.ShouldDeclineDownload(kDownloadUrl, kDocumentUrl),
++            DownloadDecision::kDeclinedByEngine);
++  EXPECT_EQ(guard.ShouldDeclineDownload(kDownloadUrl, kDocumentUrl),
++            DownloadDecision::kDeclinedByEngine);
++  EXPECT_EQ(guard.declined_download_count(), 2);
++}
++
++TEST(InwebDownloadGuardTest, ProductionDeciderObjectRuleThroughHolder) {
++  // A real holder with an object rule for the download host: the
++  // production decider path must decline (§2D BLOCK on OBJECT).
++  adblock::InwebAdblockEngineHolder holder;
++  adblock::TrackingProtectionSettings settings(
++      /*enabled=*/true, adblock::CookiePolicy::kAllowAll,
++      /*allowlisted_sites=*/{});
++  std::vector<adblock::ParsedFilterList> lists;
++  lists.push_back(adblock::FilterListParser::Parse(
++      "||tracker.example.net^$object", "download-test"));
++  holder.SetFilterLists(std::move(lists));
++  holder.UpdateSettings(settings);
++
++  InwebDownloadGuard guard(base::BindRepeating(
++      [](adblock::InwebAdblockEngineHolder* holder,
++         const RequestContext& context) { return holder->Decide(context); },
++      &holder));
++  EXPECT_EQ(guard.ShouldDeclineDownload(kDownloadUrl, kDocumentUrl),
++            DownloadDecision::kDeclinedByEngine);
++
++  // Same engine, an @@ exception for the exact download URL wins.
++  std::vector<adblock::ParsedFilterList> exception_lists;
++  exception_lists.push_back(adblock::FilterListParser::Parse(
++      "@@||cdn.tracker.example.net/payload.apk^$object", "download-ex"));
++  holder.SetFilterLists(std::move(exception_lists));
++  EXPECT_EQ(guard.ShouldDeclineDownload(kDownloadUrl, kDocumentUrl),
++            DownloadDecision::kAllow);
++}
++
++}  // namespace inweb::popup
+diff --git a/chrome/browser/download/BUILD.gn b/chrome/browser/download/BUILD.gn
+index 9d33c6e..eebf978 100644
+--- a/chrome/browser/download/BUILD.gn
++++ b/chrome/browser/download/BUILD.gn
+@@ -187,6 +187,7 @@ source_set("impl") {
+ 
+   deps = [
+     ":status_text_builder_utils",
++    "//chrome/android/inweb/popup:inweb_download_guard",
+     "//chrome/browser:browser_process",
+     "//chrome/browser:primitives",
+     "//chrome/browser/actor",
+diff --git a/chrome/browser/download/chrome_download_manager_delegate.cc b/chrome/browser/download/chrome_download_manager_delegate.cc
+index d0b653e..67c9942 100644
+--- a/chrome/browser/download/chrome_download_manager_delegate.cc
++++ b/chrome/browser/download/chrome_download_manager_delegate.cc
+@@ -31,6 +31,7 @@
+ #include "base/task/thread_pool.h"
+ #include "base/time/time.h"
+ #include "build/build_config.h"
++#include "chrome/android/inweb/popup/inweb_download_guard.h"
+ #include "chrome/browser/browser_process.h"
+ #include "chrome/browser/download/download_core_service.h"
+ #include "chrome/browser/download/download_core_service_factory.h"
+@@ -1226,6 +1227,18 @@ bool ChromeDownloadManagerDelegate::InterceptDownloadIfApplicable(
+     return true;
+   }
+ 
++  // iNWEB: engine-backed download host check (patch 0011). A download
++  // URL the filter engine BLOCKs (object rules, §2D) is declined and
++  // counted (§24). Automatic-download confirmation stays Chromium's
++  // DownloadRequestLimiter + AUTOMATIC_DOWNLOADS default behavior.
++  const GURL inweb_document_url =
++      web_contents ? web_contents->GetLastCommittedURL() : GURL();
++  if (inweb::popup::GetDownloadGuard()->ShouldDeclineDownload(
++          url, inweb_document_url)) {
++    LOG(WARNING) << "Download declined by iNWEB tracking protection.";
++    return true;
++  }
++
+ #if BUILDFLAG(ENABLE_OFFLINE_PAGES)
+   DCHECK_CURRENTLY_ON(BrowserThread::UI);
+   // For background service downloads we don't want offline pages backend to

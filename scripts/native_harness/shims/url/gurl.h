@@ -8,6 +8,9 @@ class GURL {
   bool is_empty() const { return spec_.empty(); }
   std::string host() const { return host_; }
   const std::string& possibly_invalid_spec() const { return spec_; }
+
+  bool operator==(const GURL& other) const { return spec_ == other.spec_; }
+  bool operator!=(const GURL& other) const { return !(*this == other); }
  private:
   std::string spec_;
   std::string host_;

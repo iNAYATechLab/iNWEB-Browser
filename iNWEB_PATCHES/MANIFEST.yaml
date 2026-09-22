@@ -437,3 +437,61 @@ patches:
       text/explanation surface is Chromium's; the "exactly once
       explained" education surface beyond the chip is deferred to the
       settings/UI patch and documented, not claimed.
+  - id: 0011-popup-download-guard
+    file: popup_protection/0011-popup-download-guard.patch
+    area: popup_protection
+    description: >-
+      Malicious-download protection (PHASE4-POPUP §2D), honestly
+      scoped (§6: no remote reputation or scan service claimed or
+      bundled). Layer 1 — automatic-download limiting: Chromium's
+      existing DownloadRequestLimiter + the AUTOMATIC_DOWNLOADS
+      content setting (default ASK) already require explicit user
+      confirmation when a site triggers multiple automatic
+      (non-gesture) downloads; iNWEB keeps that default unchanged —
+      no new code, no claim beyond it. Layer 2 — engine-backed host
+      checks (this patch): a download whose URL the filter engine
+      BLOCKs (object rules, consulted with ResourceType::kObject
+      through the process-wide holder) is declined at
+      ChromeDownloadManagerDelegate::InterceptDownloadIfApplicable,
+      alongside the enterprise policy blocklist hook; the engine's
+      own decision order honors @@ exceptions and the site allowlist,
+      and tracking-protection-off means every download proceeds.
+      Declined downloads count into a real §24 counter
+      (declined_download_count; zero until real events). The decision
+      core is the pure, harness-tested InwebDownloadGuard (scriptable
+      decider; production instance bound to the holder); no separate
+      content/ wrapper is needed — the delegate call site is the
+      wrapper. Hooks: chrome_download_manager_delegate.cc (sorted
+      include before chrome/browser/browser_process.h; guard block
+      after the policy blocklist check, before the OFFLINE_PAGES
+      block) and chrome/browser/download BUILD.gn target "impl" deps
+      (after :status_text_builder_utils).
+    upstream_files:
+      - chrome/browser/download/BUILD.gn
+      - chrome/browser/download/chrome_download_manager_delegate.cc
+    risk: medium
+    validation: >-
+      Host harness (scripts/native_harness): 103/103 tests pass (97 +
+      6 download guard: engine-BLOCK declines with kObject context,
+      engine-PASS allows, @@ exception allows, empty document URL
+      still host-checked, counter counts only real declines,
+      production-decider path through the real holder with an $object
+      rule plus a same-engine @@ exception override). The exact
+      InterceptDownloadIfApplicable signature + the policy blocklist
+      anchor at the pinned tag were verified against the pinned tree
+      (sparse partial clone @154; the IS_ANDROID blocks inside the
+      method confirm the Android path runs through it). apply_patches
+      E2E on the 11-patch series with byte-identical applied files
+      and PEEL idempotence; lint_manifest.py. Compile + unit tests
+      run in the b001-build-hop chain.
+    rebase_notes: >-
+      Two upstream hunks: chrome_download_manager_delegate.cc (include
+      slot between build/build_config.h and
+      chrome/browser/browser_process.h; guard block inserted after the
+      URLBlocklist early-return, before #if BUILDFLAG
+      (ENABLE_OFFLINE_PAGES)) and chrome/browser/download BUILD.gn
+      (deps line after ":status_text_builder_utils" in source_set
+      "impl"). Sources: src/native/popup/ (download guard; cumulative
+      over the 0010-applied state). The download manager's own
+      dangerous-download UI (Safe Browsing verdicts, MIME sniffs) is
+      untouched and not claimed.
