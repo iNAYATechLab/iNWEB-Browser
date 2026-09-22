@@ -84,14 +84,17 @@ patches:
     file: ui/0003-launcher-icons.patch
     area: ui
     description: >-
-      iNWEB launcher icon set: replaces all 15 launcher icon assets in
-      res_chromium_base (app_icon.png legacy round icon at
-      48/72/96/144/192 px; layered_app_icon.png adaptive-foreground and
-      layered_app_icon_background.png adaptive-background at
-      108/162/216/324/432 px per density). Design: minimalist white globe
-      with meridian lines and a cyan orbit swoosh over a deep navy-to-teal
-      gradient. Master artwork generated, programmatically derived to all
-      densities (PIL), binary git diff.
+      iNWEB launcher icon set (v1 logo, user-selected): replaces all 15
+      launcher icon assets in res_chromium_base (app_icon.png legacy
+      round icon at 48/72/96/144/192 px; layered_app_icon.png
+      adaptive-foreground and layered_app_icon_background.png
+      adaptive-background at 108/162/216/324/432 px per density). Design:
+      the user-provided iNWEB logo mark (transparent-background PNG
+      master, preserved at iNWEB_PATCHES/assets/inweb_logo_master.png)
+      composited over the deep navy-to-teal gradient; legacy icons
+      circle-cropped with transparent corners, adaptive foreground
+      full-bleed, adaptive background pure gradient. All densities
+      derived programmatically (PIL); binary git diff.
     upstream_files:
       - chrome/android/java/res_chromium_base/mipmap-mdpi/app_icon.png
       - chrome/android/java/res_chromium_base/mipmap-hdpi/app_icon.png
@@ -110,13 +113,15 @@ patches:
       - chrome/android/java/res_chromium_base/mipmap-xxxhdpi/layered_app_icon_background.png
     risk: low
     validation: >-
-      Programmatic image sanity (palette/contrast/center-brightness) on the
-      master; exact upstream dimensions reproduced per density; git
-      apply/--reverse binary round-trip; apply_patches.py E2E (apply,
-      verify, PEEL-idempotence, 3-patch series); lint_manifest.py;
-      b001-verify (patches mode) on a real fetched tree; visual acceptance
-      at first iNWEB APK install.
+      Exact upstream dimensions and PNG modes reproduced per density; git
+      apply/--reverse binary round-trip with byte-identical applied files;
+      apply_patches.py E2E (apply, verify, PEEL-idempotence, 3-patch
+      series); lint_manifest.py. b001-verify (patches mode) on a real
+      fetched tree pending for this reworked content - the previous globe
+      design passed run 35739593282; visual acceptance at first iNWEB
+      APK install.
     rebase_notes: >-
-      Binary patch - on rebase, regenerate assets from the master design
+      Binary patch - on rebase, regenerate assets from the master
+      (iNWEB_PATCHES/assets/inweb_logo_master.png, user-provided v1 logo)
       and re-diff. themed_app_icon.xml (Android 13+ monochrome) not yet
       rebranded; planned for the final polish patch.
