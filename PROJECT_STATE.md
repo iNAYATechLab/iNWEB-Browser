@@ -1301,13 +1301,17 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Stage 2 — continue the series (0012+):** the adblock core (0005–0007),
-the popup window guard (0008) and the tab-takeover redirect throttle
-(0009) are CI-verified (9-patch series: b001-verify 35770417844
-@3a457fc); the notification quieting policy (0010, b001-verify
-35773256003 in progress) and the download guard (0011, harness
-103/103 + E2E clean) are authored — record both CI verdicts when
-green. The popup_protection series (0008–0011) is complete. Next:
+**Stage 2 — continue the series (0012+):** patches 0001–0011 are all
+CI-verified (latest: b001-verify 35774091092 @ec1d157, 11-patch
+series; the popup_protection series 0008–0011 is complete). Product
+note: **K-1** (docs/KNOWN-ISSUES.md) — user reports intermittent hangs
+under heavy load on alpha.1; triaged honestly (alpha.1 has no Stage-2
+native code; ANR trace + device details wanted; device-matrix load
+test + alpha.2 A/B added to the plan). **Beta (public) is NOT
+warranted yet**: 13 patches remain, no Stage-2 patch has been compiled
+(b001-verify is patches-mode), no alpha.2 artifact exists, B-5..B-8 +
+G-closure pending, K-1 open. Target path: finish series → build hop →
+alpha.2 → device matrix → beta. Next:
 adblock/0012 (cosmetic filtering — element hiding per PHASE4-COSMETIC),
 then the extension series (0013–0016), offline (0017–0019), security
 (0020–0021), ui (0022) and settings (0023) per the PHASE4–PHASE9
