@@ -424,7 +424,11 @@ patches:
       prompt model files) was verified against the pinned tree (sparse
       partial clone @154). apply_patches E2E on the 10-patch series
       with byte-identical applied files and PEEL idempotence;
-      lint_manifest.py. Compile + unit tests run in the
+      lint_manifest.py; b001-verify (patches mode) PASS on the real
+      fetched tree (run 35774091092, commit ec1d157, 11-patch series —
+      the 0010-head run 35773256003 was cancelled mid-run by the 0011
+      push's concurrency supersession; full-series coverage comes from
+      the 11-patch run). Compile + unit tests run in the
       b001-build-hop chain.
     rebase_notes: >-
       Two upstream hunks: chrome_permissions_client.cc (include slot
