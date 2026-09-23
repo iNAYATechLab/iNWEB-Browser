@@ -70,8 +70,36 @@ FilterDecision InwebAdblockEngineHolder::Decide(
 void InwebAdblockEngineHolder::SetFilterLists(
     std::vector<ParsedFilterList> lists) {
   base::AutoLock lock(lock_);
+  // Retain the cosmetic half before the lists move into the network
+  // engine (PHASE4-COSMETIC §1: cosmetic lists parsed beside network
+  // lists, one provisioning path).
+  std::vector<CosmeticRule> cosmetic_rules;
+  for (const ParsedFilterList& list : lists) {
+    cosmetic_rules.insert(cosmetic_rules.end(),
+                          list.cosmetic_rules.begin(),
+                          list.cosmetic_rules.end());
+  }
+  cosmetic_engine_ = cosmetic_rules.empty()
+                         ? nullptr
+                         : std::make_unique<CosmeticFilterEngine>(
+                               std::move(cosmetic_rules));
   engine_ = std::make_unique<TrackingProtectionEngine>(std::move(lists),
                                                        settings_);
+}
+
+std::string InwebAdblockEngineHolder::CosmeticCssFor(
+    const std::string& host) const {
+  base::AutoLock lock(lock_);
+  // Policy before engine (PHASE4-COSMETIC §3): the global toggle and
+  // the single per-site shields list are honored first — one decision
+  // path, no divergence from the network engine.
+  if (!settings_.enabled() || settings_.IsSiteAllowlisted(host)) {
+    return "";
+  }
+  if (!cosmetic_engine_) {
+    return "";
+  }
+  return cosmetic_engine_->HideCssFor(host);
 }
 
 SecurityCenterModel InwebAdblockEngineHolder::BuildSecurityCenterModel(

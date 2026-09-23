@@ -1239,8 +1239,9 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   the 14-run resumable B-001 chain (hop 14 = run 35715711786; full ledger:
   `docs/verification/B001-BUILD-CHAIN.md`). B-3 (real build completes) and
   B-4 (real verified artifact) evidence recorded.
-- **Stage 2 in progress** — iNWEB patch series: **0001–0011 authored**
-  (11/24; the popup_protection series 0008–0011 is complete). CI-verified on the real pinned tree: 0001–0004 (b001-verify
+- **Stage 2 in progress** — iNWEB patch series: **0001–0012 authored**
+  (12/24; popup_protection 0008–0011 complete; 0012 completes the
+  adblock series 0005–0012). CI-verified on the real pinned tree: 0001–0004 (b001-verify
   35749687902 @75c71fa) and 0005–0006 — the native ad-block engine +
   URL-loader throttle wiring (b001-verify **35756172332 @4bb5024:
   `TAG: PASS`, `PATCHES: PASS`**; ci-authoring 35756172362 green).
@@ -1259,16 +1260,22 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   `PATCHES: PASS` (9-patch series)**; ci-authoring 35770417829 green.
   0010 (notification quieting policy — all ASK-state notification
   prompts quieted to Chromium's existing quiet chip via our own
-  PermissionUiSelector registered first; never auto-granted; real §24
-  counter; no Safe-Browsing claims) is authored, harness-verified
-  (97/97) and E2E-verified; ci-authoring 35773256032 green, b001-verify
-  35773256003 in progress (record verdict when green). 0011 (download
-  guard — engine-backed host checks decline engine-BLOCKed download
-  URLs at InterceptDownloadIfApplicable with ResourceType::kObject +
-  real §24 counter; automatic-download confirmation stays Chromium's
-  DownloadRequestLimiter default, unchanged; no reputation-service
-  claims) is authored, harness-verified (103/103) and E2E-verified;
-  CI verdict pending (record when green). The Android UI sources compile inside
+  PermissionUiSelector registered first; never auto-granted; no
+  Safe-Browsing claims) and 0011 (download guard — engine-backed host
+  checks decline engine-BLOCKed download URLs with
+  ResourceType::kObject; automatic-download confirmation stays
+  Chromium's DownloadRequestLimiter default) are CI-verified:
+  b001-verify **35774091092 @ec1d157: `PATCHES: PASS` (11-patch
+  series)**; ci-authoring green at both heads (35773256032,
+  35774091062; 0010's own-head verify 35773256003 was cancelled by
+  push supersession). 0012 (cosmetic injection — C++ port of the
+  Kotlin cosmetic engine; holder CosmeticCssFor, policy-first; the
+  per-frame InwebCosmeticInjector appends a <style> via
+  ExecuteJavaScriptInIsolatedWorld in the first embedder world — the
+  pinned tree has no public CSS-insertion API, deviation documented;
+  ADR-021 v1 subset ##/#@# only; documented flash/CSP/race limits) is
+  authored, harness-verified (117/117) and E2E-verified; CI verdict
+  pending (record when green). The Android UI sources compile inside
   the Chromium build once the integration patches land (see
   `docs/phases/PHASE2-INTEGRATION-PLAN.md`).
 - **Next build:** incremental resume from cached state-13 → first
@@ -1301,9 +1308,12 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Stage 2 — continue the series (0012+):** patches 0001–0011 are all
+**Stage 2 — continue the series (0013+):** patches 0001–0011 are all
 CI-verified (latest: b001-verify 35774091092 @ec1d157, 11-patch
-series; the popup_protection series 0008–0011 is complete). Product
+series; the popup_protection series 0008–0011 is complete). 0012
+(cosmetic injection) is authored, harness-verified (117/117) and E2E
+clean — record its CI verdict when green; it completes the adblock
+series (0005–0012). Product
 note: **K-1** (docs/KNOWN-ISSUES.md) — user reports intermittent hangs
 under heavy load on alpha.1; triaged honestly (alpha.1 has no Stage-2
 native code; ANR trace + device details wanted; device-matrix load
@@ -1311,11 +1321,10 @@ test + alpha.2 A/B added to the plan). **Beta (public) is NOT
 warranted yet**: 13 patches remain, no Stage-2 patch has been compiled
 (b001-verify is patches-mode), no alpha.2 artifact exists, B-5..B-8 +
 G-closure pending, K-1 open. Target path: finish series → build hop →
-alpha.2 → device matrix → beta. Next:
-adblock/0012 (cosmetic filtering — element hiding per PHASE4-COSMETIC),
-then the extension series (0013–0016), offline (0017–0019), security
-(0020–0021), ui (0022) and settings (0023) per the PHASE4–PHASE9
-design docs, then
+alpha.2 → device matrix → beta. Next: the extension series
+(0013–0016, per PHASE6-EXTENSION-DESIGN), offline (0017–0019),
+security (0020–0021), ui (0022) and settings (0023) per the
+PHASE4–PHASE9 design docs, then
 extensions, offline, security, settings; after the series verifies,
 dispatch the incremental build hop (resume from state-13) for the first
 iNWEB-branded APK **with working ad-block** → v1.0.0-alpha.2, then the

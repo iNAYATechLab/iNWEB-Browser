@@ -16,6 +16,7 @@
 #include "chrome/android/inweb/adblock/inweb_filter_list_cache.h"
 #include "chrome/android/inweb/adblock/inweb_filter_list_manager.h"
 #include "chrome/android/inweb/adblock/inweb_security_center.h"
+#include "chrome/android/inweb/adblock/inweb_cosmetic_filter.h"
 #include "chrome/android/inweb/adblock/inweb_tracking_protection_engine.h"
 
 namespace inweb::adblock {
@@ -36,6 +37,13 @@ class InwebAdblockEngineHolder {
   // True when |host| is on the per-site allowlist (single shields list —
   // also the popup exemption list, PHASE4-POPUP §1).
   bool IsSiteAllowlisted(const std::string& host) const;
+
+  // The grouped cosmetic (element-hiding) CSS for |host|, or "" when
+  // nothing applies. Honors the global toggle and the per-site
+  // allowlist BEFORE the engine is consulted (PHASE4-COSMETIC §3 —
+  // one decision path with the network engine). Thread-safe; intended
+  // for a worker thread (the injector never calls it on the UI thread).
+  std::string CosmeticCssFor(const std::string& host) const;
 
   // Thread-safe; callable from any sequence. Holds the holder lock for the
   // duration of the (v1 full-scan) decision — see ADR-013/ADR-040 notes.
@@ -65,6 +73,7 @@ class InwebAdblockEngineHolder {
   std::unique_ptr<MemoryFilterListCache> cache_ GUARDED_BY(lock_);
   std::unique_ptr<FilterListManager> manager_ GUARDED_BY(lock_);
   std::unique_ptr<TrackingProtectionEngine> engine_ GUARDED_BY(lock_);
+  std::unique_ptr<CosmeticFilterEngine> cosmetic_engine_ GUARDED_BY(lock_);
 };
 
 }  // namespace inweb::adblock

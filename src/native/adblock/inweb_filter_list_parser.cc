@@ -6,6 +6,8 @@
 
 #include "chrome/android/inweb/adblock/inweb_filter_list_parser.h"
 
+#include "chrome/android/inweb/adblock/inweb_cosmetic_filter.h"
+
 #include <string>
 #include <utility>
 #include <vector>
@@ -45,10 +47,15 @@ ParsedFilterList FilterListParser::Parse(const std::string& text,
       ++parsed.comment_count;
       continue;
     }
-    if (line.find("##") != std::string::npos ||
-        line.find("#@#") != std::string::npos ||
-        line.find("#?#") != std::string::npos) {
+    const CosmeticLineResult cosmetic = CosmeticFilterParser::ParseLine(line);
+    if (cosmetic.kind != CosmeticLineResult::Kind::kNotCosmetic) {
+      // Every line carrying a cosmetic marker counts here (including
+      // procedural/unsupported/invalid ones) — Kotlin parity.
       ++parsed.cosmetic_rule_count;
+      if (cosmetic.kind == CosmeticLineResult::Kind::kHide ||
+          cosmetic.kind == CosmeticLineResult::Kind::kException) {
+        parsed.cosmetic_rules.push_back(cosmetic.rule);
+      }
       continue;
     }
     std::optional<NetworkFilterRule> rule = ParseRule(line, line_number);

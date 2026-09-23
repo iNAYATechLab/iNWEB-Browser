@@ -499,3 +499,72 @@ patches:
       over the 0010-applied state). The download manager's own
       dangerous-download UI (Safe Browsing verdicts, MIME sniffs) is
       untouched and not claimed.
+  - id: 0012-cosmetic-injection
+    file: adblock/0012-cosmetic-injection.patch
+    area: adblock
+    description: >-
+      Cosmetic (element-hiding) stylesheet injection, PHASE4-COSMETIC
+      (MASTER-SPEC §11 "where technically feasible"; ADR-021 v1 subset
+      — ## hide + #@# exceptions only; #?#/#$#/#%# counted, never
+      matched). The C++ CosmeticFilterParser/CosmeticFilterEngine is a
+      1:1 port of the tested Kotlin reference (CosmeticFilter.kt),
+      retained per list by the network list parser. The holder gains
+      CosmeticCssFor(host): global toggle + single per-site shields
+      list honored BEFORE the engine (one decision path, §3); thread-
+      safe, called from a worker thread. InwebCosmeticInjector (a
+      WebContentsObserver attached from
+      ChromeContentBrowserClient::OnWebContentsCreated) injects on
+      every committed non-same-document, non-error navigation in any
+      frame: CSS computed on a worker thread, inserted on the UI
+      thread by appending a <style> element through a tiny script run
+      in the first embedder isolated world. No new §24 counters (§3 —
+      page-decoration concern). Known, documented limitations: brief
+      flash of unhidden elements before injection; strict-CSP pages
+      may defeat inline <style> insertion; races with frame death
+      lose that frame's injection (cosmetic is the secondary defense;
+      network blocking stays primary). Pinned-tree honesty note: the
+      design doc said "content-layer CSS-insertion API" — at 154 no
+      public CSS-insertion API exists for web content
+      (RenderFrameHost::ExecuteJavaScript is chrome://-only), so the
+      closest real path, ExecuteJavaScriptInIsolatedWorld with
+      content::ISOLATED_WORLD_ID_CONTENT_END (impl verified: no WebUI
+      gate), is used and the deviation is documented here.
+    upstream_files:
+      - chrome/browser/BUILD.gn
+      - chrome/browser/chrome_content_browser_client.cc
+    risk: medium
+    validation: >-
+      Host harness (scripts/native_harness): 117/117 tests pass (103 +
+      14 cosmetic: parser — universal hide, domain includes/excludes,
+      exception, procedural counted, unsupported counted, invalid
+      counted, network/comments skipped; engine — universal applies
+      everywhere, host+subdomain matching with no suffix spoof,
+      exclude-wins, exception cancellation, grouped CSS, host
+      hygiene (case + trailing dot); list parser retains cosmetic
+      rules with total-marker counter unchanged; holder CosmeticCssFor
+      — per-host CSS, allowlisted site empty, toggle off empty, no
+      rules empty). The exact pinned-tree API surface (no public
+      CSS-insertion API; ExecuteJavaScript WebUI-only;
+      ExecuteJavaScriptInIsolatedWorld without a WebUI gate;
+      ISOLATED_WORLD_ID_CONTENT_END as the first embedder world;
+      OnWebContentsCreated/AttachUniversalWebContentsObservers;
+      DidFinishNavigation + HasCommitted/IsSameDocument/IsErrorPage +
+      GetRenderFrameHost + GetGlobalId + FromID for lifetime-safe
+      re-resolution; GetLastCommittedOrigin().host()) was verified
+      against the pinned tree (sparse partial clone @154).
+      apply_patches E2E on the 12-patch series with byte-identical
+      applied files and PEEL idempotence; lint_manifest.py. Compile +
+      unit tests run in the b001-build-hop chain.
+    rebase_notes: >-
+      Two upstream hunks: chrome_content_browser_client.cc (sorted
+      include between the adblock and popup inweb includes; the
+      CreateForWebContents attach line right after
+      AttachUniversalWebContentsObservers inside OnWebContentsCreated)
+      and chrome/browser BUILD.gn (deps line after
+      //chrome/android/inweb/adblock:inweb_adblock_throttle). Sources:
+      src/native/adblock/ (cosmetic filter + injector + holder/parser
+      deltas; cumulative over the 0011-applied state). Harness shim
+      gained base::TrimWhitespaceASCII (upstream parity) and GURL
+      operator==/!= came with 0011. The isolated-world script only
+      touches the shared DOM (appends one <style data-inweb="cosmetic">
+      element); it never reads page JS state.

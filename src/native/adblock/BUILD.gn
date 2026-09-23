@@ -6,6 +6,8 @@
 
 source_set("inweb_adblock_engine") {
   sources = [
+    "inweb_cosmetic_filter.cc",
+    "inweb_cosmetic_filter.h",
     "inweb_default_filter_list.cc",
     "inweb_default_filter_list.h",
     "inweb_domain_classifier.cc",
@@ -48,6 +50,24 @@ source_set("inweb_adblock_engine") {
 
 # URL-loader throttle + engine holder (patch 0006): wires the engine into
 # the network stack. Registered from ChromeContentBrowserClient.
+# Per-frame cosmetic stylesheet injection (patch 0012). Chromium-only:
+# content/ wrappers; the pure decision core lives in the engine target
+# above and is what the host harness tests.
+source_set("inweb_cosmetic_injector") {
+  sources = [
+    "inweb_cosmetic_injector.cc",
+    "inweb_cosmetic_injector.h",
+  ]
+
+  deps = [
+    ":inweb_adblock_engine",
+    "//base",
+    "//content/public/browser",
+    "//content/public/common",
+    "//url",
+  ]
+}
+
 source_set("inweb_adblock_throttle") {
   sources = [
     "inweb_adblock_engine_holder.cc",
@@ -72,6 +92,7 @@ source_set("unittests") {
   testonly = true
   sources = [
     "inweb_adblock_engine_holder_unittest.cc",
+    "inweb_cosmetic_filter_unittest.cc",
     "inweb_adblock_url_loader_throttle_unittest.cc",
     "inweb_domain_classifier_unittest.cc",
     "inweb_filter_list_cache_unittest.cc",

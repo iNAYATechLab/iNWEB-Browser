@@ -21,4 +21,10 @@ inline std::string_view TrimString(std::string_view input, std::string_view trim
   return input.substr(b, e - b);
 }
 extern const char kWhitespaceASCII[];
+
+// Upstream parity: base::TrimWhitespaceASCII (string_util.h).
+inline std::string_view TrimWhitespaceASCII(std::string_view input,
+                                            TrimPositions pos) {
+  return TrimString(input, kWhitespaceASCII, pos);
+}
 }  // namespace base

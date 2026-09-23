@@ -1,0 +1,958 @@
+diff --git a/chrome/android/inweb/adblock/BUILD.gn b/chrome/android/inweb/adblock/BUILD.gn
+index 112e9b0..1efdcdf 100644
+--- a/chrome/android/inweb/adblock/BUILD.gn
++++ b/chrome/android/inweb/adblock/BUILD.gn
+@@ -6,6 +6,8 @@
+ 
+ source_set("inweb_adblock_engine") {
+   sources = [
++    "inweb_cosmetic_filter.cc",
++    "inweb_cosmetic_filter.h",
+     "inweb_default_filter_list.cc",
+     "inweb_default_filter_list.h",
+     "inweb_domain_classifier.cc",
+@@ -48,6 +50,24 @@ source_set("inweb_adblock_engine") {
+ 
+ # URL-loader throttle + engine holder (patch 0006): wires the engine into
+ # the network stack. Registered from ChromeContentBrowserClient.
++# Per-frame cosmetic stylesheet injection (patch 0012). Chromium-only:
++# content/ wrappers; the pure decision core lives in the engine target
++# above and is what the host harness tests.
++source_set("inweb_cosmetic_injector") {
++  sources = [
++    "inweb_cosmetic_injector.cc",
++    "inweb_cosmetic_injector.h",
++  ]
++
++  deps = [
++    ":inweb_adblock_engine",
++    "//base",
++    "//content/public/browser",
++    "//content/public/common",
++    "//url",
++  ]
++}
++
+ source_set("inweb_adblock_throttle") {
+   sources = [
+     "inweb_adblock_engine_holder.cc",
+@@ -72,6 +92,7 @@ source_set("unittests") {
+   testonly = true
+   sources = [
+     "inweb_adblock_engine_holder_unittest.cc",
++    "inweb_cosmetic_filter_unittest.cc",
+     "inweb_adblock_url_loader_throttle_unittest.cc",
+     "inweb_domain_classifier_unittest.cc",
+     "inweb_filter_list_cache_unittest.cc",
+diff --git a/chrome/android/inweb/adblock/inweb_adblock_engine_holder.cc b/chrome/android/inweb/adblock/inweb_adblock_engine_holder.cc
+index 1875f4f..bb63919 100644
+--- a/chrome/android/inweb/adblock/inweb_adblock_engine_holder.cc
++++ b/chrome/android/inweb/adblock/inweb_adblock_engine_holder.cc
+@@ -70,10 +70,38 @@ FilterDecision InwebAdblockEngineHolder::Decide(
+ void InwebAdblockEngineHolder::SetFilterLists(
+     std::vector<ParsedFilterList> lists) {
+   base::AutoLock lock(lock_);
++  // Retain the cosmetic half before the lists move into the network
++  // engine (PHASE4-COSMETIC §1: cosmetic lists parsed beside network
++  // lists, one provisioning path).
++  std::vector<CosmeticRule> cosmetic_rules;
++  for (const ParsedFilterList& list : lists) {
++    cosmetic_rules.insert(cosmetic_rules.end(),
++                          list.cosmetic_rules.begin(),
++                          list.cosmetic_rules.end());
++  }
++  cosmetic_engine_ = cosmetic_rules.empty()
++                         ? nullptr
++                         : std::make_unique<CosmeticFilterEngine>(
++                               std::move(cosmetic_rules));
+   engine_ = std::make_unique<TrackingProtectionEngine>(std::move(lists),
+                                                        settings_);
+ }
+ 
++std::string InwebAdblockEngineHolder::CosmeticCssFor(
++    const std::string& host) const {
++  base::AutoLock lock(lock_);
++  // Policy before engine (PHASE4-COSMETIC §3): the global toggle and
++  // the single per-site shields list are honored first — one decision
++  // path, no divergence from the network engine.
++  if (!settings_.enabled() || settings_.IsSiteAllowlisted(host)) {
++    return "";
++  }
++  if (!cosmetic_engine_) {
++    return "";
++  }
++  return cosmetic_engine_->HideCssFor(host);
++}
++
+ SecurityCenterModel InwebAdblockEngineHolder::BuildSecurityCenterModel(
+     bool enforcement_active) const {
+   base::AutoLock lock(lock_);
+diff --git a/chrome/android/inweb/adblock/inweb_adblock_engine_holder.h b/chrome/android/inweb/adblock/inweb_adblock_engine_holder.h
+index 5ef452d..b7f2549 100644
+--- a/chrome/android/inweb/adblock/inweb_adblock_engine_holder.h
++++ b/chrome/android/inweb/adblock/inweb_adblock_engine_holder.h
+@@ -16,6 +16,7 @@
+ #include "chrome/android/inweb/adblock/inweb_filter_list_cache.h"
+ #include "chrome/android/inweb/adblock/inweb_filter_list_manager.h"
+ #include "chrome/android/inweb/adblock/inweb_security_center.h"
++#include "chrome/android/inweb/adblock/inweb_cosmetic_filter.h"
+ #include "chrome/android/inweb/adblock/inweb_tracking_protection_engine.h"
+ 
+ namespace inweb::adblock {
+@@ -37,6 +38,13 @@ class InwebAdblockEngineHolder {
+   // also the popup exemption list, PHASE4-POPUP §1).
+   bool IsSiteAllowlisted(const std::string& host) const;
+ 
++  // The grouped cosmetic (element-hiding) CSS for |host|, or "" when
++  // nothing applies. Honors the global toggle and the per-site
++  // allowlist BEFORE the engine is consulted (PHASE4-COSMETIC §3 —
++  // one decision path with the network engine). Thread-safe; intended
++  // for a worker thread (the injector never calls it on the UI thread).
++  std::string CosmeticCssFor(const std::string& host) const;
++
+   // Thread-safe; callable from any sequence. Holds the holder lock for the
+   // duration of the (v1 full-scan) decision — see ADR-013/ADR-040 notes.
+   FilterDecision Decide(const RequestContext& request) const;
+@@ -65,6 +73,7 @@ class InwebAdblockEngineHolder {
+   std::unique_ptr<MemoryFilterListCache> cache_ GUARDED_BY(lock_);
+   std::unique_ptr<FilterListManager> manager_ GUARDED_BY(lock_);
+   std::unique_ptr<TrackingProtectionEngine> engine_ GUARDED_BY(lock_);
++  std::unique_ptr<CosmeticFilterEngine> cosmetic_engine_ GUARDED_BY(lock_);
+ };
+ 
+ }  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_cosmetic_filter.cc b/chrome/android/inweb/adblock/inweb_cosmetic_filter.cc
+new file mode 100644
+index 0000000..db1ef81
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_cosmetic_filter.cc
+@@ -0,0 +1,230 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/adblock/inweb_cosmetic_filter.h"
++
++#include <algorithm>
++#include <cstring>
++
++#include "base/strings/string_split.h"
++#include "base/strings/string_util.h"
++
++namespace inweb::adblock {
++
++namespace {
++
++// Marker candidates, earliest occurrence wins (Kotlin parity).
++struct Marker {
++  const char* text;
++  CosmeticLineResult::Kind kind;
++  bool is_exception;
++};
++
++const Marker kMarkers[] = {
++    {"##", CosmeticLineResult::Kind::kHide, false},
++    {"#@#", CosmeticLineResult::Kind::kException, true},
++    {"#?#", CosmeticLineResult::Kind::kProcedural, false},
++    {"#$#", CosmeticLineResult::Kind::kUnsupported, false},
++    {"#%#", CosmeticLineResult::Kind::kUnsupported, false},
++};
++
++// Returns null on malformed domain lists (e.g. empty entries).
++bool ParseDomains(const std::string& domain_part,
++                  std::map<std::string, bool>* domains) {
++  if (domain_part.empty() ||
++      base::TrimWhitespaceASCII(domain_part, base::TRIM_ALL).empty()) {
++    return true;  // blank = applies everywhere
++  }
++  for (const std::string& entry : base::SplitString(
++           domain_part, ",", base::TRIM_WHITESPACE,
++           base::SPLIT_WANT_ALL)) {
++    std::string e = base::ToLowerASCII(entry);
++    if (e.empty()) {
++      return false;
++    }
++    if (e[0] == '~') {
++      std::string domain = e.substr(1);
++      if (domain.empty()) {
++        return false;
++      }
++      (*domains)[domain] = false;
++    } else {
++      (*domains)[e] = true;
++    }
++  }
++  return true;
++}
++
++}  // namespace
++
++CosmeticLineResult CosmeticFilterParser::ParseLine(const std::string& line) {
++  CosmeticLineResult result;
++  const std::string trimmed(
++      base::TrimWhitespaceASCII(line, base::TRIM_ALL));
++  if (trimmed.empty() || trimmed[0] == '!' || trimmed[0] == '[') {
++    return result;  // kNotCosmetic (comments handled by the caller)
++  }
++
++  // Earliest marker wins.
++  const Marker* best = nullptr;
++  size_t best_index = std::string::npos;
++  for (const Marker& marker : kMarkers) {
++    const size_t index = trimmed.find(marker.text);
++    if (index != std::string::npos && index < best_index) {
++      best = &marker;
++      best_index = index;
++    }
++  }
++  if (!best) {
++    return result;  // kNotCosmetic: a network rule or plain text
++  }
++
++  const std::string domain_part = trimmed.substr(0, best_index);
++  const std::string selector(base::TrimWhitespaceASCII(
++      trimmed.substr(best_index + strlen(best->text)), base::TRIM_ALL));
++  if (selector.empty()) {
++    result.kind = CosmeticLineResult::Kind::kInvalid;
++    return result;
++  }
++  switch (best->kind) {
++    case CosmeticLineResult::Kind::kProcedural:
++    case CosmeticLineResult::Kind::kUnsupported:
++      result.kind = best->kind;
++      return result;
++    default:
++      break;
++  }
++  result.rule.raw = trimmed;
++  result.rule.selector = selector;
++  if (!ParseDomains(domain_part, &result.rule.domains)) {
++    result.kind = CosmeticLineResult::Kind::kInvalid;
++    result.rule = CosmeticRule();
++    return result;
++  }
++  result.rule.is_exception = best->is_exception;
++  result.kind = best->kind;
++  return result;
++}
++
++ParsedCosmeticList CosmeticFilterParser::Parse(const std::string& text,
++                                               const std::string& list_id) {
++  ParsedCosmeticList parsed;
++  parsed.list_id = list_id;
++  for (const std::string& raw_line : base::SplitString(
++           text, "\n", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL)) {
++    const std::string line(
++        base::TrimWhitespaceASCII(raw_line, base::TRIM_ALL));
++    if (line.empty()) {
++      continue;
++    }
++    if (line[0] == '!' || line[0] == '[') {
++      ++parsed.comment_count;
++      continue;
++    }
++    const CosmeticLineResult result = ParseLine(line);
++    switch (result.kind) {
++      case CosmeticLineResult::Kind::kHide:
++      case CosmeticLineResult::Kind::kException:
++        parsed.rules.push_back(result.rule);
++        break;
++      case CosmeticLineResult::Kind::kProcedural:
++        ++parsed.procedural_rule_count;
++        break;
++      case CosmeticLineResult::Kind::kUnsupported:
++        ++parsed.unsupported_rule_count;
++        break;
++      case CosmeticLineResult::Kind::kInvalid:
++        ++parsed.invalid_rule_count;
++        break;
++      case CosmeticLineResult::Kind::kNotCosmetic:
++        break;  // network rule — not this parser's concern
++    }
++  }
++  return parsed;
++}
++
++CosmeticFilterEngine::CosmeticFilterEngine(std::vector<CosmeticRule> rules)
++    : rules_(std::move(rules)) {}
++
++std::string CosmeticFilterEngine::HideCssFor(const std::string& host) const {
++  std::string h = base::ToLowerASCII(std::string(
++      base::TrimWhitespaceASCII(host, base::TRIM_ALL)));
++  if (!h.empty() && h.back() == '.') {
++    h.pop_back();
++  }
++  if (h.empty()) {
++    return "";
++  }
++
++  // Linked-set semantics: first occurrence order preserved, duplicates
++  // collapse (Kotlin linkedSetOf parity).
++  std::vector<std::string> hidden;
++  std::vector<std::string> cancelled;
++  auto add_unique = [](std::vector<std::string>* set,
++                       const std::string& value) {
++    if (std::find(set->begin(), set->end(), value) == set->end()) {
++      set->push_back(value);
++    }
++  };
++  for (const CosmeticRule& rule : rules_) {
++    if (!DomainsMatch(rule.domains, h)) {
++      continue;
++    }
++    if (rule.is_exception) {
++      add_unique(&cancelled, rule.selector);
++    } else {
++      add_unique(&hidden, rule.selector);
++    }
++  }
++  std::vector<std::string> active;
++  for (const std::string& selector : hidden) {
++    if (std::find(cancelled.begin(), cancelled.end(), selector) ==
++        cancelled.end()) {
++      active.push_back(selector);
++    }
++  }
++  if (active.empty()) {
++    return "";
++  }
++  std::string css;
++  for (size_t i = 0; i < active.size(); ++i) {
++    if (i > 0) {
++      css += ", ";
++    }
++    css += active[i];
++  }
++  css += " { display: none !important; }";
++  return css;
++}
++
++bool CosmeticFilterEngine::DomainsMatch(
++    const std::map<std::string, bool>& domains,
++    const std::string& host) {
++  for (const auto& [domain, included] : domains) {
++    if (!included && HostMatchesDomain(host, domain)) {
++      return false;  // excluded
++    }
++  }
++  bool has_includes = false;
++  for (const auto& [domain, included] : domains) {
++    if (included) {
++      has_includes = true;
++      if (HostMatchesDomain(host, domain)) {
++        return true;
++      }
++    }
++  }
++  return !has_includes;
++}
++
++bool CosmeticFilterEngine::HostMatchesDomain(const std::string& host,
++                                             const std::string& domain) {
++  return host == domain ||
++         (host.size() > domain.size() &&
++          host.compare(host.size() - domain.size(), domain.size(), domain) ==
++              0 &&
++          host[host.size() - domain.size() - 1] == '.');
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_cosmetic_filter.h b/chrome/android/inweb/adblock/inweb_cosmetic_filter.h
+new file mode 100644
+index 0000000..0933616
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_cosmetic_filter.h
+@@ -0,0 +1,110 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_COSMETIC_FILTER_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_COSMETIC_FILTER_H_
++
++#include <map>
++#include <string>
++#include <vector>
++
++#include "url/gurl.h"
++
++namespace inweb::adblock {
++
++// A cosmetic (element-hiding) rule: a CSS selector hidden on a set of
++// document domains (MASTER-SPEC §11). Ported 1:1 from the tested Kotlin
++// reference (src/core/tracking-protection .../CosmeticFilter.kt).
++//
++// v1 subset (ADR-021):
++//  - `##`   — hide selector on matching domains (empty domain list =
++//             everywhere)
++//  - `#@#`  — exception: cancel hiding of that selector on matching
++//             domains
++//  - `#?#`  — procedural (JS-based) rules: recognized and counted, NOT
++//             matched
++//  - `#$#` / `#%#` — stylesheet-rewrite / scriptlet rules: counted as
++//             unsupported, NOT matched
++//
++// Selectors pass through verbatim — the browser CSS parser is the
++// validator at injection time; nothing is invented here.
++struct CosmeticRule {
++  std::string raw;
++  std::string selector;
++  // Include (true) / exclude (false) domains; empty = applies
++  // everywhere. Map semantics: a later entry for the same domain
++  // overwrites an earlier one (Kotlin parity).
++  std::map<std::string, bool> domains;
++  bool is_exception = false;
++};
++
++// One parsed cosmetic line, or why it was not a matchable rule.
++struct CosmeticLineResult {
++  enum class Kind {
++    kNotCosmetic,   // no cosmetic marker on the line
++    kHide,          // `##`
++    kException,     // `#@#`
++    kProcedural,    // `#?#` — counted, never matched
++    kUnsupported,   // `#$#` / `#%#` — counted, never matched
++    kInvalid,       // empty selector or malformed domain list
++  };
++  Kind kind = Kind::kNotCosmetic;
++  CosmeticRule rule;
++};
++
++// Result of parsing the cosmetic half of one filter list (Kotlin
++// ParsedCosmeticList parity).
++struct ParsedCosmeticList {
++  std::string list_id;
++  std::vector<CosmeticRule> rules;
++  int procedural_rule_count = 0;
++  int unsupported_rule_count = 0;
++  int invalid_rule_count = 0;
++  int comment_count = 0;
++};
++
++// Parses the cosmetic rules of an EasyList-family list body. Network
++// rules and comments are not this parser's concern (see
++// inweb_filter_list_parser.h) — lines without a cosmetic marker are
++// simply skipped.
++class CosmeticFilterParser {
++ public:
++  // Parses one trimmed line. Pure, allocation-light.
++  static CosmeticLineResult ParseLine(const std::string& line);
++
++  // Full-list parse (test/parity convenience; mirrors Kotlin parse()).
++  static ParsedCosmeticList Parse(const std::string& text,
++                                  const std::string& list_id);
++};
++
++// Computes the stylesheet to inject into a page: every hiding selector
++// that applies to the document host, minus selectors cancelled by
++// matching exception (`#@#`) rules. Pure function of the parsed lists
++// and the host — injection timing is inweb_cosmetic_injector's concern.
++class CosmeticFilterEngine {
++ public:
++  explicit CosmeticFilterEngine(std::vector<CosmeticRule> rules);
++
++  CosmeticFilterEngine(const CosmeticFilterEngine&) = delete;
++  CosmeticFilterEngine& operator=(const CosmeticFilterEngine&) = delete;
++
++  int total_rules() const { return static_cast<int>(rules_.size()); }
++
++  // The grouped hiding CSS for |host|, or "" when nothing applies.
++  // Example: ".ad, .banner { display: none !important; }"
++  std::string HideCssFor(const std::string& host) const;
++
++ private:
++  // Same include/exclude semantics as the network `domain=` option.
++  static bool DomainsMatch(const std::map<std::string, bool>& domains,
++                           const std::string& host);
++  static bool HostMatchesDomain(const std::string& host,
++                                const std::string& domain);
++
++  std::vector<CosmeticRule> rules_;
++};
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_COSMETIC_FILTER_H_
+diff --git a/chrome/android/inweb/adblock/inweb_cosmetic_filter_unittest.cc b/chrome/android/inweb/adblock/inweb_cosmetic_filter_unittest.cc
+new file mode 100644
+index 0000000..e4a8ef4
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_cosmetic_filter_unittest.cc
+@@ -0,0 +1,199 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — cosmetic filter unit tests (PHASE4-COSMETIC §1),
++// ported 1:1 from the tested Kotlin reference (CosmeticFilterTest.kt):
++// parsing (## / #@# / #?# / #$# / #%#, domain includes/excludes),
++// engine matching (universal, domain, exclude-wins, exception
++// cancellation, grouped CSS), list-parser retention, and the holder's
++// policy-gated CosmeticCssFor path.
++
++#include "chrome/android/inweb/adblock/inweb_cosmetic_filter.h"
++
++#include <vector>
++
++#include "chrome/android/inweb/adblock/inweb_adblock_engine_holder.h"
++#include "chrome/android/inweb/adblock/inweb_filter_list_parser.h"
++#include "testing/gtest/include/gtest/gtest.h"
++
++namespace inweb::adblock {
++
++namespace {
++
++CosmeticFilterEngine EngineFromText(const std::string& text) {
++  return CosmeticFilterEngine(CosmeticFilterParser::Parse(text, "t").rules);
++}
++
++}  // namespace
++
++TEST(CosmeticFilterParserTest, ParsesUniversalHidingRule) {
++  const CosmeticLineResult r = CosmeticFilterParser::ParseLine("##.ad-banner");
++  EXPECT_EQ(CosmeticLineResult::Kind::kHide, r.kind);
++  EXPECT_EQ(".ad-banner", r.rule.selector);
++  EXPECT_TRUE(r.rule.domains.empty());
++  EXPECT_FALSE(r.rule.is_exception);
++}
++
++TEST(CosmeticFilterParserTest, ParsesDomainIncludesAndExcludes) {
++  const CosmeticLineResult r =
++      CosmeticFilterParser::ParseLine("example.com,~sub.example.com##.promo");
++  EXPECT_EQ(CosmeticLineResult::Kind::kHide, r.kind);
++  EXPECT_EQ(2u, r.rule.domains.size());
++  EXPECT_TRUE(r.rule.domains.at("example.com"));
++  EXPECT_FALSE(r.rule.domains.at("sub.example.com"));
++}
++
++TEST(CosmeticFilterParserTest, ParsesExceptionRule) {
++  const CosmeticLineResult r =
++      CosmeticFilterParser::ParseLine("example.com#@#.sponsored");
++  EXPECT_EQ(CosmeticLineResult::Kind::kException, r.kind);
++  EXPECT_TRUE(r.rule.is_exception);
++  EXPECT_EQ(".sponsored", r.rule.selector);
++}
++
++TEST(CosmeticFilterParserTest, ProceduralRulesAreCountedNotMatched) {
++  const ParsedCosmeticList parsed = CosmeticFilterParser::Parse(
++      "example.com#?#.item:has-text(Sponsored)\n", "t");
++  EXPECT_EQ(1, parsed.procedural_rule_count);
++  EXPECT_TRUE(parsed.rules.empty());
++}
++
++TEST(CosmeticFilterParserTest, UnsupportedMarkersAreCounted) {
++  const ParsedCosmeticList parsed = CosmeticFilterParser::Parse(
++      "example.com#$#body { background: #fff; }\n"
++      "example.com#%#window.__x = 1;\n",
++      "t");
++  EXPECT_EQ(2, parsed.unsupported_rule_count);
++  EXPECT_TRUE(parsed.rules.empty());
++}
++
++TEST(CosmeticFilterParserTest, InvalidRulesAreCounted) {
++  const ParsedCosmeticList parsed =
++      CosmeticFilterParser::Parse("example.com##\nexample.com,##.x\n", "t");
++  EXPECT_EQ(2, parsed.invalid_rule_count);
++  EXPECT_TRUE(parsed.rules.empty());
++}
++
++TEST(CosmeticFilterParserTest, NetworkLinesAndCommentsAreSkipped) {
++  const ParsedCosmeticList parsed = CosmeticFilterParser::Parse(
++      "! comment\n[AdBlock Plus 2.0]\n||ads.example.com^\nnormal line\n",
++      "t");
++  EXPECT_EQ(2, parsed.comment_count);  // '!' line + '[' header line
++  EXPECT_TRUE(parsed.rules.empty());
++  EXPECT_EQ(0, parsed.invalid_rule_count);
++}
++
++TEST(CosmeticFilterEngineTest, UniversalRuleAppliesEverywhere) {
++  CosmeticFilterEngine engine = EngineFromText("##.ad\n");
++  EXPECT_EQ(".ad { display: none !important; }", engine.HideCssFor("anything.example.net"));
++  EXPECT_EQ(".ad { display: none !important; }", engine.HideCssFor("other.org"));
++}
++
++TEST(CosmeticFilterEngineTest, DomainRuleAppliesToHostAndSubdomainsOnly) {
++  CosmeticFilterEngine engine = EngineFromText("example.com##.promo\n");
++  EXPECT_EQ(".promo { display: none !important; }",
++            engine.HideCssFor("example.com"));
++  EXPECT_EQ(".promo { display: none !important; }",
++            engine.HideCssFor("sub.example.com"));
++  EXPECT_EQ("", engine.HideCssFor("notexample.com"));
++  EXPECT_EQ("", engine.HideCssFor("example.com.evil.net"));
++}
++
++TEST(CosmeticFilterEngineTest, ExcludeWinsOverInclude) {
++  CosmeticFilterEngine engine =
++      EngineFromText("example.com,~sub.example.com##.promo\n");
++  EXPECT_EQ("", engine.HideCssFor("sub.example.com"));
++  EXPECT_EQ(".promo { display: none !important; }",
++            engine.HideCssFor("other.example.com"));
++}
++
++TEST(CosmeticFilterEngineTest, ExceptionCancelsSelectorOnMatchingDomains) {
++  CosmeticFilterEngine engine = EngineFromText(
++      "##.ad\n"
++      "trusted.example##.ad\n");
++  // The exception line here is a HIDE on trusted.example (not #@#): both
++  // collapse into one selector. The real cancellation case is below.
++  EXPECT_EQ(".ad { display: none !important; }",
++            engine.HideCssFor("trusted.example"));
++
++  CosmeticFilterEngine cancelled = EngineFromText(
++      "##.ad\n"
++      "trusted.example#@#.ad\n");
++  EXPECT_EQ("", cancelled.HideCssFor("trusted.example"));
++  EXPECT_EQ(".ad { display: none !important; }",
++            cancelled.HideCssFor("other.example"));
++}
++
++TEST(CosmeticFilterEngineTest, GroupedCssOrEmptyWhenNothingApplies) {
++  CosmeticFilterEngine engine = EngineFromText(
++      "##.a\n"
++      "example.com##.b\n"
++      "other.net##.c\n");
++  EXPECT_EQ(".a, .b { display: none !important; }",
++            engine.HideCssFor("example.com"));
++  // The universal rule applies everywhere — "nothing applies" needs a
++  // rule set without universal rules.
++  EXPECT_EQ(".a { display: none !important; }",
++            engine.HideCssFor("nomatch.invalid"));
++  // Host hygiene: trailing dot and case are handled (Kotlin parity) —
++  // the lowered, dot-stripped host matches the example.com rule too.
++  EXPECT_EQ(".a, .b { display: none !important; }",
++            engine.HideCssFor("EXAMPLE.com."));
++  CosmeticFilterEngine no_universal = EngineFromText(
++      "example.com##.b\nother.net##.c\n");
++  EXPECT_EQ("", no_universal.HideCssFor("nomatch.invalid"));
++}
++
++TEST(CosmeticFilterListParserTest, ListParserRetainsCosmeticRules) {
++  // The network list parser routes cosmetic lines into the retained
++  // cosmetic half while keeping its total-marker counter.
++  const ParsedFilterList parsed = FilterListParser::Parse(
++      "||ads.example.com^\n"
++      "##.ad\n"
++      "example.com#@#.promo\n"
++      "example.com#?#.proc:has-text(x)\n"
++      "! comment\n",
++      "t");
++  EXPECT_EQ(1, static_cast<int>(parsed.network_rules.size()));
++  EXPECT_EQ(3, parsed.cosmetic_rule_count);  // ## + #@# + #?#
++  ASSERT_EQ(2u, parsed.cosmetic_rules.size());
++  EXPECT_EQ(".ad", parsed.cosmetic_rules[0].selector);
++  EXPECT_FALSE(parsed.cosmetic_rules[0].is_exception);
++  EXPECT_EQ(".promo", parsed.cosmetic_rules[1].selector);
++  EXPECT_TRUE(parsed.cosmetic_rules[1].is_exception);
++}
++
++TEST(InwebAdblockHolderCosmeticTest, CosmeticCssForHonorsPolicyAndEngine) {
++  InwebAdblockEngineHolder holder;
++  TrackingProtectionSettings settings(
++      /*enabled=*/true, CookiePolicy::kAllowAll,
++      /*allowlisted_sites=*/{"trusted.example"});
++  std::vector<ParsedFilterList> lists;
++  lists.push_back(FilterListParser::Parse(
++      "##.ad\n"
++      "example.com##.promo\n",
++      "cosmetic"));
++  holder.SetFilterLists(std::move(lists));
++  holder.UpdateSettings(settings);
++
++  // Engine answers per host.
++  EXPECT_EQ(".ad, .promo { display: none !important; }",
++            holder.CosmeticCssFor("example.com"));
++  EXPECT_EQ(".ad { display: none !important; }",
++            holder.CosmeticCssFor("other.org"));
++  // Allowlisted site: no cosmetics (single shields list).
++  EXPECT_EQ("", holder.CosmeticCssFor("trusted.example"));
++
++  // Global toggle off: no cosmetics anywhere.
++  holder.UpdateSettings(
++      TrackingProtectionSettings(false, CookiePolicy::kAllowAll, {}));
++  EXPECT_EQ("", holder.CosmeticCssFor("example.com"));
++
++  // No cosmetic rules at all: empty string, never a crash.
++  InwebAdblockEngineHolder empty_holder;
++  empty_holder.UpdateSettings(settings);
++  EXPECT_EQ("", empty_holder.CosmeticCssFor("example.com"));
++}
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_cosmetic_injector.cc b/chrome/android/inweb/adblock/inweb_cosmetic_injector.cc
+new file mode 100644
+index 0000000..bf6c250
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_cosmetic_injector.cc
+@@ -0,0 +1,111 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/adblock/inweb_cosmetic_injector.h"
++
++#include <utility>
++
++#include "base/functional/bind.h"
++#include "base/json/json_writer.h"
++#include "base/strings/utf_string_conversions.h"
++#include "base/task/task_traits.h"
++#include "base/task/thread_pool.h"
++#include "base/values.h"
++#include "chrome/android/inweb/adblock/inweb_adblock_engine_holder.h"
++#include "content/public/browser/navigation_handle.h"
++#include "content/public/browser/render_frame_host.h"
++#include "content/public/common/isolated_world_ids.h"
++
++namespace inweb::adblock {
++
++namespace {
++
++// The tiny script executed in our isolated world. It only touches the
++// shared DOM (appending a <style> element); it never interacts with
++// the page's JavaScript context. |json_css| is a pre-escaped,
++// JSON-quoted string literal.
++std::u16string BuildInjectionScript(const std::string& json_css) {
++  std::string script =
++      "(function(){var s=document.createElement('style');"
++      "s.setAttribute('data-inweb','cosmetic');"
++      "s.textContent=" + json_css + ";"
++      "(document.head||document.documentElement).appendChild(s);})();";
++  return base::UTF8ToUTF16(script);
++}
++
++}  // namespace
++
++InwebCosmeticInjector::~InwebCosmeticInjector() = default;
++
++InwebCosmeticInjector::InwebCosmeticInjector(content::WebContents* web_contents)
++    : content::WebContentsObserver(web_contents) {}
++
++void InwebCosmeticInjector::DidFinishNavigation(
++    content::NavigationHandle* handle) {
++  // Pure stylesheet hiding is set-and-forget (PHASE4-COSMETIC §2):
++  // inject once per committed document, main frame and same-process
++  // iframes alike. Same-document navigations keep the old document;
++  // error pages get no cosmetics.
++  if (!handle->HasCommitted() || handle->IsSameDocument() ||
++      handle->IsErrorPage()) {
++    return;
++  }
++  content::RenderFrameHost* rfh = handle->GetRenderFrameHost();
++  if (!rfh) {
++    return;
++  }
++  const std::string host = rfh->GetLastCommittedOrigin().host();
++  if (host.empty()) {
++    return;
++  }
++  const content::GlobalRenderFrameHostId frame_id = rfh->GetGlobalId();
++
++  // Compute the CSS on a worker thread (never the UI thread; the
++  // holder lock is held there for the v1 full-scan decision). The
++  // reply is bound to this injector — if the WebContents dies while we
++  // are computing, the callback is a no-op. Policy (global toggle +
++  // per-site allowlist) is honored inside CosmeticCssFor, before the
++  // engine is consulted — one decision path with the network engine.
++  base::ThreadPool::PostTaskAndReplyWithResult(
++      FROM_HERE,
++      {base::TaskPriority::USER_VISIBLE, base::TaskShutdownBehavior::SKIP_ON_SHUTDOWN},
++      base::BindOnce([](const std::string& host) {
++        return InwebAdblockEngineHolder::GetInstance()->CosmeticCssFor(host);
++      },
++                     host),
++      base::BindOnce(&InwebCosmeticInjector::InjectCss,
++                     weak_factory_.GetWeakPtr(), frame_id));
++}
++
++void InwebCosmeticInjector::InjectCss(
++    content::GlobalRenderFrameHostId frame_id,
++    const std::string& css) {
++  if (css.empty()) {
++    return;  // nothing to hide on this host (or filtering off)
++  }
++  // Re-resolve the frame: it may have been swapped or destroyed while
++  // the CSS was computed. Losing the race loses the injection for
++  // that document — acceptable for the secondary defense, documented.
++  content::RenderFrameHost* rfh =
++      content::RenderFrameHost::FromID(frame_id);
++  if (!rfh) {
++    return;
++  }
++  // JSON-Quote the CSS so it travels as one string literal (escaping
++  // quotes/backslashes/newlines inside selectors).
++  std::string json_css;
++  base::JSONWriter::Write(base::Value(css), &json_css);
++
++  // Embedder isolated world (the first one past content's reserved
++  // range); no ExecuteJavaScript on web content at 154 — see the
++  // header's pinned-tree honesty note.
++  rfh->ExecuteJavaScriptInIsolatedWorld(
++      BuildInjectionScript(json_css),
++      content::RenderFrameHost::JavaScriptResultCallback(),
++      content::ISOLATED_WORLD_ID_CONTENT_END);
++}
++
++WEB_CONTENTS_USER_DATA_KEY_IMPL(InwebCosmeticInjector);
++
++}  // namespace inweb::adblock
+diff --git a/chrome/android/inweb/adblock/inweb_cosmetic_injector.h b/chrome/android/inweb/adblock/inweb_cosmetic_injector.h
+new file mode 100644
+index 0000000..c3b6a21
+--- /dev/null
++++ b/chrome/android/inweb/adblock/inweb_cosmetic_injector.h
+@@ -0,0 +1,66 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_ADBLOCK_INWEB_COSMETIC_INJECTOR_H_
++#define CHROME_ANDROID_INWEB_ADBLOCK_INWEB_COSMETIC_INJECTOR_H_
++
++#include "base/memory/weak_ptr.h"
++#include "content/public/browser/global_routing_id.h"
++#include "content/public/browser/web_contents.h"
++#include "content/public/browser/web_contents_observer.h"
++#include "content/public/browser/web_contents_user_data.h"
++
++namespace inweb::adblock {
++
++// Per-frame cosmetic-filter stylesheet injection (PHASE4-COSMETIC §2).
++//
++// One instance per WebContents (attached from
++// ChromeContentBrowserClient::OnWebContentsCreated). On every committed
++// non-same-document, non-error navigation in ANY frame (main frame or
++// same-process iframe), the injector asks the engine holder for the
++// grouped hiding CSS for that frame's host — the computation runs on a
++// worker thread (never the UI thread; PHASE4-COSMETIC §2) — and inserts
++// it back on the UI thread by executing a tiny script in our own
++// isolated world that appends a <style> element to the document.
++//
++// Pinned-tree honesty (PHASE4-COSMETIC said "content-layer CSS-insertion
++// API"): at 154 there is no public CSS-insertion API for web content —
++// RenderFrameHost::ExecuteJavaScript is WebUI-only. The closest real
++// path is ExecuteJavaScriptInIsolatedWorld with the first embedder
++// world (content::ISOLATED_WORLD_ID_CONTENT_END), whose DOM
++// modification (appending a <style> element) styles the shared
++// document. Known limitations, documented not hidden: a brief flash of
++// unhidden elements before injection; strict-CSP pages may defeat
++// inline <style> insertion (cosmetic filtering is the secondary
++// defense — network blocking is primary); races with frame death lose
++// the injection for that frame (RenderFrameHost::FromID returns null —
++// skipped silently).
++class InwebCosmeticInjector
++    : public content::WebContentsObserver,
++      public content::WebContentsUserData<InwebCosmeticInjector> {
++ public:
++  ~InwebCosmeticInjector() override;
++
++  InwebCosmeticInjector(const InwebCosmeticInjector&) = delete;
++  InwebCosmeticInjector& operator=(const InwebCosmeticInjector&) = delete;
++
++  // content::WebContentsObserver:
++  void DidFinishNavigation(content::NavigationHandle* handle) override;
++
++ private:
++  friend class content::WebContentsUserData<InwebCosmeticInjector>;
++  explicit InwebCosmeticInjector(content::WebContents* web_contents);
++
++  // Runs on the UI thread after the worker-thread CSS computation.
++  // Bound through weak_factory_ — a no-op if the WebContents (and so
++  // this injector) was destroyed meanwhile.
++  void InjectCss(content::GlobalRenderFrameHostId frame_id,
++                 const std::string& css);
++
++  base::WeakPtrFactory<InwebCosmeticInjector> weak_factory_{this};
++};
++
++}  // namespace inweb::adblock
++
++#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_COSMETIC_INJECTOR_H_
+diff --git a/chrome/android/inweb/adblock/inweb_filter_list_parser.cc b/chrome/android/inweb/adblock/inweb_filter_list_parser.cc
+index 44cb4b0..c336d3d 100644
+--- a/chrome/android/inweb/adblock/inweb_filter_list_parser.cc
++++ b/chrome/android/inweb/adblock/inweb_filter_list_parser.cc
+@@ -6,6 +6,8 @@
+ 
+ #include "chrome/android/inweb/adblock/inweb_filter_list_parser.h"
+ 
++#include "chrome/android/inweb/adblock/inweb_cosmetic_filter.h"
++
+ #include <string>
+ #include <utility>
+ #include <vector>
+@@ -45,10 +47,15 @@ ParsedFilterList FilterListParser::Parse(const std::string& text,
+       ++parsed.comment_count;
+       continue;
+     }
+-    if (line.find("##") != std::string::npos ||
+-        line.find("#@#") != std::string::npos ||
+-        line.find("#?#") != std::string::npos) {
++    const CosmeticLineResult cosmetic = CosmeticFilterParser::ParseLine(line);
++    if (cosmetic.kind != CosmeticLineResult::Kind::kNotCosmetic) {
++      // Every line carrying a cosmetic marker counts here (including
++      // procedural/unsupported/invalid ones) — Kotlin parity.
+       ++parsed.cosmetic_rule_count;
++      if (cosmetic.kind == CosmeticLineResult::Kind::kHide ||
++          cosmetic.kind == CosmeticLineResult::Kind::kException) {
++        parsed.cosmetic_rules.push_back(cosmetic.rule);
++      }
+       continue;
+     }
+     std::optional<NetworkFilterRule> rule = ParseRule(line, line_number);
+diff --git a/chrome/android/inweb/adblock/inweb_filter_rule.h b/chrome/android/inweb/adblock/inweb_filter_rule.h
+index 9d8b23a..21db129 100644
+--- a/chrome/android/inweb/adblock/inweb_filter_rule.h
++++ b/chrome/android/inweb/adblock/inweb_filter_rule.h
+@@ -28,6 +28,8 @@
+ #include <string>
+ #include <vector>
+ 
++#include "chrome/android/inweb/adblock/inweb_cosmetic_filter.h"
++
+ #include "chrome/android/inweb/adblock/inweb_resource_type.h"
+ #include "third_party/re2/re2.h"
+ 
+@@ -71,6 +73,10 @@ struct NetworkFilterRule {
+ struct ParsedFilterList {
+   std::string list_id;
+   std::vector<NetworkFilterRule> network_rules;
++  // Cosmetic (element-hiding) rules retained for the cosmetic engine
++  // (patch 0012); `cosmetic_rule_count` below still counts ALL lines
++  // with a cosmetic marker, matchable or not.
++  std::vector<CosmeticRule> cosmetic_rules;
+   int cosmetic_rule_count = 0;
+   int comment_count = 0;
+   int invalid_rule_count = 0;
+diff --git a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
+index 4f7011c..9b1c6d5 100644
+--- a/chrome/browser/BUILD.gn
++++ b/chrome/browser/BUILD.gn
+@@ -1665,6 +1665,7 @@ source_set("core") {
+       "//chrome/android:jni_headers",
+       "//chrome/android/inweb/adblock:inweb_adblock_engine",
+       "//chrome/android/inweb/adblock:inweb_adblock_throttle",
++      "//chrome/android/inweb/adblock:inweb_cosmetic_injector",
+       "//chrome/android/inweb/popup:inweb_redirect_throttle",
+       "//chrome/browser/android",
+       "//chrome/browser/autocomplete",
+diff --git a/chrome/browser/chrome_content_browser_client.cc b/chrome/browser/chrome_content_browser_client.cc
+index b8dd9d5..57b3996 100644
+--- a/chrome/browser/chrome_content_browser_client.cc
++++ b/chrome/browser/chrome_content_browser_client.cc
+@@ -535,6 +535,7 @@
+ #include "base/feature_list.h"
+ #include "chrome/android/inweb/adblock/inweb_adblock_engine_holder.h"
+ #include "chrome/android/inweb/adblock/inweb_adblock_url_loader_throttle.h"
++#include "chrome/android/inweb/adblock/inweb_cosmetic_injector.h"
+ #include "chrome/android/inweb/popup/inweb_redirect_throttle.h"
+ #include "chrome/browser/android/customtabs/client_data_header_web_contents_observer.h"  // nogncheck crbug.com/40147906
+ #include "chrome/browser/android/devtools_manager_delegate_android.h"  // nogncheck crbug.com/40147906
+@@ -8473,6 +8474,8 @@ void ChromeContentBrowserClient::OnWebContentsCreated(
+   // WebContentsObservers goes through the separate function, to ensure that the
+   // (rare) additions of universal helpers are code reviewed by separate OWNERS.
+   AttachUniversalWebContentsObservers(web_contents);
++  // iNWEB: per-frame cosmetic-filter stylesheet injection (patch 0012).
++  inweb::adblock::InwebCosmeticInjector::CreateForWebContents(web_contents);
+ }
+ 
+ #if !BUILDFLAG(IS_ANDROID)

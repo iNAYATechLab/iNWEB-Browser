@@ -28,6 +28,8 @@
 #include <string>
 #include <vector>
 
+#include "chrome/android/inweb/adblock/inweb_cosmetic_filter.h"
+
 #include "chrome/android/inweb/adblock/inweb_resource_type.h"
 #include "third_party/re2/re2.h"
 
@@ -71,6 +73,10 @@ struct NetworkFilterRule {
 struct ParsedFilterList {
   std::string list_id;
   std::vector<NetworkFilterRule> network_rules;
+  // Cosmetic (element-hiding) rules retained for the cosmetic engine
+  // (patch 0012); `cosmetic_rule_count` below still counts ALL lines
+  // with a cosmetic marker, matchable or not.
+  std::vector<CosmeticRule> cosmetic_rules;
   int cosmetic_rule_count = 0;
   int comment_count = 0;
   int invalid_rule_count = 0;
