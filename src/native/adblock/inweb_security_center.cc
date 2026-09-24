@@ -56,4 +56,24 @@ SecurityCenterModel SecurityCenter::Build(
   return model;
 }
 
+
+// Out-of-line ctor/dtor definitions (chromium-style fallout fix).
+FilterListStatus::FilterListStatus() = default;
+FilterListStatus::~FilterListStatus() = default;
+
+SecurityCenterModel::SecurityCenterModel() = default;
+SecurityCenterModel::~SecurityCenterModel() = default;
+
+
+FilterListStatus::FilterListStatus(FilterListStatus&&) = default;
+FilterListStatus& FilterListStatus::operator=(FilterListStatus&&) = default;
+SecurityCenterModel::SecurityCenterModel(SecurityCenterModel&&) = default;
+SecurityCenterModel& SecurityCenterModel::operator=(SecurityCenterModel&&) = default;
+
+
+FilterListStatus::FilterListStatus(const FilterListStatus&) = default;
+FilterListStatus& FilterListStatus::operator=(const FilterListStatus&) = default;
+SecurityCenterModel::SecurityCenterModel(const SecurityCenterModel&) = default;
+SecurityCenterModel& SecurityCenterModel::operator=(const SecurityCenterModel&) = default;
+
 }  // namespace inweb::adblock

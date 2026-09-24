@@ -26,8 +26,13 @@ fi
 # excluded; their pure decision cores are what we test here.
 mapfile -t ENGINE < <(ls "$REPO"/src/native/adblock/*.cc "$REPO"/src/native/popup/*.cc "$REPO"/src/native/extensions/*.cc 2>/dev/null | grep -v _unittest | grep -Ev 'inweb_redirect_throttle\.cc|inweb_notification_policy_ui_selector\.cc|inweb_cosmetic_injector\.cc' || true)
 mapfile -t TESTS < <(ls "$REPO"/src/native/adblock/*_unittest.cc "$REPO"/src/native/popup/*_unittest.cc "$REPO"/src/native/extensions/*_unittest.cc 2>/dev/null)
+# Style-plugin + include-path audit FIRST: fail fast locally on the bug
+# classes that burn 30-minute CI hops (out-of-line ctor/dtor, invented
+# include paths).
+python3 "$HERE/audit_chromium_style.py" || exit 1
+
 g++ -std=c++20 -I"$HERE/shims" -I"$ROOT" \
   "$HERE/shims/url/gurl.cc" "$HERE/shims/base/strings/string_util.cc" \
-  "$HERE/shims/net/base/registry_controlled_domains.cc" \
+  "$HERE/shims/net/base/registry_controlled_domains/registry_controlled_domain.cc" \
   "${ENGINE[@]}" "${TESTS[@]}" "$HERE/main.cc" "$LIBRE2" -lcrypto -lz -o "$HERE/run_tests"
 "$HERE/run_tests"

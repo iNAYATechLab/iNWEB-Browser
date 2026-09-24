@@ -30,6 +30,13 @@ namespace inweb::adblock {
 // Selectors pass through verbatim — the browser CSS parser is the
 // validator at injection time; nothing is invented here.
 struct CosmeticRule {
+  CosmeticRule();
+  ~CosmeticRule();
+  CosmeticRule(const CosmeticRule&);
+  CosmeticRule& operator=(const CosmeticRule&);
+  CosmeticRule(CosmeticRule&&);
+  CosmeticRule& operator=(CosmeticRule&&);
+
   std::string raw;
   std::string selector;
   // Include (true) / exclude (false) domains; empty = applies
@@ -56,6 +63,13 @@ struct CosmeticLineResult {
 // Result of parsing the cosmetic half of one filter list (Kotlin
 // ParsedCosmeticList parity).
 struct ParsedCosmeticList {
+  ParsedCosmeticList();
+  ~ParsedCosmeticList();
+  ParsedCosmeticList(const ParsedCosmeticList&);
+  ParsedCosmeticList& operator=(const ParsedCosmeticList&);
+  ParsedCosmeticList(ParsedCosmeticList&&);
+  ParsedCosmeticList& operator=(ParsedCosmeticList&&);
+
   std::string list_id;
   std::vector<CosmeticRule> rules;
   int procedural_rule_count = 0;
@@ -85,6 +99,7 @@ class CosmeticFilterParser {
 class CosmeticFilterEngine {
  public:
   explicit CosmeticFilterEngine(std::vector<CosmeticRule> rules);
+  ~CosmeticFilterEngine();
 
   CosmeticFilterEngine(const CosmeticFilterEngine&) = delete;
   CosmeticFilterEngine& operator=(const CosmeticFilterEngine&) = delete;

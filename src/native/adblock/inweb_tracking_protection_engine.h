@@ -50,6 +50,11 @@ class TrackingProtectionSettings {
   TrackingProtectionSettings(bool enabled,
                              CookiePolicy cookie_policy,
                              std::set<std::string> allowlisted_sites);
+  ~TrackingProtectionSettings();
+  TrackingProtectionSettings(const TrackingProtectionSettings&);
+  TrackingProtectionSettings& operator=(const TrackingProtectionSettings&);
+  TrackingProtectionSettings(TrackingProtectionSettings&&);
+  TrackingProtectionSettings& operator=(TrackingProtectionSettings&&);
 
   bool enabled() const { return enabled_; }
   CookiePolicy cookie_policy() const { return cookie_policy_; }
@@ -74,6 +79,13 @@ class TrackingProtectionSettings {
 // Copyable snapshot of decision counters for reporting (Security Center
 // read path, patch 0007). Produced by EngineStatistics::Snapshot().
 struct EngineStatisticsSnapshot {
+  EngineStatisticsSnapshot();
+  ~EngineStatisticsSnapshot();
+  EngineStatisticsSnapshot(const EngineStatisticsSnapshot&);
+  EngineStatisticsSnapshot& operator=(const EngineStatisticsSnapshot&);
+  EngineStatisticsSnapshot(EngineStatisticsSnapshot&&);
+  EngineStatisticsSnapshot& operator=(EngineStatisticsSnapshot&&);
+
   int block_count = 0;
   int allow_count = 0;
   int pass_count = 0;
@@ -84,6 +96,13 @@ struct EngineStatisticsSnapshot {
 // Thread-safe: decisions run on worker-pool threads.
 class EngineStatistics {
  public:
+  EngineStatistics();
+  ~EngineStatistics();
+  EngineStatistics(const EngineStatistics&) = delete;
+  EngineStatistics& operator=(const EngineStatistics&) = delete;
+  EngineStatistics(EngineStatistics&&) = delete;
+  EngineStatistics& operator=(EngineStatistics&&) = delete;
+
   int block_count() const;
   int allow_count() const;
   int pass_count() const;
@@ -109,6 +128,11 @@ class TrackingProtectionEngine {
  public:
   TrackingProtectionEngine(std::vector<ParsedFilterList> parsed_lists,
                            TrackingProtectionSettings settings);
+  ~TrackingProtectionEngine();
+  TrackingProtectionEngine(const TrackingProtectionEngine&) = delete;
+  TrackingProtectionEngine& operator=(const TrackingProtectionEngine&) = delete;
+  TrackingProtectionEngine(TrackingProtectionEngine&&) = delete;
+  TrackingProtectionEngine& operator=(TrackingProtectionEngine&&) = delete;
 
   FilterDecision Decide(const RequestContext& request) const;
 

@@ -265,4 +265,32 @@ void FilterListManager::Record(const std::string& source_id,
   last_status_[source_id] = std::move(status);
 }
 
+
+// Out-of-line ctor/dtor definitions (chromium-style fallout fix).
+// FetchResult lives in the header-only fetcher; its definitions are
+// hosted here (same source_set).
+FetchResult::FetchResult() = default;
+FetchResult::~FetchResult() = default;
+
+ListUpdateStatus::ListUpdateStatus() = default;
+ListUpdateStatus::~ListUpdateStatus() = default;
+
+FilterListManager::~FilterListManager() = default;
+
+
+FetchResult::FetchResult(FetchResult&&) = default;
+FetchResult& FetchResult::operator=(FetchResult&&) = default;
+
+
+ListUpdateStatus::ListUpdateStatus(ListUpdateStatus&&) = default;
+ListUpdateStatus& ListUpdateStatus::operator=(ListUpdateStatus&&) = default;
+
+
+FetchResult::FetchResult(const FetchResult&) = default;
+FetchResult& FetchResult::operator=(const FetchResult&) = default;
+
+
+ListUpdateStatus::ListUpdateStatus(const ListUpdateStatus&) = default;
+ListUpdateStatus& ListUpdateStatus::operator=(const ListUpdateStatus&) = default;
+
 }  // namespace inweb::adblock

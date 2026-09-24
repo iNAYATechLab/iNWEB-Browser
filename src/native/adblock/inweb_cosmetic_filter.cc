@@ -147,6 +147,8 @@ ParsedCosmeticList CosmeticFilterParser::Parse(const std::string& text,
 CosmeticFilterEngine::CosmeticFilterEngine(std::vector<CosmeticRule> rules)
     : rules_(std::move(rules)) {}
 
+CosmeticFilterEngine::~CosmeticFilterEngine() = default;
+
 std::string CosmeticFilterEngine::HideCssFor(const std::string& host) const {
   std::string h = base::ToLowerASCII(std::string(
       base::TrimWhitespaceASCII(host, base::TRIM_ALL)));
@@ -226,5 +228,25 @@ bool CosmeticFilterEngine::HostMatchesDomain(const std::string& host,
               0 &&
           host[host.size() - domain.size() - 1] == '.');
 }
+
+
+// Out-of-line ctor/dtor definitions (chromium-style fallout fix).
+CosmeticRule::CosmeticRule() = default;
+CosmeticRule::~CosmeticRule() = default;
+
+ParsedCosmeticList::ParsedCosmeticList() = default;
+ParsedCosmeticList::~ParsedCosmeticList() = default;
+
+
+CosmeticRule::CosmeticRule(CosmeticRule&&) = default;
+CosmeticRule& CosmeticRule::operator=(CosmeticRule&&) = default;
+ParsedCosmeticList::ParsedCosmeticList(ParsedCosmeticList&&) = default;
+ParsedCosmeticList& ParsedCosmeticList::operator=(ParsedCosmeticList&&) = default;
+
+
+CosmeticRule::CosmeticRule(const CosmeticRule&) = default;
+CosmeticRule& CosmeticRule::operator=(const CosmeticRule&) = default;
+ParsedCosmeticList::ParsedCosmeticList(const ParsedCosmeticList&) = default;
+ParsedCosmeticList& ParsedCosmeticList::operator=(const ParsedCosmeticList&) = default;
 
 }  // namespace inweb::adblock

@@ -202,4 +202,8 @@ std::optional<std::vector<uint8_t>> ZipMemoryReader::ReadEntry(
   return out;
 }
 
+
+// Out-of-line dtor definition (chromium-style fallout fix).
+ZipMemoryReader::~ZipMemoryReader() = default;
+
 }  // namespace inweb::extensions

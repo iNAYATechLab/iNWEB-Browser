@@ -9,7 +9,7 @@
 #include <string>
 
 #include "base/strings/string_util.h"
-#include "net/base/registry_controlled_domains.h"
+#include "net/base/registry_controlled_domains/registry_controlled_domain.h"
 
 namespace inweb::adblock {
 
@@ -22,7 +22,9 @@ std::string DomainClassifier::RegistrableDomain(const std::string& host) {
   }
   std::string registrable =
       net::registry_controlled_domains::GetDomainAndRegistry(
-          h, net::registry_controlled_domains::EXCLUDE_PRIVATE_REGISTRIES);
+          h,
+          net::registry_controlled_domains::PrivateRegistryFilter::
+              EXCLUDE_PRIVATE_REGISTRIES);
   if (!registrable.empty()) {
     return registrable;
   }

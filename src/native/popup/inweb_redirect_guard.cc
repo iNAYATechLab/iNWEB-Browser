@@ -102,4 +102,8 @@ InwebRedirectGuard* GetRedirectGuard() {
   return guard.get();
 }
 
+
+// Out-of-line ctor definition (chromium-style fallout fix).
+NavigationFacts::NavigationFacts() = default;
+
 }  // namespace inweb::popup

@@ -308,10 +308,10 @@ index 0000000..5692ca6
 +#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_DEFAULT_FILTER_LIST_H_
 diff --git a/chrome/android/inweb/adblock/inweb_filter_list_cache.cc b/chrome/android/inweb/adblock/inweb_filter_list_cache.cc
 new file mode 100644
-index 0000000..fc50069
+index 0000000..d9d974285317
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_filter_list_cache.cc
-@@ -0,0 +1,208 @@
+@@ -0,0 +1,227 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -519,13 +519,32 @@ index 0000000..fc50069
 +  base::ReplaceFile(temp, target, /*error=*/nullptr);
 +}
 +
++
++// Out-of-line ctor/dtor definitions (chromium-style fallout fix).
++FilterListMetadata::FilterListMetadata() = default;
++FilterListMetadata::FilterListMetadata(std::string source_id,
++                                       int64_t downloaded_at_ms)
++    : source_id(std::move(source_id)), downloaded_at_ms(downloaded_at_ms) {}
++FilterListMetadata::~FilterListMetadata() = default;
++
++MemoryFilterListCache::MemoryFilterListCache() = default;
++MemoryFilterListCache::~MemoryFilterListCache() = default;
++
++
++FilterListMetadata::FilterListMetadata(FilterListMetadata&&) = default;
++FilterListMetadata& FilterListMetadata::operator=(FilterListMetadata&&) = default;
++
++
++FilterListMetadata::FilterListMetadata(const FilterListMetadata&) = default;
++FilterListMetadata& FilterListMetadata::operator=(const FilterListMetadata&) = default;
++
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_filter_list_cache.h b/chrome/android/inweb/adblock/inweb_filter_list_cache.h
 new file mode 100644
-index 0000000..3766a9f
+index 0000000..6b393aaa5aeb
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_filter_list_cache.h
-@@ -0,0 +1,110 @@
+@@ -0,0 +1,123 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -546,6 +565,14 @@ index 0000000..3766a9f
 +// Cache metadata persisted beside each cached list body. Ported from the
 +// Kotlin reference (lists/FilterListCache.kt).
 +struct FilterListMetadata {
++  FilterListMetadata();
++  FilterListMetadata(std::string source_id, int64_t downloaded_at_ms);
++  ~FilterListMetadata();
++  FilterListMetadata(const FilterListMetadata&);
++  FilterListMetadata& operator=(const FilterListMetadata&);
++  FilterListMetadata(FilterListMetadata&&);
++  FilterListMetadata& operator=(FilterListMetadata&&);
++
 +  std::string source_id;
 +  // When this content was last successfully downloaded or confirmed (304).
 +  int64_t downloaded_at_ms = 0;
@@ -587,7 +614,12 @@ index 0000000..3766a9f
 +// In-memory cache for tests and engine-less previews (no file system).
 +class MemoryFilterListCache : public FilterListCache {
 + public:
-+  MemoryFilterListCache() = default;
++  MemoryFilterListCache();
++  ~MemoryFilterListCache() override;
++  MemoryFilterListCache(const MemoryFilterListCache&) = delete;
++  MemoryFilterListCache& operator=(const MemoryFilterListCache&) = delete;
++  MemoryFilterListCache(MemoryFilterListCache&&) = delete;
++  MemoryFilterListCache& operator=(MemoryFilterListCache&&) = delete;
 +
 +  void Store(const FilterListSource& source,
 +             const std::string& body,
@@ -818,10 +850,10 @@ index 0000000..5b5f97a
 +#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_CHECKSUM_H_
 diff --git a/chrome/android/inweb/adblock/inweb_filter_list_fetcher.h b/chrome/android/inweb/adblock/inweb_filter_list_fetcher.h
 new file mode 100644
-index 0000000..60aaaf0
+index 0000000..16ab92662437
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_filter_list_fetcher.h
-@@ -0,0 +1,83 @@
+@@ -0,0 +1,90 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -838,6 +870,13 @@ index 0000000..60aaaf0
 +// Outcome of one filter-list download attempt. Ported from the Kotlin
 +// reference (lists/FilterListFetcher.kt).
 +struct FetchResult {
++  FetchResult();
++  ~FetchResult();
++  FetchResult(const FetchResult&);
++  FetchResult& operator=(const FetchResult&);
++  FetchResult(FetchResult&&);
++  FetchResult& operator=(FetchResult&&);
++
 +  enum class Kind {
 +    // 200 OK — full body plus revalidation validators (may be null).
 +    kSuccess,
@@ -907,10 +946,10 @@ index 0000000..60aaaf0
 +#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_FETCHER_H_
 diff --git a/chrome/android/inweb/adblock/inweb_filter_list_manager.cc b/chrome/android/inweb/adblock/inweb_filter_list_manager.cc
 new file mode 100644
-index 0000000..df43414
+index 0000000..d1df3d2d4a2c
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_filter_list_manager.cc
-@@ -0,0 +1,268 @@
+@@ -0,0 +1,296 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -1178,13 +1217,41 @@ index 0000000..df43414
 +  last_status_[source_id] = std::move(status);
 +}
 +
++
++// Out-of-line ctor/dtor definitions (chromium-style fallout fix).
++// FetchResult lives in the header-only fetcher; its definitions are
++// hosted here (same source_set).
++FetchResult::FetchResult() = default;
++FetchResult::~FetchResult() = default;
++
++ListUpdateStatus::ListUpdateStatus() = default;
++ListUpdateStatus::~ListUpdateStatus() = default;
++
++FilterListManager::~FilterListManager() = default;
++
++
++FetchResult::FetchResult(FetchResult&&) = default;
++FetchResult& FetchResult::operator=(FetchResult&&) = default;
++
++
++ListUpdateStatus::ListUpdateStatus(ListUpdateStatus&&) = default;
++ListUpdateStatus& ListUpdateStatus::operator=(ListUpdateStatus&&) = default;
++
++
++FetchResult::FetchResult(const FetchResult&) = default;
++FetchResult& FetchResult::operator=(const FetchResult&) = default;
++
++
++ListUpdateStatus::ListUpdateStatus(const ListUpdateStatus&) = default;
++ListUpdateStatus& ListUpdateStatus::operator=(const ListUpdateStatus&) = default;
++
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_filter_list_manager.h b/chrome/android/inweb/adblock/inweb_filter_list_manager.h
 new file mode 100644
-index 0000000..a06faab
+index 0000000..25a149936d60
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_filter_list_manager.h
-@@ -0,0 +1,133 @@
+@@ -0,0 +1,145 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -1218,6 +1285,13 @@ index 0000000..a06faab
 +};
 +
 +struct ListUpdateStatus {
++  ListUpdateStatus();
++  ~ListUpdateStatus();
++  ListUpdateStatus(const ListUpdateStatus&);
++  ListUpdateStatus& operator=(const ListUpdateStatus&);
++  ListUpdateStatus(ListUpdateStatus&&);
++  ListUpdateStatus& operator=(ListUpdateStatus&&);
++
 +  ListUpdateKind kind = ListUpdateKind::kSkipped;
 +  std::optional<std::string> version;  // kUpdated / kNotModified
 +  int rule_count = 0;                  // kUpdated
@@ -1245,6 +1319,11 @@ index 0000000..a06faab
 +                    FilterListFetcher* fetcher,
 +                    FilterListCache* cache,
 +                    UpdatePolicy policy = UpdatePolicy());
++  ~FilterListManager();
++  FilterListManager(const FilterListManager&) = delete;
++  FilterListManager& operator=(const FilterListManager&) = delete;
++  FilterListManager(FilterListManager&&) = delete;
++  FilterListManager& operator=(FilterListManager&&) = delete;
 +
 +  // Initial load: serve every enabled source from cache; download only
 +  // the ones with no cached copy (when UpdatePolicy::fetch_on_startup
@@ -1571,10 +1650,10 @@ index 0000000..59f2b8c
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_filter_list_source.cc b/chrome/android/inweb/adblock/inweb_filter_list_source.cc
 new file mode 100644
-index 0000000..d29e856
+index 0000000..382fe4487f0d
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_filter_list_source.cc
-@@ -0,0 +1,86 @@
+@@ -0,0 +1,107 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -1660,13 +1739,34 @@ index 0000000..d29e856
 +                          /*download_url=*/std::nullopt, /*enabled=*/true};
 +}
 +
++
++// Out-of-line ctor/dtor definitions (chromium-style fallout fix).
++FilterListSource::FilterListSource() = default;
++FilterListSource::FilterListSource(std::string id,
++                                   std::string title,
++                                   std::optional<std::string> download_url,
++                                   bool enabled)
++    : id(std::move(id)),
++      title(std::move(title)),
++      download_url(std::move(download_url)),
++      enabled(enabled) {}
++FilterListSource::~FilterListSource() = default;
++
++
++FilterListSource::FilterListSource(FilterListSource&&) = default;
++FilterListSource& FilterListSource::operator=(FilterListSource&&) = default;
++
++
++FilterListSource::FilterListSource(const FilterListSource&) = default;
++FilterListSource& FilterListSource::operator=(const FilterListSource&) = default;
++
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_filter_list_source.h b/chrome/android/inweb/adblock/inweb_filter_list_source.h
 new file mode 100644
-index 0000000..73307d5
+index 0000000..e4e04bad8a1d
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_filter_list_source.h
-@@ -0,0 +1,49 @@
+@@ -0,0 +1,60 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -1690,6 +1790,17 @@ index 0000000..73307d5
 +// the embedded default list (inweb_default_filter_list.h) has no upstream
 +// URL. Validation is applied only when a URL is present.
 +struct FilterListSource {
++  FilterListSource();
++  FilterListSource(std::string id,
++                   std::string title,
++                   std::optional<std::string> download_url,
++                   bool enabled);
++  ~FilterListSource();
++  FilterListSource(const FilterListSource&);
++  FilterListSource& operator=(const FilterListSource&);
++  FilterListSource(FilterListSource&&);
++  FilterListSource& operator=(FilterListSource&&);
++
 +  std::string id;
 +  std::string title;
 +  std::optional<std::string> download_url;
@@ -1810,10 +1921,10 @@ index 0000000..a492cf6
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_filter_list_version.cc b/chrome/android/inweb/adblock/inweb_filter_list_version.cc
 new file mode 100644
-index 0000000..18969ef
+index 0000000..e9bd03f57459
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_filter_list_version.cc
-@@ -0,0 +1,72 @@
+@@ -0,0 +1,85 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -1885,13 +1996,26 @@ index 0000000..18969ef
 +  return info;
 +}
 +
++
++// Out-of-line ctor/dtor definitions (chromium-style fallout fix).
++FilterListVersionInfo::FilterListVersionInfo() = default;
++FilterListVersionInfo::~FilterListVersionInfo() = default;
++
++
++FilterListVersionInfo::FilterListVersionInfo(FilterListVersionInfo&&) = default;
++FilterListVersionInfo& FilterListVersionInfo::operator=(FilterListVersionInfo&&) = default;
++
++
++FilterListVersionInfo::FilterListVersionInfo(const FilterListVersionInfo&) = default;
++FilterListVersionInfo& FilterListVersionInfo::operator=(const FilterListVersionInfo&) = default;
++
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_filter_list_version.h b/chrome/android/inweb/adblock/inweb_filter_list_version.h
 new file mode 100644
-index 0000000..c72e392
+index 0000000..4f230e027679
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_filter_list_version.h
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,35 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -1906,6 +2030,13 @@ index 0000000..c72e392
 +
 +// Version information extracted from EasyList-family header comments.
 +struct FilterListVersionInfo {
++  FilterListVersionInfo();
++  ~FilterListVersionInfo();
++  FilterListVersionInfo(const FilterListVersionInfo&);
++  FilterListVersionInfo& operator=(const FilterListVersionInfo&);
++  FilterListVersionInfo(FilterListVersionInfo&&);
++  FilterListVersionInfo& operator=(FilterListVersionInfo&&);
++
 +  std::optional<std::string> version;
 +  std::optional<std::string> last_modified;
 +};
@@ -1922,10 +2053,10 @@ index 0000000..c72e392
 +#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_FILTER_LIST_VERSION_H_
 diff --git a/chrome/android/inweb/adblock/inweb_security_center.cc b/chrome/android/inweb/adblock/inweb_security_center.cc
 new file mode 100644
-index 0000000..b2d0385
+index 0000000..3e046b51330c
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_security_center.cc
-@@ -0,0 +1,59 @@
+@@ -0,0 +1,79 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -1984,13 +2115,33 @@ index 0000000..b2d0385
 +  return model;
 +}
 +
++
++// Out-of-line ctor/dtor definitions (chromium-style fallout fix).
++FilterListStatus::FilterListStatus() = default;
++FilterListStatus::~FilterListStatus() = default;
++
++SecurityCenterModel::SecurityCenterModel() = default;
++SecurityCenterModel::~SecurityCenterModel() = default;
++
++
++FilterListStatus::FilterListStatus(FilterListStatus&&) = default;
++FilterListStatus& FilterListStatus::operator=(FilterListStatus&&) = default;
++SecurityCenterModel::SecurityCenterModel(SecurityCenterModel&&) = default;
++SecurityCenterModel& SecurityCenterModel::operator=(SecurityCenterModel&&) = default;
++
++
++FilterListStatus::FilterListStatus(const FilterListStatus&) = default;
++FilterListStatus& FilterListStatus::operator=(const FilterListStatus&) = default;
++SecurityCenterModel::SecurityCenterModel(const SecurityCenterModel&) = default;
++SecurityCenterModel& SecurityCenterModel::operator=(const SecurityCenterModel&) = default;
++
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_security_center.h b/chrome/android/inweb/adblock/inweb_security_center.h
 new file mode 100644
-index 0000000..027316d
+index 0000000..17b2ffb21a4b
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_security_center.h
-@@ -0,0 +1,71 @@
+@@ -0,0 +1,85 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -2011,6 +2162,13 @@ index 0000000..027316d
 +
 +// Status of one filter list, for the Security Center (§24).
 +struct FilterListStatus {
++  FilterListStatus();
++  ~FilterListStatus();
++  FilterListStatus(const FilterListStatus&);
++  FilterListStatus& operator=(const FilterListStatus&);
++  FilterListStatus(FilterListStatus&&);
++  FilterListStatus& operator=(FilterListStatus&&);
++
 +  std::string id;
 +  int rule_count = 0;
 +  std::optional<std::string> version;
@@ -2028,6 +2186,13 @@ index 0000000..027316d
 +// real parsed filter lists, real policy inputs. Nothing is estimated or
 +// fabricated. Ported from the Kotlin reference (SecurityCenter.kt).
 +struct SecurityCenterModel {
++  SecurityCenterModel();
++  ~SecurityCenterModel();
++  SecurityCenterModel(const SecurityCenterModel&);
++  SecurityCenterModel& operator=(const SecurityCenterModel&);
++  SecurityCenterModel(SecurityCenterModel&&);
++  SecurityCenterModel& operator=(SecurityCenterModel&&);
++
 +  bool enforcement_active = false;
 +  bool tracking_protection_enabled = false;
 +  CookiePolicy cookie_policy = CookiePolicy::kBlockThirdParty;
@@ -2206,10 +2371,10 @@ index 0000000..ee1dad3
 +
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
-index 1485e65..83c962a 100644
+index d431cca..26658ec 100644
 --- a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
 +++ b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
-@@ -158,6 +158,16 @@ FilterDecision TrackingProtectionEngine::Decide(
+@@ -158,8 +158,26 @@ FilterDecision TrackingProtectionEngine::Decide(
                          .matched_rule = block_match};
  }
  
@@ -2223,20 +2388,51 @@ index 1485e65..83c962a 100644
 +  return snapshot;
 +}
 +
- void TrackingProtectionEngine::UpdateSettings(
-     TrackingProtectionSettings settings) {
-   settings_ = std::move(settings);
++void TrackingProtectionEngine::UpdateSettings(
++    TrackingProtectionSettings settings) {
++  settings_ = std::move(settings);
++}
++
+ 
+ // Out-of-line ctor/dtor definitions (chromium-style fallout fix).
++EngineStatisticsSnapshot::EngineStatisticsSnapshot() = default;
++EngineStatisticsSnapshot::~EngineStatisticsSnapshot() = default;
++
+ EngineStatistics::EngineStatistics() = default;
+ EngineStatistics::~EngineStatistics() = default;
+ 
+@@ -170,9 +188,13 @@ TrackingProtectionSettings::~TrackingProtectionSettings() = default;
+ 
+ TrackingProtectionSettings::TrackingProtectionSettings(TrackingProtectionSettings&&) = default;
+ TrackingProtectionSettings& TrackingProtectionSettings::operator=(TrackingProtectionSettings&&) = default;
++EngineStatisticsSnapshot::EngineStatisticsSnapshot(EngineStatisticsSnapshot&&) = default;
++EngineStatisticsSnapshot& EngineStatisticsSnapshot::operator=(EngineStatisticsSnapshot&&) = default;
+ 
+ 
+ TrackingProtectionSettings::TrackingProtectionSettings(const TrackingProtectionSettings&) = default;
+ TrackingProtectionSettings& TrackingProtectionSettings::operator=(const TrackingProtectionSettings&) = default;
++EngineStatisticsSnapshot::EngineStatisticsSnapshot(const EngineStatisticsSnapshot&) = default;
++EngineStatisticsSnapshot& EngineStatisticsSnapshot::operator=(const EngineStatisticsSnapshot&) = default;
+ 
+ }  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h
-index 2477e76..e1d46be 100644
+index 11b096e..f2bd2a6 100644
 --- a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h
 +++ b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h
-@@ -71,6 +71,15 @@ class TrackingProtectionSettings {
+@@ -76,6 +76,22 @@ class TrackingProtectionSettings {
    std::set<std::string> allowlisted_sites_;
  };
  
 +// Copyable snapshot of decision counters for reporting (Security Center
 +// read path, patch 0007). Produced by EngineStatistics::Snapshot().
 +struct EngineStatisticsSnapshot {
++  EngineStatisticsSnapshot();
++  ~EngineStatisticsSnapshot();
++  EngineStatisticsSnapshot(const EngineStatisticsSnapshot&);
++  EngineStatisticsSnapshot& operator=(const EngineStatisticsSnapshot&);
++  EngineStatisticsSnapshot(EngineStatisticsSnapshot&&);
++  EngineStatisticsSnapshot& operator=(EngineStatisticsSnapshot&&);
++
 +  int block_count = 0;
 +  int allow_count = 0;
 +  int pass_count = 0;
@@ -2246,7 +2442,7 @@ index 2477e76..e1d46be 100644
  // Real decision counters, backing Security Center statistics (§24).
  // Thread-safe: decisions run on worker-pool threads.
  class EngineStatistics {
-@@ -80,6 +89,9 @@ class EngineStatistics {
+@@ -92,6 +108,9 @@ class EngineStatistics {
    int pass_count() const;
    std::map<std::string, int> blocked_by_domain() const;
  

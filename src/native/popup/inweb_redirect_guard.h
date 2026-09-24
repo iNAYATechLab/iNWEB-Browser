@@ -48,6 +48,8 @@ enum class RedirectDecision {
 // wrapper (inweb_redirect_throttle.cc). Kept out of the core so the core
 // builds and unit-tests on the host harness without content/ headers.
 struct NavigationFacts {
+  NavigationFacts();
+
   // Navigation target context.
   bool in_main_frame = false;    // top-level navigation only.
   bool renderer_initiated = false;  // excludes omnibox/bookmarks/UI.

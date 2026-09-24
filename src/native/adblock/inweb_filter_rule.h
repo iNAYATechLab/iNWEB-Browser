@@ -37,6 +37,13 @@ namespace inweb::adblock {
 
 // Option constraints of a rule (the part after `$`).
 struct FilterOptions {
+  FilterOptions();
+  ~FilterOptions();
+  FilterOptions(const FilterOptions&);
+  FilterOptions& operator=(const FilterOptions&);
+  FilterOptions(FilterOptions&&);
+  FilterOptions& operator=(FilterOptions&&);
+
   std::set<ResourceType> types;
   std::set<ResourceType> negated_types;
   // true = third-party requests only; false = first-party only;
@@ -49,10 +56,12 @@ struct FilterOptions {
 // Parsed network-filter rule (EasyList-family syntax subset). Move-only:
 // owns its compiled regex.
 struct NetworkFilterRule {
-  NetworkFilterRule() = default;
-  NetworkFilterRule(NetworkFilterRule&&) = default;
-  NetworkFilterRule& operator=(NetworkFilterRule&&) = default;
-  ~NetworkFilterRule() = default;
+  NetworkFilterRule();
+  NetworkFilterRule(NetworkFilterRule&&);
+  NetworkFilterRule& operator=(NetworkFilterRule&&);
+  ~NetworkFilterRule();
+  NetworkFilterRule(const NetworkFilterRule&) = delete;
+  NetworkFilterRule& operator=(const NetworkFilterRule&) = delete;
 
   std::string raw;
   std::string pattern;
@@ -71,6 +80,14 @@ struct NetworkFilterRule {
 
 // Result of parsing one filter list.
 struct ParsedFilterList {
+  ParsedFilterList();
+  ~ParsedFilterList();
+  // Move-only: holds move-only NetworkFilterRules.
+  ParsedFilterList(const ParsedFilterList&) = delete;
+  ParsedFilterList& operator=(const ParsedFilterList&) = delete;
+  ParsedFilterList(ParsedFilterList&&);
+  ParsedFilterList& operator=(ParsedFilterList&&);
+
   std::string list_id;
   std::vector<NetworkFilterRule> network_rules;
   // Cosmetic (element-hiding) rules retained for the cosmetic engine

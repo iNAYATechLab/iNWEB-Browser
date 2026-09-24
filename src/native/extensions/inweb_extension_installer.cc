@@ -364,4 +364,17 @@ UpdateDecision DecideUpdate(const std::optional<std::string>& installed,
   return UpdateDecision::kRejectOlderVersion;
 }
 
+
+// Out-of-line ctor/dtor definitions (chromium-style fallout fix).
+ExtensionManifest::ExtensionManifest() = default;
+ExtensionManifest::~ExtensionManifest() = default;
+
+
+ExtensionManifest::ExtensionManifest(ExtensionManifest&&) = default;
+ExtensionManifest& ExtensionManifest::operator=(ExtensionManifest&&) = default;
+
+
+ExtensionManifest::ExtensionManifest(const ExtensionManifest&) = default;
+ExtensionManifest& ExtensionManifest::operator=(const ExtensionManifest&) = default;
+
 }  // namespace inweb::extensions

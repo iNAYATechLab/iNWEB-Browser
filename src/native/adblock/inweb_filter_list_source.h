@@ -21,6 +21,17 @@ namespace inweb::adblock {
 // the embedded default list (inweb_default_filter_list.h) has no upstream
 // URL. Validation is applied only when a URL is present.
 struct FilterListSource {
+  FilterListSource();
+  FilterListSource(std::string id,
+                   std::string title,
+                   std::optional<std::string> download_url,
+                   bool enabled);
+  ~FilterListSource();
+  FilterListSource(const FilterListSource&);
+  FilterListSource& operator=(const FilterListSource&);
+  FilterListSource(FilterListSource&&);
+  FilterListSource& operator=(FilterListSource&&);
+
   std::string id;
   std::string title;
   std::optional<std::string> download_url;

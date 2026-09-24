@@ -14,6 +14,13 @@ namespace inweb::adblock {
 // Outcome of one filter-list download attempt. Ported from the Kotlin
 // reference (lists/FilterListFetcher.kt).
 struct FetchResult {
+  FetchResult();
+  ~FetchResult();
+  FetchResult(const FetchResult&);
+  FetchResult& operator=(const FetchResult&);
+  FetchResult(FetchResult&&);
+  FetchResult& operator=(FetchResult&&);
+
   enum class Kind {
     // 200 OK — full body plus revalidation validators (may be null).
     kSuccess,

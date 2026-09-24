@@ -55,10 +55,10 @@ index c22511e..c036f2a 100644
      "//testing/gtest",
 diff --git a/chrome/android/inweb/popup/inweb_redirect_guard.cc b/chrome/android/inweb/popup/inweb_redirect_guard.cc
 new file mode 100644
-index 0000000..c0fb4ec
+index 0000000..2174de3f3e50
 --- /dev/null
 +++ b/chrome/android/inweb/popup/inweb_redirect_guard.cc
-@@ -0,0 +1,105 @@
+@@ -0,0 +1,109 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -163,13 +163,17 @@ index 0000000..c0fb4ec
 +  return guard.get();
 +}
 +
++
++// Out-of-line ctor definition (chromium-style fallout fix).
++NavigationFacts::NavigationFacts() = default;
++
 +}  // namespace inweb::popup
 diff --git a/chrome/android/inweb/popup/inweb_redirect_guard.h b/chrome/android/inweb/popup/inweb_redirect_guard.h
 new file mode 100644
-index 0000000..107dee9
+index 0000000..6e218f6071ff
 --- /dev/null
 +++ b/chrome/android/inweb/popup/inweb_redirect_guard.h
-@@ -0,0 +1,105 @@
+@@ -0,0 +1,107 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -220,6 +224,8 @@ index 0000000..107dee9
 +// wrapper (inweb_redirect_throttle.cc). Kept out of the core so the core
 +// builds and unit-tests on the host harness without content/ headers.
 +struct NavigationFacts {
++  NavigationFacts();
++
 +  // Navigation target context.
 +  bool in_main_frame = false;    // top-level navigation only.
 +  bool renderer_initiated = false;  // excludes omnibox/bookmarks/UI.

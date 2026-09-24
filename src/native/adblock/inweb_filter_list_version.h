@@ -12,6 +12,13 @@ namespace inweb::adblock {
 
 // Version information extracted from EasyList-family header comments.
 struct FilterListVersionInfo {
+  FilterListVersionInfo();
+  ~FilterListVersionInfo();
+  FilterListVersionInfo(const FilterListVersionInfo&);
+  FilterListVersionInfo& operator=(const FilterListVersionInfo&);
+  FilterListVersionInfo(FilterListVersionInfo&&);
+  FilterListVersionInfo& operator=(FilterListVersionInfo&&);
+
   std::optional<std::string> version;
   std::optional<std::string> last_modified;
 };

@@ -205,4 +205,23 @@ void FileFilterListCache::WriteAtomically(const base::FilePath& target,
   base::ReplaceFile(temp, target, /*error=*/nullptr);
 }
 
+
+// Out-of-line ctor/dtor definitions (chromium-style fallout fix).
+FilterListMetadata::FilterListMetadata() = default;
+FilterListMetadata::FilterListMetadata(std::string source_id,
+                                       int64_t downloaded_at_ms)
+    : source_id(std::move(source_id)), downloaded_at_ms(downloaded_at_ms) {}
+FilterListMetadata::~FilterListMetadata() = default;
+
+MemoryFilterListCache::MemoryFilterListCache() = default;
+MemoryFilterListCache::~MemoryFilterListCache() = default;
+
+
+FilterListMetadata::FilterListMetadata(FilterListMetadata&&) = default;
+FilterListMetadata& FilterListMetadata::operator=(FilterListMetadata&&) = default;
+
+
+FilterListMetadata::FilterListMetadata(const FilterListMetadata&) = default;
+FilterListMetadata& FilterListMetadata::operator=(const FilterListMetadata&) = default;
+
 }  // namespace inweb::adblock

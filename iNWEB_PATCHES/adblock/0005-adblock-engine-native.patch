@@ -52,10 +52,10 @@ index 0000000..4dcc57d
 +}
 diff --git a/chrome/android/inweb/adblock/inweb_domain_classifier.cc b/chrome/android/inweb/adblock/inweb_domain_classifier.cc
 new file mode 100644
-index 0000000..78160da
+index 0000000..56e4a6ce33f8
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_domain_classifier.cc
-@@ -0,0 +1,40 @@
+@@ -0,0 +1,42 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -67,7 +67,7 @@ index 0000000..78160da
 +#include <string>
 +
 +#include "base/strings/string_util.h"
-+#include "net/base/registry_controlled_domains.h"
++#include "net/base/registry_controlled_domains/registry_controlled_domain.h"
 +
 +namespace inweb::adblock {
 +
@@ -80,7 +80,9 @@ index 0000000..78160da
 +  }
 +  std::string registrable =
 +      net::registry_controlled_domains::GetDomainAndRegistry(
-+          h, net::registry_controlled_domains::EXCLUDE_PRIVATE_REGISTRIES);
++          h,
++          net::registry_controlled_domains::PrivateRegistryFilter::
++              EXCLUDE_PRIVATE_REGISTRIES);
 +  if (!registrable.empty()) {
 +    return registrable;
 +  }
@@ -201,10 +203,10 @@ index 0000000..e08707e
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_filter_list_parser.cc b/chrome/android/inweb/adblock/inweb_filter_list_parser.cc
 new file mode 100644
-index 0000000..44cb4b0
+index 0000000..7a015869bd51
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_filter_list_parser.cc
-@@ -0,0 +1,226 @@
+@@ -0,0 +1,244 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -250,12 +252,6 @@ index 0000000..44cb4b0
 +    }
 +    if (line[0] == '!' || line[0] == '[') {
 +      ++parsed.comment_count;
-+      continue;
-+    }
-+    if (line.find("##") != std::string::npos ||
-+        line.find("#@#") != std::string::npos ||
-+        line.find("#?#") != std::string::npos) {
-+      ++parsed.cosmetic_rule_count;
 +      continue;
 +    }
 +    std::optional<NetworkFilterRule> rule = ParseRule(line, line_number);
@@ -429,6 +425,30 @@ index 0000000..44cb4b0
 +  }
 +  return true;
 +}
++
++
++// Out-of-line ctor/dtor definitions (chromium-style: complex classes
++// must not define them inline in headers).
++FilterOptions::FilterOptions() = default;
++FilterOptions::~FilterOptions() = default;
++
++NetworkFilterRule::NetworkFilterRule() = default;
++NetworkFilterRule::NetworkFilterRule(NetworkFilterRule&&) = default;
++NetworkFilterRule& NetworkFilterRule::operator=(NetworkFilterRule&&) = default;
++NetworkFilterRule::~NetworkFilterRule() = default;
++
++ParsedFilterList::ParsedFilterList() = default;
++ParsedFilterList::~ParsedFilterList() = default;
++
++
++FilterOptions::FilterOptions(FilterOptions&&) = default;
++FilterOptions& FilterOptions::operator=(FilterOptions&&) = default;
++ParsedFilterList::ParsedFilterList(ParsedFilterList&&) = default;
++ParsedFilterList& ParsedFilterList::operator=(ParsedFilterList&&) = default;
++
++
++FilterOptions::FilterOptions(const FilterOptions&) = default;
++FilterOptions& FilterOptions::operator=(const FilterOptions&) = default;
 +
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_filter_list_parser.h b/chrome/android/inweb/adblock/inweb_filter_list_parser.h
@@ -613,10 +633,10 @@ index 0000000..0374e5b
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_filter_rule.h b/chrome/android/inweb/adblock/inweb_filter_rule.h
 new file mode 100644
-index 0000000..9d8b23a
+index 0000000..34594c01ca21
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_filter_rule.h
-@@ -0,0 +1,87 @@
+@@ -0,0 +1,104 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -654,6 +674,13 @@ index 0000000..9d8b23a
 +
 +// Option constraints of a rule (the part after `$`).
 +struct FilterOptions {
++  FilterOptions();
++  ~FilterOptions();
++  FilterOptions(const FilterOptions&);
++  FilterOptions& operator=(const FilterOptions&);
++  FilterOptions(FilterOptions&&);
++  FilterOptions& operator=(FilterOptions&&);
++
 +  std::set<ResourceType> types;
 +  std::set<ResourceType> negated_types;
 +  // true = third-party requests only; false = first-party only;
@@ -666,10 +693,12 @@ index 0000000..9d8b23a
 +// Parsed network-filter rule (EasyList-family syntax subset). Move-only:
 +// owns its compiled regex.
 +struct NetworkFilterRule {
-+  NetworkFilterRule() = default;
-+  NetworkFilterRule(NetworkFilterRule&&) = default;
-+  NetworkFilterRule& operator=(NetworkFilterRule&&) = default;
-+  ~NetworkFilterRule() = default;
++  NetworkFilterRule();
++  NetworkFilterRule(NetworkFilterRule&&);
++  NetworkFilterRule& operator=(NetworkFilterRule&&);
++  ~NetworkFilterRule();
++  NetworkFilterRule(const NetworkFilterRule&) = delete;
++  NetworkFilterRule& operator=(const NetworkFilterRule&) = delete;
 +
 +  std::string raw;
 +  std::string pattern;
@@ -688,6 +717,14 @@ index 0000000..9d8b23a
 +
 +// Result of parsing one filter list.
 +struct ParsedFilterList {
++  ParsedFilterList();
++  ~ParsedFilterList();
++  // Move-only: holds move-only NetworkFilterRules.
++  ParsedFilterList(const ParsedFilterList&) = delete;
++  ParsedFilterList& operator=(const ParsedFilterList&) = delete;
++  ParsedFilterList(ParsedFilterList&&);
++  ParsedFilterList& operator=(ParsedFilterList&&);
++
 +  std::string list_id;
 +  std::vector<NetworkFilterRule> network_rules;
 +  int cosmetic_rule_count = 0;
@@ -1237,10 +1274,10 @@ index 0000000..fc4fe13
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
 new file mode 100644
-index 0000000..706fa31
+index 0000000..d431ccadd2e3
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
-@@ -0,0 +1,161 @@
+@@ -0,0 +1,178 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -1401,13 +1438,30 @@ index 0000000..706fa31
 +                        .matched_rule = block_match};
 +}
 +
++
++// Out-of-line ctor/dtor definitions (chromium-style fallout fix).
++EngineStatistics::EngineStatistics() = default;
++EngineStatistics::~EngineStatistics() = default;
++
++TrackingProtectionEngine::~TrackingProtectionEngine() = default;
++
++TrackingProtectionSettings::~TrackingProtectionSettings() = default;
++
++
++TrackingProtectionSettings::TrackingProtectionSettings(TrackingProtectionSettings&&) = default;
++TrackingProtectionSettings& TrackingProtectionSettings::operator=(TrackingProtectionSettings&&) = default;
++
++
++TrackingProtectionSettings::TrackingProtectionSettings(const TrackingProtectionSettings&) = default;
++TrackingProtectionSettings& TrackingProtectionSettings::operator=(const TrackingProtectionSettings&) = default;
++
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h
 new file mode 100644
-index 0000000..80c2c45
+index 0000000..984e8e953631
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h
-@@ -0,0 +1,115 @@
+@@ -0,0 +1,132 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -1460,6 +1514,11 @@ index 0000000..80c2c45
 +  TrackingProtectionSettings(bool enabled,
 +                             CookiePolicy cookie_policy,
 +                             std::set<std::string> allowlisted_sites);
++  ~TrackingProtectionSettings();
++  TrackingProtectionSettings(const TrackingProtectionSettings&);
++  TrackingProtectionSettings& operator=(const TrackingProtectionSettings&);
++  TrackingProtectionSettings(TrackingProtectionSettings&&);
++  TrackingProtectionSettings& operator=(TrackingProtectionSettings&&);
 +
 +  bool enabled() const { return enabled_; }
 +  CookiePolicy cookie_policy() const { return cookie_policy_; }
@@ -1485,6 +1544,13 @@ index 0000000..80c2c45
 +// Thread-safe: decisions run on worker-pool threads.
 +class EngineStatistics {
 + public:
++  EngineStatistics();
++  ~EngineStatistics();
++  EngineStatistics(const EngineStatistics&) = delete;
++  EngineStatistics& operator=(const EngineStatistics&) = delete;
++  EngineStatistics(EngineStatistics&&) = delete;
++  EngineStatistics& operator=(EngineStatistics&&) = delete;
++
 +  int block_count() const;
 +  int allow_count() const;
 +  int pass_count() const;
@@ -1507,6 +1573,11 @@ index 0000000..80c2c45
 + public:
 +  TrackingProtectionEngine(std::vector<ParsedFilterList> parsed_lists,
 +                           TrackingProtectionSettings settings);
++  ~TrackingProtectionEngine();
++  TrackingProtectionEngine(const TrackingProtectionEngine&) = delete;
++  TrackingProtectionEngine& operator=(const TrackingProtectionEngine&) = delete;
++  TrackingProtectionEngine(TrackingProtectionEngine&&) = delete;
++  TrackingProtectionEngine& operator=(TrackingProtectionEngine&&) = delete;
 +
 +  FilterDecision Decide(const RequestContext& request) const;
 +

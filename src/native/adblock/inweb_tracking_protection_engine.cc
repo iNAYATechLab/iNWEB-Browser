@@ -173,4 +173,28 @@ void TrackingProtectionEngine::UpdateSettings(
   settings_ = std::move(settings);
 }
 
+
+// Out-of-line ctor/dtor definitions (chromium-style fallout fix).
+EngineStatisticsSnapshot::EngineStatisticsSnapshot() = default;
+EngineStatisticsSnapshot::~EngineStatisticsSnapshot() = default;
+
+EngineStatistics::EngineStatistics() = default;
+EngineStatistics::~EngineStatistics() = default;
+
+TrackingProtectionEngine::~TrackingProtectionEngine() = default;
+
+TrackingProtectionSettings::~TrackingProtectionSettings() = default;
+
+
+TrackingProtectionSettings::TrackingProtectionSettings(TrackingProtectionSettings&&) = default;
+TrackingProtectionSettings& TrackingProtectionSettings::operator=(TrackingProtectionSettings&&) = default;
+EngineStatisticsSnapshot::EngineStatisticsSnapshot(EngineStatisticsSnapshot&&) = default;
+EngineStatisticsSnapshot& EngineStatisticsSnapshot::operator=(EngineStatisticsSnapshot&&) = default;
+
+
+TrackingProtectionSettings::TrackingProtectionSettings(const TrackingProtectionSettings&) = default;
+TrackingProtectionSettings& TrackingProtectionSettings::operator=(const TrackingProtectionSettings&) = default;
+EngineStatisticsSnapshot::EngineStatisticsSnapshot(const EngineStatisticsSnapshot&) = default;
+EngineStatisticsSnapshot& EngineStatisticsSnapshot::operator=(const EngineStatisticsSnapshot&) = default;
+
 }  // namespace inweb::adblock

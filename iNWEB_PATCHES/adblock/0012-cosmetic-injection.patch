@@ -123,10 +123,10 @@ index 5ef452d..b7f2549 100644
  }  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_cosmetic_filter.cc b/chrome/android/inweb/adblock/inweb_cosmetic_filter.cc
 new file mode 100644
-index 0000000..db1ef81
+index 0000000..370a41d4bac8
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_cosmetic_filter.cc
-@@ -0,0 +1,230 @@
+@@ -0,0 +1,252 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -276,6 +276,8 @@ index 0000000..db1ef81
 +CosmeticFilterEngine::CosmeticFilterEngine(std::vector<CosmeticRule> rules)
 +    : rules_(std::move(rules)) {}
 +
++CosmeticFilterEngine::~CosmeticFilterEngine() = default;
++
 +std::string CosmeticFilterEngine::HideCssFor(const std::string& host) const {
 +  std::string h = base::ToLowerASCII(std::string(
 +      base::TrimWhitespaceASCII(host, base::TRIM_ALL)));
@@ -356,13 +358,33 @@ index 0000000..db1ef81
 +          host[host.size() - domain.size() - 1] == '.');
 +}
 +
++
++// Out-of-line ctor/dtor definitions (chromium-style fallout fix).
++CosmeticRule::CosmeticRule() = default;
++CosmeticRule::~CosmeticRule() = default;
++
++ParsedCosmeticList::ParsedCosmeticList() = default;
++ParsedCosmeticList::~ParsedCosmeticList() = default;
++
++
++CosmeticRule::CosmeticRule(CosmeticRule&&) = default;
++CosmeticRule& CosmeticRule::operator=(CosmeticRule&&) = default;
++ParsedCosmeticList::ParsedCosmeticList(ParsedCosmeticList&&) = default;
++ParsedCosmeticList& ParsedCosmeticList::operator=(ParsedCosmeticList&&) = default;
++
++
++CosmeticRule::CosmeticRule(const CosmeticRule&) = default;
++CosmeticRule& CosmeticRule::operator=(const CosmeticRule&) = default;
++ParsedCosmeticList::ParsedCosmeticList(const ParsedCosmeticList&) = default;
++ParsedCosmeticList& ParsedCosmeticList::operator=(const ParsedCosmeticList&) = default;
++
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_cosmetic_filter.h b/chrome/android/inweb/adblock/inweb_cosmetic_filter.h
 new file mode 100644
-index 0000000..0933616
+index 0000000..2e2ffec4082d
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_cosmetic_filter.h
-@@ -0,0 +1,110 @@
+@@ -0,0 +1,125 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -395,6 +417,13 @@ index 0000000..0933616
 +// Selectors pass through verbatim — the browser CSS parser is the
 +// validator at injection time; nothing is invented here.
 +struct CosmeticRule {
++  CosmeticRule();
++  ~CosmeticRule();
++  CosmeticRule(const CosmeticRule&);
++  CosmeticRule& operator=(const CosmeticRule&);
++  CosmeticRule(CosmeticRule&&);
++  CosmeticRule& operator=(CosmeticRule&&);
++
 +  std::string raw;
 +  std::string selector;
 +  // Include (true) / exclude (false) domains; empty = applies
@@ -421,6 +450,13 @@ index 0000000..0933616
 +// Result of parsing the cosmetic half of one filter list (Kotlin
 +// ParsedCosmeticList parity).
 +struct ParsedCosmeticList {
++  ParsedCosmeticList();
++  ~ParsedCosmeticList();
++  ParsedCosmeticList(const ParsedCosmeticList&);
++  ParsedCosmeticList& operator=(const ParsedCosmeticList&);
++  ParsedCosmeticList(ParsedCosmeticList&&);
++  ParsedCosmeticList& operator=(ParsedCosmeticList&&);
++
 +  std::string list_id;
 +  std::vector<CosmeticRule> rules;
 +  int procedural_rule_count = 0;
@@ -450,6 +486,7 @@ index 0000000..0933616
 +class CosmeticFilterEngine {
 + public:
 +  explicit CosmeticFilterEngine(std::vector<CosmeticRule> rules);
++  ~CosmeticFilterEngine();
 +
 +  CosmeticFilterEngine(const CosmeticFilterEngine&) = delete;
 +  CosmeticFilterEngine& operator=(const CosmeticFilterEngine&) = delete;
@@ -868,7 +905,7 @@ index 0000000..c3b6a21
 +
 +#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_COSMETIC_INJECTOR_H_
 diff --git a/chrome/android/inweb/adblock/inweb_filter_list_parser.cc b/chrome/android/inweb/adblock/inweb_filter_list_parser.cc
-index 44cb4b0..c336d3d 100644
+index 7a01586..b689317 100644
 --- a/chrome/android/inweb/adblock/inweb_filter_list_parser.cc
 +++ b/chrome/android/inweb/adblock/inweb_filter_list_parser.cc
 @@ -6,6 +6,8 @@
@@ -880,27 +917,26 @@ index 44cb4b0..c336d3d 100644
  #include <string>
  #include <utility>
  #include <vector>
-@@ -45,10 +47,15 @@ ParsedFilterList FilterListParser::Parse(const std::string& text,
+@@ -45,6 +47,17 @@ ParsedFilterList FilterListParser::Parse(const std::string& text,
        ++parsed.comment_count;
        continue;
      }
--    if (line.find("##") != std::string::npos ||
--        line.find("#@#") != std::string::npos ||
--        line.find("#?#") != std::string::npos) {
 +    const CosmeticLineResult cosmetic = CosmeticFilterParser::ParseLine(line);
 +    if (cosmetic.kind != CosmeticLineResult::Kind::kNotCosmetic) {
 +      // Every line carrying a cosmetic marker counts here (including
 +      // procedural/unsupported/invalid ones) — Kotlin parity.
-       ++parsed.cosmetic_rule_count;
++      ++parsed.cosmetic_rule_count;
 +      if (cosmetic.kind == CosmeticLineResult::Kind::kHide ||
 +          cosmetic.kind == CosmeticLineResult::Kind::kException) {
 +        parsed.cosmetic_rules.push_back(cosmetic.rule);
 +      }
-       continue;
-     }
++      continue;
++    }
      std::optional<NetworkFilterRule> rule = ParseRule(line, line_number);
+     if (!rule) {
+       ++parsed.invalid_rule_count;
 diff --git a/chrome/android/inweb/adblock/inweb_filter_rule.h b/chrome/android/inweb/adblock/inweb_filter_rule.h
-index 9d8b23a..21db129 100644
+index 34594c0..b21100a 100644
 --- a/chrome/android/inweb/adblock/inweb_filter_rule.h
 +++ b/chrome/android/inweb/adblock/inweb_filter_rule.h
 @@ -28,6 +28,8 @@
@@ -912,8 +948,8 @@ index 9d8b23a..21db129 100644
  #include "chrome/android/inweb/adblock/inweb_resource_type.h"
  #include "third_party/re2/re2.h"
  
-@@ -71,6 +73,10 @@ struct NetworkFilterRule {
- struct ParsedFilterList {
+@@ -88,6 +90,10 @@ struct ParsedFilterList {
+ 
    std::string list_id;
    std::vector<NetworkFilterRule> network_rules;
 +  // Cosmetic (element-hiding) rules retained for the cosmetic engine

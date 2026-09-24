@@ -795,25 +795,12 @@ index 0000000..f9651d2
 +}
 +
 +}  // namespace inweb::adblock
-diff --git a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
-index 706fa31..1485e65 100644
---- a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
-+++ b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
-@@ -158,4 +158,9 @@ FilterDecision TrackingProtectionEngine::Decide(
-                         .matched_rule = block_match};
- }
- 
-+void TrackingProtectionEngine::UpdateSettings(
-+    TrackingProtectionSettings settings) {
-+  settings_ = std::move(settings);
-+}
-+
- }  // namespace inweb::adblock
+
 diff --git a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h
-index 80c2c45..2477e76 100644
+index 984e8e9..11b096e 100644
 --- a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h
 +++ b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.h
-@@ -100,6 +100,11 @@ class TrackingProtectionEngine {
+@@ -117,6 +117,11 @@ class TrackingProtectionEngine {
  
    FilterDecision Decide(const RequestContext& request) const;
  

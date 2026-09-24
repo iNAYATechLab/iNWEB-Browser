@@ -230,4 +230,28 @@ bool FilterListParser::ParseDomains(const std::string& text,
   return true;
 }
 
+
+// Out-of-line ctor/dtor definitions (chromium-style: complex classes
+// must not define them inline in headers).
+FilterOptions::FilterOptions() = default;
+FilterOptions::~FilterOptions() = default;
+
+NetworkFilterRule::NetworkFilterRule() = default;
+NetworkFilterRule::NetworkFilterRule(NetworkFilterRule&&) = default;
+NetworkFilterRule& NetworkFilterRule::operator=(NetworkFilterRule&&) = default;
+NetworkFilterRule::~NetworkFilterRule() = default;
+
+ParsedFilterList::ParsedFilterList() = default;
+ParsedFilterList::~ParsedFilterList() = default;
+
+
+FilterOptions::FilterOptions(FilterOptions&&) = default;
+FilterOptions& FilterOptions::operator=(FilterOptions&&) = default;
+ParsedFilterList::ParsedFilterList(ParsedFilterList&&) = default;
+ParsedFilterList& ParsedFilterList::operator=(ParsedFilterList&&) = default;
+
+
+FilterOptions::FilterOptions(const FilterOptions&) = default;
+FilterOptions& FilterOptions::operator=(const FilterOptions&) = default;
+
 }  // namespace inweb::adblock

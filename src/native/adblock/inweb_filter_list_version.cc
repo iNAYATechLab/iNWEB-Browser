@@ -69,4 +69,17 @@ FilterListVersionInfo ParseFilterListVersion(const std::string& text) {
   return info;
 }
 
+
+// Out-of-line ctor/dtor definitions (chromium-style fallout fix).
+FilterListVersionInfo::FilterListVersionInfo() = default;
+FilterListVersionInfo::~FilterListVersionInfo() = default;
+
+
+FilterListVersionInfo::FilterListVersionInfo(FilterListVersionInfo&&) = default;
+FilterListVersionInfo& FilterListVersionInfo::operator=(FilterListVersionInfo&&) = default;
+
+
+FilterListVersionInfo::FilterListVersionInfo(const FilterListVersionInfo&) = default;
+FilterListVersionInfo& FilterListVersionInfo::operator=(const FilterListVersionInfo&) = default;
+
 }  // namespace inweb::adblock

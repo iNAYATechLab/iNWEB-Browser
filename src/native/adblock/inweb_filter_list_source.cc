@@ -83,4 +83,25 @@ FilterListSource FilterListSource::DefaultList() {
                           /*download_url=*/std::nullopt, /*enabled=*/true};
 }
 
+
+// Out-of-line ctor/dtor definitions (chromium-style fallout fix).
+FilterListSource::FilterListSource() = default;
+FilterListSource::FilterListSource(std::string id,
+                                   std::string title,
+                                   std::optional<std::string> download_url,
+                                   bool enabled)
+    : id(std::move(id)),
+      title(std::move(title)),
+      download_url(std::move(download_url)),
+      enabled(enabled) {}
+FilterListSource::~FilterListSource() = default;
+
+
+FilterListSource::FilterListSource(FilterListSource&&) = default;
+FilterListSource& FilterListSource::operator=(FilterListSource&&) = default;
+
+
+FilterListSource::FilterListSource(const FilterListSource&) = default;
+FilterListSource& FilterListSource::operator=(const FilterListSource&) = default;
+
 }  // namespace inweb::adblock

@@ -18,6 +18,13 @@ class FilterListManager;
 
 // Status of one filter list, for the Security Center (§24).
 struct FilterListStatus {
+  FilterListStatus();
+  ~FilterListStatus();
+  FilterListStatus(const FilterListStatus&);
+  FilterListStatus& operator=(const FilterListStatus&);
+  FilterListStatus(FilterListStatus&&);
+  FilterListStatus& operator=(FilterListStatus&&);
+
   std::string id;
   int rule_count = 0;
   std::optional<std::string> version;
@@ -35,6 +42,13 @@ struct BlockedDomainCount {
 // real parsed filter lists, real policy inputs. Nothing is estimated or
 // fabricated. Ported from the Kotlin reference (SecurityCenter.kt).
 struct SecurityCenterModel {
+  SecurityCenterModel();
+  ~SecurityCenterModel();
+  SecurityCenterModel(const SecurityCenterModel&);
+  SecurityCenterModel& operator=(const SecurityCenterModel&);
+  SecurityCenterModel(SecurityCenterModel&&);
+  SecurityCenterModel& operator=(SecurityCenterModel&&);
+
   bool enforcement_active = false;
   bool tracking_protection_enabled = false;
   CookiePolicy cookie_policy = CookiePolicy::kBlockThirdParty;

@@ -31,6 +31,13 @@ enum class ListUpdateKind {
 };
 
 struct ListUpdateStatus {
+  ListUpdateStatus();
+  ~ListUpdateStatus();
+  ListUpdateStatus(const ListUpdateStatus&);
+  ListUpdateStatus& operator=(const ListUpdateStatus&);
+  ListUpdateStatus(ListUpdateStatus&&);
+  ListUpdateStatus& operator=(ListUpdateStatus&&);
+
   ListUpdateKind kind = ListUpdateKind::kSkipped;
   std::optional<std::string> version;  // kUpdated / kNotModified
   int rule_count = 0;                  // kUpdated
@@ -58,6 +65,11 @@ class FilterListManager {
                     FilterListFetcher* fetcher,
                     FilterListCache* cache,
                     UpdatePolicy policy = UpdatePolicy());
+  ~FilterListManager();
+  FilterListManager(const FilterListManager&) = delete;
+  FilterListManager& operator=(const FilterListManager&) = delete;
+  FilterListManager(FilterListManager&&) = delete;
+  FilterListManager& operator=(FilterListManager&&) = delete;
 
   // Initial load: serve every enabled source from cache; download only
   // the ones with no cached copy (when UpdatePolicy::fetch_on_startup

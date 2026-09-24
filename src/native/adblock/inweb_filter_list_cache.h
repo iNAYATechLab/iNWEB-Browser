@@ -18,6 +18,14 @@ struct FilterListSource;
 // Cache metadata persisted beside each cached list body. Ported from the
 // Kotlin reference (lists/FilterListCache.kt).
 struct FilterListMetadata {
+  FilterListMetadata();
+  FilterListMetadata(std::string source_id, int64_t downloaded_at_ms);
+  ~FilterListMetadata();
+  FilterListMetadata(const FilterListMetadata&);
+  FilterListMetadata& operator=(const FilterListMetadata&);
+  FilterListMetadata(FilterListMetadata&&);
+  FilterListMetadata& operator=(FilterListMetadata&&);
+
   std::string source_id;
   // When this content was last successfully downloaded or confirmed (304).
   int64_t downloaded_at_ms = 0;
@@ -59,7 +67,12 @@ class FilterListCache {
 // In-memory cache for tests and engine-less previews (no file system).
 class MemoryFilterListCache : public FilterListCache {
  public:
-  MemoryFilterListCache() = default;
+  MemoryFilterListCache();
+  ~MemoryFilterListCache() override;
+  MemoryFilterListCache(const MemoryFilterListCache&) = delete;
+  MemoryFilterListCache& operator=(const MemoryFilterListCache&) = delete;
+  MemoryFilterListCache(MemoryFilterListCache&&) = delete;
+  MemoryFilterListCache& operator=(MemoryFilterListCache&&) = delete;
 
   void Store(const FilterListSource& source,
              const std::string& body,

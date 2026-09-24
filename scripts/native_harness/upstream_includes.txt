@@ -1,0 +1,58 @@
+# Verified-upstream include allowlist for iNWEB native sources.
+# Every quoted #include in src/native/** production files must appear here
+# (or be chrome/android/inweb/... internal, or third_party/zlib/ which the
+# harness shims to system zlib). Evidence tiers:
+#   hop16  = compiled clean in a real Chromium build hop (run 35958620441)
+#   hop15  = reached by the real toolchain in run 35953643726
+#   pinned = verified against the pinned 154.0.8037.21 tree during patch
+#            research (recorded in PHASE notes / session state)
+#   stable = long-stable upstream path, confirmed by the upstream files we
+#            edit compiling against them in real hops
+# A path NOT here fails scripts/native_harness/audit_chromium_style.py.
+# Lesson recorded 2026-09-24 (hop 16): net/base/registry_controlled_domains.h
+# was a shim-invented path that does not exist upstream — the real header is
+# net/base/registry_controlled_domains/registry_controlled_domain.h.
+base/files/file_enumerator.h                # stable
+base/files/file_path.h                      # stable
+base/files/file_util.h                      # stable
+base/functional/bind.h                      # stable
+base/functional/callback.h                  # stable
+base/json/json_writer.h                     # stable
+base/memory/weak_ptr.h                      # stable
+base/no_destructor.h                        # hop15 (static_assert error proves the real header)
+base/notreached.h                           # stable
+base/strings/string_number_conversions.h    # stable
+base/strings/string_split.h                 # stable
+base/strings/string_util.h                  # hop16 (compiled in domain_classifier before net-include failure)
+base/strings/utf_string_conversions.h       # stable
+base/synchronization/lock.h                 # stable
+base/task/task_traits.h                     # stable
+base/task/thread_pool.h                     # stable
+base/thread_annotations.h                   # stable
+base/values.h                               # stable
+components/content_settings/core/common/content_settings_types.h  # stable
+components/permissions/permission_request.h                     # hop16 (chrome_permissions_client.o)
+components/permissions/prediction_service/permission_ui_selector.h  # hop16 (ui_selector.o compiled)
+content/public/browser/global_routing_id.h                      # pinned (0012 research)
+content/public/browser/navigation_handle.h                      # stable
+content/public/browser/navigation_throttle.h                    # stable
+content/public/browser/navigation_throttle_registry.h           # stable
+content/public/browser/render_frame_host.h                      # pinned (0012 injector research)
+content/public/browser/web_contents.h                           # pinned (0012 injector research)
+content/public/browser/web_contents_observer.h                  # pinned (0012 injector research)
+content/public/browser/web_contents_user_data.h                 # pinned (0012 injector research)
+content/public/common/isolated_world_ids.h                      # pinned (0012 research)
+crypto/sha2.h                                                   # stable
+net/base/net_errors.h                                           # stable
+net/base/redirect_info.h                                        # stable
+net/base/registry_controlled_domains/registry_controlled_domain.h  # stable (real upstream path since 2014; hop-17 oracle)
+services/network/public/cpp/resource_request.h                  # stable
+services/network/public/mojom/fetch_api.mojom-shared.h          # stable
+third_party/blink/public/common/loader/url_loader_throttle.h    # pinned (0006 research)
+third_party/re2/re2.h                                           # stable
+third_party/zlib/zlib.h                                         # stable (harness shims to system zlib)
+url/gurl.h                                                      # stable
+url/origin.h                                                    # stable
+testing/gtest/include/gtest/gtest.h                                      # stable (testonly targets)
+base/test/task_environment.h                                             # stable (testonly targets)
+base/files/scoped_temp_dir.h                                             # stable (testonly targets)

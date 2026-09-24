@@ -16,6 +16,13 @@ namespace inweb::extensions {
 // The full manifest is surfaced too (raw), because the management UI
 // shows the real permission list — never a summary we invented.
 struct ExtensionManifest {
+  ExtensionManifest();
+  ~ExtensionManifest();
+  ExtensionManifest(const ExtensionManifest&);
+  ExtensionManifest& operator=(const ExtensionManifest&);
+  ExtensionManifest(ExtensionManifest&&);
+  ExtensionManifest& operator=(ExtensionManifest&&);
+
   std::string name;
   std::string version;        // Chrome format: dot-separated integers.
   int manifest_version = 0;   // 2 or 3 supported (PHASE6 MV2/MV3 policy)

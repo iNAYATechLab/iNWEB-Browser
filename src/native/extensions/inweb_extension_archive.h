@@ -51,6 +51,11 @@ struct ZipEntry {
 class ZipMemoryReader {
  public:
   explicit ZipMemoryReader(std::vector<uint8_t> data);
+  ~ZipMemoryReader();
+  ZipMemoryReader(const ZipMemoryReader&) = delete;
+  ZipMemoryReader& operator=(const ZipMemoryReader&) = delete;
+  ZipMemoryReader(ZipMemoryReader&&) = delete;
+  ZipMemoryReader& operator=(ZipMemoryReader&&) = delete;
 
   // Parses the central directory. False + |error_| on malformed input.
   bool Open(std::string* error);
