@@ -155,5 +155,12 @@ run_module "src/core/tracking-protection" \
 run_module "src/core/clear-data" --deps "browser-shell tracking-protection offline" \
   com.inweb.browser.cleardata.ClearDataManagerTest
 
+run_module "src/core/home" --deps "browser-shell tracking-protection offline" \
+  com.inweb.browser.home.HomePageModelTest \
+  com.inweb.browser.home.HomeContentTest \
+  com.inweb.browser.home.HomeAdaptersTest \
+  com.inweb.browser.home.HomeSearchTest \
+  com.inweb.browser.home.QuickAccessTest
+
 echo ""
 echo "[kotlin-core] ALL MODULES PASSED"
