@@ -16,6 +16,7 @@ ROOT="$HERE/root"
 mkdir -p "$ROOT/chrome/android/inweb"
 ln -sfn "$REPO/src/native/adblock" "$ROOT/chrome/android/inweb/adblock"
 ln -sfn "$REPO/src/native/popup" "$ROOT/chrome/android/inweb/popup" 2>/dev/null || true
+ln -sfn "$REPO/src/native/extensions" "$ROOT/chrome/android/inweb/extensions" 2>/dev/null || true
 LIBRE2="$(find /usr/lib -name 'libre2.so' 2>/dev/null | head -1)"
 if [ -z "$LIBRE2" ]; then
   echo "libre2.so not found — apt-get install libre2-dev" >&2
@@ -23,10 +24,10 @@ if [ -z "$LIBRE2" ]; then
 fi
 # Chromium-only wrappers (need content/ or components/ headers) are
 # excluded; their pure decision cores are what we test here.
-mapfile -t ENGINE < <(ls "$REPO"/src/native/adblock/*.cc "$REPO"/src/native/popup/*.cc 2>/dev/null | grep -v _unittest | grep -Ev 'inweb_redirect_throttle\.cc|inweb_notification_policy_ui_selector\.cc|inweb_cosmetic_injector\.cc' || true)
-mapfile -t TESTS < <(ls "$REPO"/src/native/adblock/*_unittest.cc "$REPO"/src/native/popup/*_unittest.cc 2>/dev/null)
+mapfile -t ENGINE < <(ls "$REPO"/src/native/adblock/*.cc "$REPO"/src/native/popup/*.cc "$REPO"/src/native/extensions/*.cc 2>/dev/null | grep -v _unittest | grep -Ev 'inweb_redirect_throttle\.cc|inweb_notification_policy_ui_selector\.cc|inweb_cosmetic_injector\.cc' || true)
+mapfile -t TESTS < <(ls "$REPO"/src/native/adblock/*_unittest.cc "$REPO"/src/native/popup/*_unittest.cc "$REPO"/src/native/extensions/*_unittest.cc 2>/dev/null)
 g++ -std=c++20 -I"$HERE/shims" -I"$ROOT" \
   "$HERE/shims/url/gurl.cc" "$HERE/shims/base/strings/string_util.cc" \
   "$HERE/shims/net/base/registry_controlled_domains.cc" \
-  "${ENGINE[@]}" "${TESTS[@]}" "$HERE/main.cc" "$LIBRE2" -lcrypto -o "$HERE/run_tests"
+  "${ENGINE[@]}" "${TESTS[@]}" "$HERE/main.cc" "$LIBRE2" -lcrypto -lz -o "$HERE/run_tests"
 "$HERE/run_tests"

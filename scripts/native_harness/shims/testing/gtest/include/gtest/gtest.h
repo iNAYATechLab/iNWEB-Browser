@@ -46,3 +46,4 @@ class Test {
 #define ASSERT_EQ(a, b) do { if (!((a) == (b))) { shim_gtest::Report(__FILE__, __LINE__, "ASSERT_EQ"); return; } } while (0)
 #define ASSERT_NE(a, b) do { if (!((a) != (b))) { shim_gtest::Report(__FILE__, __LINE__, "ASSERT_NE"); return; } } while (0)
 #define ASSERT_TRUE(a) do { if (!(a)) { shim_gtest::Report(__FILE__, __LINE__, "ASSERT_TRUE"); return; } } while (0)
+#define ASSERT_FALSE(a) do { if ((a)) { shim_gtest::Report(__FILE__, __LINE__, "ASSERT_FALSE"); return; } } while (0)
