@@ -40,7 +40,13 @@ InwebAdblockURLLoaderThrottle::InwebAdblockURLLoaderThrottle(
 InwebAdblockURLLoaderThrottle::~InwebAdblockURLLoaderThrottle() = default;
 
 void InwebAdblockURLLoaderThrottle::DetachFromCurrentSequence() {
-  weak_factory_.DetachFromThread();
+  // Empty on purpose, and that is the honest @154 answer. There is no
+  // detach API on base::WeakPtrFactory any more: DetachFromThread() was
+  // removed upstream and BindToCurrentSequence() needs a passkey. It
+  // needs none here — the factory is only ever asked for a weak pointer
+  // inside WillStartRequest(), which per the blink contract runs after
+  // any detach, so it binds to the sequence it is actually used on and no
+  // pointer is carried across a sequence move.
 }
 
 void InwebAdblockURLLoaderThrottle::WillStartRequest(

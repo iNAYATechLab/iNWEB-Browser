@@ -28,6 +28,15 @@ hop 16: chromium-style out-of-line dtor + shim-invented include path):
      caught exactly this bug: net/base/registry_controlled_domains.h
      was a shim-invented path (real: …/registry_controlled_domain.h).
 
+  4. Raw pointer fields (chromium-rawptr, check-raw-ptr-fields): a class
+     member whose type ends in `*` must be raw_ptr<T> (char/void exempt).
+  5. GN dependency propagation: every GN target must declare the
+     third_party/content deps its own sources — AND the sources of the
+     iNWEB targets it depends on — need, because GN `deps` are private and
+     do not leak include dirs upward. Hop 21 + 22 both burned on exactly
+     this: `re2/re2.h` reached a target through an iNWEB header while only
+     the engine target declared //third_party/re2.
+
 Exit 0 = clean; 1 = violations printed. Unittest sources are skipped
 for the style rules (testonly targets are not built by
 chrome_public_apk) but their includes are still audited.
@@ -139,6 +148,10 @@ def audit_class(name: str, hline: int, body, base: str, problems: list) -> None:
     members = []
     ctor_decl = ctor_inline = dtor_decl = dtor_inline = False
     move_inline = move_decl = copy_deleted = False
+    copy_ctor_decl = copy_ctor_inline = copy_ctor_deleted = False
+    copy_assign_decl = copy_assign_inline = copy_assign_deleted = False
+    move_ctor_decl = move_ctor_inline = move_ctor_deleted = False
+    move_assign_decl = move_assign_inline = move_assign_deleted = False
     virt_bad = []
     for lineno, seg in body:
         if depth == 0:
@@ -155,18 +168,38 @@ def audit_class(name: str, hline: int, body, base: str, problems: list) -> None:
         plain = strip_templates(text)
         # move ctor / move assign FIRST (they also match the ctor shape)
         if re.match(r"^%s\s*\(\s*%s\s*&&" % (re.escape(name), re.escape(name)), plain):
+            move_ctor_decl = True
             move_decl = True
             if "= default" in text:
+                move_ctor_inline = True
                 move_inline = True
+            if "= delete" in text:
+                move_ctor_deleted = True
             continue
         if re.match(r"^%s\s*&\s*operator=\s*\(\s*%s\s*&&" % (re.escape(name), re.escape(name)), plain):
+            move_assign_decl = True
             move_decl = True
             if "= default" in text:
+                move_assign_inline = True
                 move_inline = True
+            if "= delete" in text:
+                move_assign_deleted = True
             continue
-        if re.match(r"^%s\s*\(\s*const\s+%s\s*&" % (re.escape(name), re.escape(name)), plain) \
-                and "= delete" in text:
-            copy_deleted = True
+        if re.match(r"^%s\s*\(\s*const\s+%s\s*&" % (re.escape(name), re.escape(name)), plain):
+            copy_ctor_decl = True
+            if "= default" in text:
+                copy_ctor_inline = True
+            if "= delete" in text:
+                copy_ctor_deleted = True
+                copy_deleted = True
+            continue
+        if re.match(r"^%s\s*&\s*operator=\s*\(\s*const\s+%s\s*&" % (re.escape(name), re.escape(name)), plain):
+            copy_assign_decl = True
+            if "= default" in text:
+                copy_assign_inline = True
+            if "= delete" in text:
+                copy_assign_deleted = True
+                copy_deleted = True
             continue
         # constructor?
         if re.match(r"^(explicit\s+|constexpr\s+)*%s\s*\(" % re.escape(name), plain):
@@ -222,6 +255,28 @@ def audit_class(name: str, hline: int, body, base: str, problems: list) -> None:
         # (compile error when a member is move-only, perf loss when not).
         problems.append(f"{label} — dtor declared but no move ctor/assign "
                         f"declared (implicit moves suppressed)")
+    # Full rule of five for complex classes. hop-22 proved why: an
+    # implicitly generated copy/move constructor is an INLINED body to the
+    # plugin, so a complex class that declares only a default ctor still
+    # fails with "Complex constructor has an inlined body" in every TU
+    # that copies or moves it (NavigationFacts).
+    immovable = (copy_ctor_deleted and copy_assign_deleted
+                 and move_ctor_deleted and move_assign_deleted)
+    if complex_class and not immovable:
+        for what, decl, inline_, deleted in (
+                ("copy constructor", copy_ctor_decl, copy_ctor_inline, copy_ctor_deleted),
+                ("copy assignment", copy_assign_decl, copy_assign_inline, copy_assign_deleted),
+                ("move constructor", move_ctor_decl, move_ctor_inline, move_ctor_deleted),
+                ("move assignment", move_assign_decl, move_assign_inline, move_assign_deleted)):
+            if deleted:
+                continue
+            if not decl:
+                problems.append(f"{label} — complex class: {what} not "
+                                f"declared (implicit one would be an "
+                                f"inlined body)")
+            elif inline_:
+                problems.append(f"{label} — complex class: {what} "
+                                f"`= default` inline in header")
     for lineno, text in virt_bad:
         problems.append(f"{base}:{lineno}: virtual method with non-empty inline "
                         f"body: {text}…")
@@ -249,6 +304,141 @@ def audit_includes(path: str, allow: set, problems: list) -> None:
             if inc not in allow:
                 problems.append(f"{base}:{i}: #include \"{inc}\" not on "
                                 f"verified upstream allowlist")
+
+
+# ---------------------------------------------------------------------------
+# GN dependency propagation (bug class #5).
+#
+# GN `deps` are PRIVATE: a dep's include dirs do not leak up to the targets
+# that depend on us. Hops 21 and 22 both died on `re2/re2.h` reaching a
+# target through an iNWEB header while only source_set("inweb_adblock_engine")
+# declared //third_party/re2. This check rebuilds, for every target, the
+# set of headers its sources can reach (its own sources + the sources of the
+# iNWEB targets it depends on, transitively) and verifies the matching
+# third_party/content dep is declared.
+#
+# An include prefix maps to the dep(s) that own it. Several prefixes accept
+# more than one dep target (e.g. content/public/browser is satisfied by any
+# content dep in practice), so each entry is a set of acceptable answers.
+INCLUDE_TO_DEP = (
+    ("re2/", {"//third_party/re2"}),
+    ("third_party/zlib/", {"//third_party/zlib"}),
+    ("crypto/", {"//crypto"}),
+    ("net/", {"//net"}),
+    ("url/", {"//url"}),
+    ("content/public/browser/", {"//content/public/browser"}),
+    ("content/public/common/", {"//content/public/common"}),
+    ("services/network/public/", {"//services/network/public/cpp"}),
+    ("third_party/blink/public/", {"//third_party/blink/public/common"}),
+    ("components/permissions/", {"//components/permissions"}),
+    ("components/content_settings/",
+     {"//components/content_settings/core/common"}),
+    ("base/test/", {"//base/test:test_support"}),
+    ("testing/gtest/", {"//testing/gtest"}),
+    ("base/", {"//base"}),
+)
+INWEB_INCLUDE_PREFIX = "chrome/android/inweb/"
+
+
+def parse_gn(path: str) -> dict:
+    """Minimal GN reader: source_set name -> {sources, deps}."""
+    text = open(path, encoding="utf-8").read()
+    targets = {}
+    for m in re.finditer(r'(?m)^source_set\("([^"]+)"\)\s*\{', text):
+        name = m.group(1)
+        # Walk braces to find the block, then pull the two list assignments.
+        depth = 1
+        i = m.end()
+        while depth and i < len(text):
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+            i += 1
+        block = text[m.end():i]
+        def items(key):
+            km = re.search(r"(?m)^\s*%s\s*=\s*\[(.*?)^\s*\]" % key, block, re.S)
+            if not km:
+                return []
+            return re.findall(r'"([^"]+)"', km.group(1))
+        targets[name] = {"sources": items("sources"), "deps": items("deps")}
+    return targets
+
+
+def required_deps_for(includes) -> set:
+    needed = set()
+    for inc in includes:
+        for prefix, deps in INCLUDE_TO_DEP:
+            if inc.startswith(prefix):
+                needed.add((inc, frozenset(deps)))
+                break
+    return needed
+
+
+def audit_gn_deps(problems: list) -> None:
+    modules = {}
+    for entry in sorted(os.listdir(SRC_ROOT)):
+        gn = os.path.join(SRC_ROOT, entry, "BUILD.gn")
+        if os.path.isfile(gn):
+            modules[entry] = (gn, parse_gn(gn))
+
+    def includes_of(rel_path, seen):
+        """All #include targets of a source file, walking iNWEB headers."""
+        if rel_path in seen or not os.path.isfile(rel_path):
+            return set()
+        seen.add(rel_path)
+        out = set()
+        for line in open(rel_path, encoding="utf-8", errors="replace"):
+            m = re.match(r'\s*#include\s+"([^"]+)"', line)
+            if not m:
+                continue
+            inc = m.group(1)
+            out.add(inc)
+            if inc.startswith(INWEB_INCLUDE_PREFIX):
+                rest = inc[len(INWEB_INCLUDE_PREFIX):]  # <module>/<file>
+                mod, _, fname = rest.partition("/")
+                if mod in modules:
+                    out |= includes_of(os.path.join(SRC_ROOT, mod, fname), seen)
+        return out
+
+    def expand(target_key, stack):
+        """Source files a target compiles, plus those of its iNWEB deps."""
+        if target_key in stack:
+            return set()
+        stack = stack | {target_key}
+        module, name = target_key
+        gn, targets = modules[module]
+        tgt = targets.get(name)
+        if not tgt:
+            return set()
+        files = set()
+        for src in tgt["sources"]:
+            files.add(os.path.join(SRC_ROOT, module, src))
+            for dep in tgt["deps"]:
+                if dep.startswith(":"):
+                    files |= expand((module, dep[1:]), stack)
+                elif dep.startswith("//chrome/android/inweb/"):
+                    rest = dep[len("//chrome/android/inweb/"):]
+                    dmod, _, dname = rest.partition(":")
+                    if dmod in modules:
+                        files |= expand((dmod, dname), stack)
+        return files
+
+    for module, (gn, targets) in sorted(modules.items()):
+        for name, tgt in sorted(targets.items()):
+            files = expand((module, name), frozenset())
+            incs = set()
+            seen = set()
+            for f in sorted(files):
+                incs |= includes_of(f, seen)
+            declared = set(tgt["deps"])
+            for inc, ok_deps in sorted(required_deps_for(incs)):
+                if not (declared & ok_deps):
+                    problems.append(
+                        f"{module}/BUILD.gn: source_set(\"{name}\") includes "
+                        f"\"{inc}\" but declares none of "
+                        f"{sorted(ok_deps)} — GN deps do not propagate "
+                        f"upward")
 
 
 def audit_unsafe_buffers(path: str, problems: list) -> None:
@@ -309,12 +499,13 @@ def main() -> int:
             audit_unsafe_buffers(path, problems)
             if fn.endswith(".h") and "unittest" not in fn:
                 audit_style(path, problems)
+    audit_gn_deps(problems)
     if problems:
         print("AUDIT FAIL — %d problem(s):" % len(problems))
         for p in problems:
             print("  " + p)
         return 1
-    print("audit OK: style + include allowlist clean")
+    print("audit OK: style + include allowlist + GN deps clean")
     return 0
 
 

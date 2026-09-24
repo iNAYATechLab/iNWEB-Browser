@@ -1,5 +1,5 @@
 diff --git a/chrome/android/inweb/popup/BUILD.gn b/chrome/android/inweb/popup/BUILD.gn
-index 5401dac..b5f42ca 100644
+index 5401dac..7b4beb8 100644
 --- a/chrome/android/inweb/popup/BUILD.gn
 +++ b/chrome/android/inweb/popup/BUILD.gn
 @@ -1,4 +1,4 @@
@@ -8,10 +8,60 @@ index 5401dac..b5f42ca 100644
  #
  # Sources are authored at src/native/popup/ in the iNWEB repository and
  # synced into this patch; the patch series is the single authority for the
-@@ -32,6 +32,20 @@ source_set("inweb_redirect_guard") {
+@@ -11,10 +11,22 @@ source_set("inweb_popup_guard") {
+   ]
+ 
+   deps = [
+-    "//base",
+-    "//chrome/android/inweb/adblock:inweb_adblock_throttle",
+-    "//third_party/re2",
+-    "//url",
++
++      "//base",
++
++      "//chrome/android/inweb/adblock:inweb_adblock_throttle",
++
++      "//crypto",
++
++      "//net",
++
++      "//services/network/public/cpp",
++
++      "//third_party/blink/public/common",
++
++      "//third_party/re2",
++
++      "//url",
    ]
  }
  
+@@ -25,10 +37,48 @@ source_set("inweb_redirect_guard") {
+   ]
+ 
+   deps = [
+-    "//base",
+-    "//chrome/android/inweb/adblock:inweb_adblock_throttle",
+-    "//third_party/re2",
+-    "//url",
++
++      "//base",
++
++      "//chrome/android/inweb/adblock:inweb_adblock_throttle",
++
++      "//crypto",
++
++      "//net",
++
++      "//services/network/public/cpp",
++
++      "//third_party/blink/public/common",
++
++      "//third_party/re2",
++
++      "//url",
++  ]
++}
++
 +source_set("inweb_download_guard") {
 +  sources = [
 +    "inweb_download_guard.cc",
@@ -19,17 +69,56 @@ index 5401dac..b5f42ca 100644
 +  ]
 +
 +  deps = [
-+    "//base",
-+    "//chrome/android/inweb/adblock:inweb_adblock_throttle",
-+    "//third_party/re2",
-+    "//url",
-+  ]
-+}
 +
- source_set("inweb_notification_policy") {
-   sources = [
-     "inweb_notification_policy.cc",
-@@ -77,6 +91,7 @@ source_set("inweb_redirect_throttle") {
++      "//base",
++
++      "//chrome/android/inweb/adblock:inweb_adblock_throttle",
++
++      "//crypto",
++
++      "//net",
++
++      "//services/network/public/cpp",
++
++      "//third_party/blink/public/common",
++
++      "//third_party/re2",
++
++      "//url",
+   ]
+ }
+ 
+@@ -65,30 +115,60 @@ source_set("inweb_redirect_throttle") {
+   ]
+ 
+   deps = [
+-    ":inweb_redirect_guard",
+-    "//base",
+-    "//content/public/browser",
+-    "//net",
+-    "//third_party/re2",
+-    "//url",
++
++      ":inweb_redirect_guard",
++
++      "//base",
++
++      "//content/public/browser",
++
++      "//crypto",
++
++      "//net",
++
++      "//services/network/public/cpp",
++
++      "//third_party/blink/public/common",
++
++      "//third_party/re2",
++
++      "//url",
+   ]
+ }
+ 
  source_set("unittests") {
    testonly = true
    sources = [
@@ -37,6 +126,42 @@ index 5401dac..b5f42ca 100644
      "inweb_notification_policy_unittest.cc",
      "inweb_popup_guard_unittest.cc",
      "inweb_redirect_guard_unittest.cc",
+   ]
+ 
+   deps = [
+-    ":inweb_popup_guard",
+-    ":inweb_redirect_guard",
+-    "//base",
+-    "//chrome/android/inweb/adblock:inweb_adblock_engine",
+-    "//testing/gtest",
+-    "//testing/gmock",
+-    "//third_party/re2",
++
++      ":inweb_popup_guard",
++
++      ":inweb_redirect_guard",
++
++      "//base",
++
++      "//chrome/android/inweb/adblock:inweb_adblock_engine",
++
++      "//crypto",
++
++      "//net",
++
++      "//services/network/public/cpp",
++
++      "//testing/gmock",
++
++      "//testing/gtest",
++
++      "//third_party/blink/public/common",
++
++      "//third_party/re2",
++
++      "//url",
+   ]
+ }
 diff --git a/chrome/android/inweb/popup/inweb_download_guard.cc b/chrome/android/inweb/popup/inweb_download_guard.cc
 new file mode 100644
 index 0000000..46160c7

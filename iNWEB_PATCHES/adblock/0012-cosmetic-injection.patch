@@ -1,5 +1,5 @@
 diff --git a/chrome/android/inweb/adblock/BUILD.gn b/chrome/android/inweb/adblock/BUILD.gn
-index 39c24a5..5aa846b 100644
+index 39c24a5..a2077cb 100644
 --- a/chrome/android/inweb/adblock/BUILD.gn
 +++ b/chrome/android/inweb/adblock/BUILD.gn
 @@ -6,6 +6,8 @@
@@ -11,7 +11,7 @@ index 39c24a5..5aa846b 100644
      "inweb_default_filter_list.cc",
      "inweb_default_filter_list.h",
      "inweb_domain_classifier.cc",
-@@ -48,6 +50,24 @@ source_set("inweb_adblock_engine") {
+@@ -48,6 +50,35 @@ source_set("inweb_adblock_engine") {
  
  # URL-loader throttle + engine holder (patch 0006): wires the engine into
  # the network stack. Registered from ChromeContentBrowserClient.
@@ -25,18 +25,59 @@ index 39c24a5..5aa846b 100644
 +  ]
 +
 +  deps = [
-+    ":inweb_adblock_engine",
-+    "//base",
-+    "//content/public/browser",
-+    "//content/public/common",
-+    "//url",
++
++      ":inweb_adblock_engine",
++
++      "//base",
++
++      "//content/public/browser",
++
++      "//content/public/common",
++
++      "//crypto",
++
++      "//net",
++
++      "//third_party/re2",
++
++      "//url",
 +  ]
 +}
 +
  source_set("inweb_adblock_throttle") {
    sources = [
      "inweb_adblock_engine_holder.cc",
-@@ -73,6 +93,7 @@ source_set("unittests") {
+@@ -59,13 +90,22 @@ source_set("inweb_adblock_throttle") {
+   ]
+ 
+   deps = [
+-    ":inweb_adblock_engine",
+-    "//base",
+-    "//net",
+-    "//services/network/public/cpp",
+-    "//third_party/blink/public/common",
+-    "//third_party/re2",
+-    "//url",
++
++      ":inweb_adblock_engine",
++
++      "//base",
++
++      "//crypto",
++
++      "//net",
++
++      "//services/network/public/cpp",
++
++      "//third_party/blink/public/common",
++
++      "//third_party/re2",
++
++      "//url",
+   ]
+ }
+ 
+@@ -73,6 +113,7 @@ source_set("unittests") {
    testonly = true
    sources = [
      "inweb_adblock_engine_holder_unittest.cc",
@@ -44,6 +85,42 @@ index 39c24a5..5aa846b 100644
      "inweb_adblock_url_loader_throttle_unittest.cc",
      "inweb_domain_classifier_unittest.cc",
      "inweb_filter_list_cache_unittest.cc",
+@@ -86,11 +127,29 @@ source_set("unittests") {
+   ]
+ 
+   deps = [
+-    ":inweb_adblock_engine",
+-    ":inweb_adblock_throttle",
+-    "//base/test:test_support",
+-    "//testing/gtest",
+-    "//testing/gmock",
+-    "//third_party/re2",
++
++      ":inweb_adblock_engine",
++
++      ":inweb_adblock_throttle",
++
++      "//base",
++
++      "//base/test:test_support",
++
++      "//crypto",
++
++      "//net",
++
++      "//services/network/public/cpp",
++
++      "//testing/gmock",
++
++      "//testing/gtest",
++
++      "//third_party/blink/public/common",
++
++      "//third_party/re2",
++
++      "//url",
+   ]
+ }
 diff --git a/chrome/android/inweb/adblock/inweb_adblock_engine_holder.cc b/chrome/android/inweb/adblock/inweb_adblock_engine_holder.cc
 index 1875f4f..bb63919 100644
 --- a/chrome/android/inweb/adblock/inweb_adblock_engine_holder.cc
@@ -123,10 +200,10 @@ index 5ef452d..b7f2549 100644
  }  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_cosmetic_filter.cc b/chrome/android/inweb/adblock/inweb_cosmetic_filter.cc
 new file mode 100644
-index 0000000..370a41d4bac8
+index 0000000..b45da47c4da4
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_cosmetic_filter.cc
-@@ -0,0 +1,252 @@
+@@ -0,0 +1,255 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -276,6 +353,9 @@ index 0000000..370a41d4bac8
 +CosmeticFilterEngine::CosmeticFilterEngine(std::vector<CosmeticRule> rules)
 +    : rules_(std::move(rules)) {}
 +
++CosmeticFilterEngine::CosmeticFilterEngine(CosmeticFilterEngine&&) = default;
++CosmeticFilterEngine& CosmeticFilterEngine::operator=(CosmeticFilterEngine&&) =
++    default;
 +CosmeticFilterEngine::~CosmeticFilterEngine() = default;
 +
 +std::string CosmeticFilterEngine::HideCssFor(const std::string& host) const {
@@ -381,10 +461,10 @@ index 0000000..370a41d4bac8
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_cosmetic_filter.h b/chrome/android/inweb/adblock/inweb_cosmetic_filter.h
 new file mode 100644
-index 0000000..2e2ffec4082d
+index 0000000..9a7c376a4b51
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_cosmetic_filter.h
-@@ -0,0 +1,125 @@
+@@ -0,0 +1,130 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -490,6 +570,11 @@ index 0000000..2e2ffec4082d
 +
 +  CosmeticFilterEngine(const CosmeticFilterEngine&) = delete;
 +  CosmeticFilterEngine& operator=(const CosmeticFilterEngine&) = delete;
++  // Copy is deleted, so the moves must be spelled out too: an implicitly
++  // generated move would be an inlined body, which the style plugin
++  // rejects on a complex class (same rule that caught NavigationFacts).
++  CosmeticFilterEngine(CosmeticFilterEngine&&);
++  CosmeticFilterEngine& operator=(CosmeticFilterEngine&&);
 +
 +  int total_rules() const { return static_cast<int>(rules_.size()); }
 +
@@ -717,7 +802,7 @@ index 0000000..e4a8ef4
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_cosmetic_injector.cc b/chrome/android/inweb/adblock/inweb_cosmetic_injector.cc
 new file mode 100644
-index 0000000..bf6c250
+index 0000000..bf6c250516a4
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_cosmetic_injector.cc
 @@ -0,0 +1,111 @@
@@ -834,10 +919,10 @@ index 0000000..bf6c250
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_cosmetic_injector.h b/chrome/android/inweb/adblock/inweb_cosmetic_injector.h
 new file mode 100644
-index 0000000..c3b6a21
+index 0000000..106b7d14ea5f
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_cosmetic_injector.h
-@@ -0,0 +1,66 @@
+@@ -0,0 +1,72 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -884,6 +969,12 @@ index 0000000..c3b6a21
 +
 +  InwebCosmeticInjector(const InwebCosmeticInjector&) = delete;
 +  InwebCosmeticInjector& operator=(const InwebCosmeticInjector&) = delete;
++
++  // content::WebContentsUserData<T> reads T::kUserDataKey; at @154 the
++  // macro expands to `static const int kUserDataKey = 0`, and the
++  // out-of-line definition comes from WEB_CONTENTS_USER_DATA_KEY_IMPL in
++  // the .cc.
++  WEB_CONTENTS_USER_DATA_KEY_DECL();
 +
 +  // content::WebContentsObserver:
 +  void DidFinishNavigation(content::NavigationHandle* handle) override;

@@ -147,6 +147,9 @@ ParsedCosmeticList CosmeticFilterParser::Parse(const std::string& text,
 CosmeticFilterEngine::CosmeticFilterEngine(std::vector<CosmeticRule> rules)
     : rules_(std::move(rules)) {}
 
+CosmeticFilterEngine::CosmeticFilterEngine(CosmeticFilterEngine&&) = default;
+CosmeticFilterEngine& CosmeticFilterEngine::operator=(CosmeticFilterEngine&&) =
+    default;
 CosmeticFilterEngine::~CosmeticFilterEngine() = default;
 
 std::string CosmeticFilterEngine::HideCssFor(const std::string& host) const {

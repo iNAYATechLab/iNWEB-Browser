@@ -1,4 +1,4 @@
-**হপ-২২ চলমান: state-21 resume @13dd0f8 (re2-dep + NOTREACHED ফিক্স)।**
+**হপ-২৩ চলমান: state-22 resume (hop-22 ফিক্স-ব্যাচ: injector re2, rule-of-five, WeakPtr, kUserDataKey)।**
 
 # iNWEB Browser — Project State
 
@@ -1376,6 +1376,33 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 - **Next build:** hop 22 (run 36008420753, dispatched 2026-09-24T06:5xZ
   @13dd0f8) resumes from state-21 — chain continues until the first
   iNWEB-branded APK → v1.0.0-alpha.2.
+- **Hop 22 (run 36008420753 @13dd0f8, 2026-09-24) — success, state-22
+  packaged, APK: NONE, [27/2633].** The re2 GN-dep fix worked where it was
+  added (throttle + unittests compiled), and `NOTREACHED()` is accepted.
+  Four errors, three of them new classes:
+  (a) `re2/re2.h` again — this time in `source_set("inweb_cosmetic_injector")`,
+  a target the previous fix batch missed. Root cause is now understood:
+  GN `deps` are PRIVATE, so a third_party include dir does not leak up
+  through an iNWEB target. **Bug class #5 (GN dep propagation).**
+  (b) `[chromium-style] Complex constructor has an inlined body` on
+  `NavigationFacts` — it declared only a default ctor; the implicitly
+  generated COPY/MOVE ctor is an inlined body to the plugin. The audit
+  now requires the whole rule of five (declared + out-of-line) for every
+  complex class, and caught `CosmeticFilterEngine` the same way.
+  (c) `base::WeakPtrFactory::DetachFromThread()` no longer exists at @154
+  — verified against upstream base/memory/weak_ptr.h (only
+  InvalidateWeakPtrs/BindToCurrentSequence-with-passkey remain). Our
+  throttle asks for its first weak pointer inside WillStartRequest(), i.e.
+  after any detach, so DetachFromCurrentSequence() is now an empty,
+  documented override.
+  (d) `content::WebContentsUserData<T>` reads `T::kUserDataKey`; at @154
+  the macro is `WEB_CONTENTS_USER_DATA_KEY_DECL()` (`static const int
+  kUserDataKey = 0`). The injector's .cc already had the IMPL — only the
+  header decl was missing.
+  Fix batch also makes every GN target declare the deps its sources (and
+  its iNWEB deps' sources) actually need — 64 audit findings, all closed.
+- **Next build:** hop 23 resumes from state-22 — chain continues until the
+  first iNWEB-branded APK → v1.0.0-alpha.2.
 
 ## Test status
 

@@ -103,6 +103,11 @@ class CosmeticFilterEngine {
 
   CosmeticFilterEngine(const CosmeticFilterEngine&) = delete;
   CosmeticFilterEngine& operator=(const CosmeticFilterEngine&) = delete;
+  // Copy is deleted, so the moves must be spelled out too: an implicitly
+  // generated move would be an inlined body, which the style plugin
+  // rejects on a complex class (same rule that caught NavigationFacts).
+  CosmeticFilterEngine(CosmeticFilterEngine&&);
+  CosmeticFilterEngine& operator=(CosmeticFilterEngine&&);
 
   int total_rules() const { return static_cast<int>(rules_.size()); }
 

@@ -47,8 +47,17 @@ enum class RedirectDecision {
 // Facts extracted from content::NavigationHandle by the thin throttle
 // wrapper (inweb_redirect_throttle.cc). Kept out of the core so the core
 // builds and unit-tests on the host harness without content/ headers.
+// Complex under the style plugin (nine flags + two GURLs), so the whole
+// rule of five is declared here and defined out of line in the .cc: an
+// implicitly generated copy/move constructor would be an inlined body,
+// which the plugin rejects (hop-22 proved it).
 struct NavigationFacts {
   NavigationFacts();
+  NavigationFacts(const NavigationFacts&);
+  NavigationFacts& operator=(const NavigationFacts&);
+  NavigationFacts(NavigationFacts&&);
+  NavigationFacts& operator=(NavigationFacts&&);
+  ~NavigationFacts();
 
   // Navigation target context.
   bool in_main_frame = false;    // top-level navigation only.

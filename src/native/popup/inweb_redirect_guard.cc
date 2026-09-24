@@ -105,5 +105,10 @@ InwebRedirectGuard* GetRedirectGuard() {
 
 // Out-of-line ctor definition (chromium-style fallout fix).
 NavigationFacts::NavigationFacts() = default;
+NavigationFacts::NavigationFacts(const NavigationFacts&) = default;
+NavigationFacts& NavigationFacts::operator=(const NavigationFacts&) = default;
+NavigationFacts::NavigationFacts(NavigationFacts&&) = default;
+NavigationFacts& NavigationFacts::operator=(NavigationFacts&&) = default;
+NavigationFacts::~NavigationFacts() = default;
 
 }  // namespace inweb::popup

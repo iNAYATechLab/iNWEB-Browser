@@ -45,6 +45,12 @@ class InwebCosmeticInjector
   InwebCosmeticInjector(const InwebCosmeticInjector&) = delete;
   InwebCosmeticInjector& operator=(const InwebCosmeticInjector&) = delete;
 
+  // content::WebContentsUserData<T> reads T::kUserDataKey; at @154 the
+  // macro expands to `static const int kUserDataKey = 0`, and the
+  // out-of-line definition comes from WEB_CONTENTS_USER_DATA_KEY_IMPL in
+  // the .cc.
+  WEB_CONTENTS_USER_DATA_KEY_DECL();
+
   // content::WebContentsObserver:
   void DidFinishNavigation(content::NavigationHandle* handle) override;
 

@@ -57,10 +57,10 @@ index 86a2414..b118b09 100644
      "//testing/gtest",
 diff --git a/chrome/android/inweb/popup/inweb_redirect_guard.cc b/chrome/android/inweb/popup/inweb_redirect_guard.cc
 new file mode 100644
-index 0000000..2174de3f3e50
+index 0000000..e7e27aba6e81
 --- /dev/null
 +++ b/chrome/android/inweb/popup/inweb_redirect_guard.cc
-@@ -0,0 +1,109 @@
+@@ -0,0 +1,114 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -168,14 +168,19 @@ index 0000000..2174de3f3e50
 +
 +// Out-of-line ctor definition (chromium-style fallout fix).
 +NavigationFacts::NavigationFacts() = default;
++NavigationFacts::NavigationFacts(const NavigationFacts&) = default;
++NavigationFacts& NavigationFacts::operator=(const NavigationFacts&) = default;
++NavigationFacts::NavigationFacts(NavigationFacts&&) = default;
++NavigationFacts& NavigationFacts::operator=(NavigationFacts&&) = default;
++NavigationFacts::~NavigationFacts() = default;
 +
 +}  // namespace inweb::popup
 diff --git a/chrome/android/inweb/popup/inweb_redirect_guard.h b/chrome/android/inweb/popup/inweb_redirect_guard.h
 new file mode 100644
-index 0000000..6e218f6071ff
+index 0000000..ae1ecf5e32b4
 --- /dev/null
 +++ b/chrome/android/inweb/popup/inweb_redirect_guard.h
-@@ -0,0 +1,107 @@
+@@ -0,0 +1,116 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -225,8 +230,17 @@ index 0000000..6e218f6071ff
 +// Facts extracted from content::NavigationHandle by the thin throttle
 +// wrapper (inweb_redirect_throttle.cc). Kept out of the core so the core
 +// builds and unit-tests on the host harness without content/ headers.
++// Complex under the style plugin (nine flags + two GURLs), so the whole
++// rule of five is declared here and defined out of line in the .cc: an
++// implicitly generated copy/move constructor would be an inlined body,
++// which the plugin rejects (hop-22 proved it).
 +struct NavigationFacts {
 +  NavigationFacts();
++  NavigationFacts(const NavigationFacts&);
++  NavigationFacts& operator=(const NavigationFacts&);
++  NavigationFacts(NavigationFacts&&);
++  NavigationFacts& operator=(NavigationFacts&&);
++  ~NavigationFacts();
 +
 +  // Navigation target context.
 +  bool in_main_frame = false;    // top-level navigation only.

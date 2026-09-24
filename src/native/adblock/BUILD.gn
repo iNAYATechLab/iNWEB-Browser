@@ -60,11 +60,22 @@ source_set("inweb_cosmetic_injector") {
   ]
 
   deps = [
-    ":inweb_adblock_engine",
-    "//base",
-    "//content/public/browser",
-    "//content/public/common",
-    "//url",
+
+      ":inweb_adblock_engine",
+
+      "//base",
+
+      "//content/public/browser",
+
+      "//content/public/common",
+
+      "//crypto",
+
+      "//net",
+
+      "//third_party/re2",
+
+      "//url",
   ]
 }
 
@@ -79,13 +90,22 @@ source_set("inweb_adblock_throttle") {
   ]
 
   deps = [
-    ":inweb_adblock_engine",
-    "//base",
-    "//net",
-    "//services/network/public/cpp",
-    "//third_party/blink/public/common",
-    "//third_party/re2",
-    "//url",
+
+      ":inweb_adblock_engine",
+
+      "//base",
+
+      "//crypto",
+
+      "//net",
+
+      "//services/network/public/cpp",
+
+      "//third_party/blink/public/common",
+
+      "//third_party/re2",
+
+      "//url",
   ]
 }
 
@@ -107,11 +127,29 @@ source_set("unittests") {
   ]
 
   deps = [
-    ":inweb_adblock_engine",
-    ":inweb_adblock_throttle",
-    "//base/test:test_support",
-    "//testing/gtest",
-    "//testing/gmock",
-    "//third_party/re2",
+
+      ":inweb_adblock_engine",
+
+      ":inweb_adblock_throttle",
+
+      "//base",
+
+      "//base/test:test_support",
+
+      "//crypto",
+
+      "//net",
+
+      "//services/network/public/cpp",
+
+      "//testing/gmock",
+
+      "//testing/gtest",
+
+      "//third_party/blink/public/common",
+
+      "//third_party/re2",
+
+      "//url",
   ]
 }
