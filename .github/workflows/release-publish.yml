@@ -27,6 +27,9 @@ on:
       apk_asset_name:
         description: "Asset name on the release — e.g. iNWEB-1.0.0-alpha.2-adblock-popup.apk"
         required: true
+      source_commit:
+        description: "Commit the APK was built from (the build hop's head SHA) — the tag lands here"
+        required: true
       notes_file:
         description: "Release note under docs/releases/"
         required: true
@@ -40,10 +43,10 @@ jobs:
     name: Publish release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout the exact commit that was built
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ inputs.source_commit }}
 
       - name: Preconditions
         env:
@@ -64,6 +67,7 @@ jobs:
           if grep -q 'TBD\|<hash>\|XXXX' "$NOTES"; then
             echo "::error::release note still has placeholders"; exit 1
           fi
+          echo "source commit: ${{ inputs.source_commit }}"
           echo "preconditions OK for v$VERSION"
 
       - name: Download the APK artifact
@@ -151,6 +155,7 @@ jobs:
             echo "### Release v$VERSION published"
             echo ""
             echo "- source: run ${{ inputs.source_run_id }} (${{ inputs.artifact_name }})"
+            echo "- commit: ${{ inputs.source_commit }}"
             echo "- asset: \`${{ inputs.apk_asset_name }}\`"
             echo "- sha256: \`${{ inputs.expected_sha256 }}\` (verdict == artifact == asset)"
             echo ""
