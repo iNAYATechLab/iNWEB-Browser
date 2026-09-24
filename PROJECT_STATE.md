@@ -1,4 +1,4 @@
-**হপ-২১ চলমান: state-20 resume।**
+**হপ-২২ চলমান: state-21 resume @13dd0f8 (re2-dep + NOTREACHED ফিক্স)।**
 
 # iNWEB Browser — Project State
 
@@ -1345,6 +1345,36 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   68b4545 → 244e1b0 → 20ea2ea).
 - **Next build:** hop 20 (run 35980825717, dispatched 2026-09-24T09:22Z
   @20ea2ea) resumes from state-19 — chain continues until the first
+  iNWEB-branded APK → v1.0.0-alpha.2.
+- **Hop 20 (run 35980825717 @20ea2ea, 2026-09-24) — success, state-20
+  packaged, APK: NONE, [19/2633].** The manager.h raw_ptr fix from hop-19
+  is proven by a clean compile. New error: `[chromium-rawptr]` on
+  `inweb_request_context.h:38 const NetworkFilterRule* matched_rule` — a
+  struct field with no `_;` suffix, which the old line-based audit regex
+  (it looked for `\w+_`) could never see.
+- **Hop 21 (run 35985432427 @b6ef900, 2026-09-24) — success, state-21
+  packaged, APK: NONE, [21/2633].** The FilterDecision raw_ptr +
+  out-of-line rule-of-five fix is proven. Two NEW independent errors,
+  both from the first real compile of the throttle/popup targets:
+  (a) `inweb_filter_rule.h:34 fatal error: 're2/re2.h' file not found` —
+  only `source_set("inweb_adblock_engine")` declared `//third_party/re2`,
+  so every target that transitively includes inweb_filter_rule.h failed;
+  (b) `inweb_request_destination_map.cc:51 use of undeclared identifier
+  'NOTREACHED_NORETURN'` — upstream @154 removed that macro;
+  `NOTREACHED(...)` is the `[[noreturn]]` one (verified against
+  base/notreached.h @154).
+- **Bug class #5 (new): GN dep propagation.** An include path can be
+  canonical (#2) and still fail if the consuming GN target does not
+  declare the third_party dep that owns the header. Fix set at 13dd0f8:
+  adblock — throttle + unittests; popup — popup/redirect/download guards,
+  redirect_throttle, unittests. Both BUILD.gn files were re-derived
+  stage-correctly through their patch chains (adblock 0005→0006→0007→0012,
+  popup 0008→0009→0010→0011) and the shim `base/notreached.h` realigned
+  to upstream. Verification: 12-patch E2E apply+verify OK, every inweb
+  tree file byte-identical to src/native, lint_manifest OK, audit v5
+  clean, harness 128/128 (built against system libre2).
+- **Next build:** hop 22 (run 36008420753, dispatched 2026-09-24T06:5xZ
+  @13dd0f8) resumes from state-21 — chain continues until the first
   iNWEB-branded APK → v1.0.0-alpha.2.
 
 ## Test status
