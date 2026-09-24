@@ -1,4 +1,4 @@
-**হপ-২৬ চলমান: state-24 resume (lint-সাপ্রেশন ফিক্স; প্রথম APK hop-25-এ তৈরি)।**
+**হপ-২৭ চলমান: state-24 resume — alpha.2 ক্যান্ডিডেট (versionName 1.0.0-alpha.2, versionCode 1000002)।**
 
 # iNWEB Browser — Project State
 
@@ -1464,6 +1464,19 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   known condition, not a blind suppression.
 - **Next build:** hop 26 resumes from state-24 with the lint fix — a clean
   run confirms the APK reproduces with no failing action.
+- **Hop 26 (run 36038524504 @c57b04e, 2026-09-24) — SUCCESS: the build is
+  COMPLETE and GREEN.** `[1496/1496]`, 0 compile errors, 0 lint warnings —
+  every edge in the graph built, so the lint suppression closed the last
+  failing action rather than merely letting the APK appear. The APK is
+  687 MB with sha256 `0d58dff1…c0f31`, **byte-for-byte the same hash hop-25
+  produced**: the chain is reproducible across hops, not a one-off.
+- **Next build:** hop 27 resumes from state-24 with the release identity
+  arguments (`android_override_version_name = "1.0.0-alpha.2"`,
+  `android_override_version_code = "1000002"`, VERSIONING §3). hop 25/26
+  carried no iNWEB version identity at all, and §3 requires versionName to
+  carry the semver string exactly, so the publishable alpha.2 artifact
+  comes from this hop. It is then published by the `release-publish`
+  workflow (verdict sha -> artifact -> published asset, bit-for-bit).
 
 ## Team & ownership (2026-09-25)
 
