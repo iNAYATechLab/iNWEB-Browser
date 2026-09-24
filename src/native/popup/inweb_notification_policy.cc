@@ -4,8 +4,6 @@
 
 #include "chrome/android/inweb/popup/inweb_notification_policy.h"
 
-#include "base/no_destructor.h"
-
 namespace inweb::popup {
 
 NotificationPromptDecision InwebNotificationPolicy::ShouldQuietPrompt(
@@ -27,8 +25,12 @@ NotificationPromptDecision InwebNotificationPolicy::ShouldQuietPrompt(
 }
 
 InwebNotificationPolicy* GetNotificationPolicy() {
-  static base::NoDestructor<InwebNotificationPolicy> policy;
-  return policy.get();
+  // The policy is trivially destructible (one atomic member), and
+  // base::NoDestructor forbids such types by static_assert — the
+  // styleguide alternative is a plain function-local static: no
+  // exit-time destructor, no init-order hazard.
+  static InwebNotificationPolicy policy;
+  return &policy;
 }
 
 }  // namespace inweb::popup
