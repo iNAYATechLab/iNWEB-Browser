@@ -1,4 +1,4 @@
-**হপ-২৪ চলমান: state-23 resume (hop-23 ফিক্স: injector base-init)।**
+**হপ-২৫ চলমান: state-24 resume (hop-24 ফিক্স: DownloadDecision enum কল-সাইট)।**
 
 # iNWEB Browser — Project State
 
@@ -1425,6 +1425,20 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   does not touch it. Only PR presence is monitored.
 - **Next build:** hop 24 (run 36020050691 @e9d62e8) resumes from state-23
   — chain continues until the first iNWEB-branded APK → v1.0.0-alpha.2.
+- **Hop 24 (run 36020050691 @e9d62e8, 2026-09-24) — success, state-24
+  packaged, APK: NONE, [64/1625].** The injector base-init fix worked and
+  EVERY iNWEB source we have written now compiles: the whole engine
+  (parser, rule_matcher, pattern_compiler, domain_classifier, cache,
+  checksum, source, version, manager, security_center, default list,
+  cosmetic filter, tracking engine), the throttle + holder + destination
+  map, all three popup guards, the notification policy and its UI
+  selector. One error left, and it is in OUR patch's call site inside
+  upstream code: `chrome_download_manager_delegate.cc:1236` — `if (…Should
+  DeclineDownload(…))` treats an `enum class DownloadDecision` as a bool.
+  Fixed to compare against `DownloadDecision::kAllow` explicitly (patch
+  0011 regenerated from the pristine file).
+- **Next build:** hop 25 resumes from state-24 — chain continues until the
+  first iNWEB-branded APK → v1.0.0-alpha.2.
 
 ## Test status
 

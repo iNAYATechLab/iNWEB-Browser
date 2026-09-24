@@ -454,7 +454,7 @@ index 9d33c6e..eebf978 100644
      "//chrome/browser:primitives",
      "//chrome/browser/actor",
 diff --git a/chrome/browser/download/chrome_download_manager_delegate.cc b/chrome/browser/download/chrome_download_manager_delegate.cc
-index d0b653e..67c9942 100644
+index d0b653e..ce3b0fd 100644
 --- a/chrome/browser/download/chrome_download_manager_delegate.cc
 +++ b/chrome/browser/download/chrome_download_manager_delegate.cc
 @@ -31,6 +31,7 @@
@@ -465,7 +465,7 @@ index d0b653e..67c9942 100644
  #include "chrome/browser/browser_process.h"
  #include "chrome/browser/download/download_core_service.h"
  #include "chrome/browser/download/download_core_service_factory.h"
-@@ -1226,6 +1227,18 @@ bool ChromeDownloadManagerDelegate::InterceptDownloadIfApplicable(
+@@ -1226,6 +1227,19 @@ bool ChromeDownloadManagerDelegate::InterceptDownloadIfApplicable(
      return true;
    }
  
@@ -476,7 +476,8 @@ index d0b653e..67c9942 100644
 +  const GURL inweb_document_url =
 +      web_contents ? web_contents->GetLastCommittedURL() : GURL();
 +  if (inweb::popup::GetDownloadGuard()->ShouldDeclineDownload(
-+          url, inweb_document_url)) {
++          url, inweb_document_url) !=
++      inweb::popup::DownloadDecision::kAllow) {
 +    LOG(WARNING) << "Download declined by iNWEB tracking protection.";
 +    return true;
 +  }
