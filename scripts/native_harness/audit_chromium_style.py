@@ -246,6 +246,44 @@ def audit_includes(path: str, allow: set, problems: list) -> None:
                                 f"verified upstream allowlist")
 
 
+def audit_unsafe_buffers(path: str, problems: list) -> None:
+    """Heuristics for the unsafe-buffers plugin (hop-17 lesson:
+    kHex[...] C-array indexing; archive reader pointer arithmetic):
+      - indexing a file-local C-array (constexpr/static char x[] = …)
+      - `.data() +` / `.data()+` pointer arithmetic
+      - `reinterpret_cast<…>(… + n)` arithmetic on casts (subset)
+    Scoped to production sources; shims are exempt (no plugin there).
+    """
+    if "unittest" in os.path.basename(path):
+        return  # testonly targets are not built by chrome_public_apk
+    base = os.path.basename(path)
+    with open(path, encoding="utf-8") as fh:
+        lines = fh.read().splitlines()
+    decl_re = re.compile(r"\s*(?:static\s+|constexpr\s+|const\s+)*"
+                         r"[A-Za-z_][\w:<>, ]*?\s(\w+)\[\s*\]?\s*(?:=|\{)")
+    c_arrays = set()
+    decl_lines = set()
+    for idx, line in enumerate(lines, 1):
+        m = decl_re.match(line)
+        if m and not line.strip().startswith("//"):
+            c_arrays.add(m.group(1))
+            decl_lines.add(idx)
+    for i, line in enumerate(lines, 1):
+        if i in decl_lines:
+            continue
+        code = strip_line_comment(line)
+        if not code.strip():
+            continue
+        if re.search(r"\.data\(\)\s*\+", code):
+            problems.append(f"{base}:{i}: pointer arithmetic on .data() "
+                            f"(unsafe-buffers) — use checked offsets/spans")
+        for name in c_arrays:
+            if re.search(r"\b%s\s*\[" % re.escape(name), code):
+                problems.append(f"{base}:{i}: C-array indexing on `{name}` "
+                                f"(unsafe-buffers) — use a Chromium API or "
+                                f"class operator[]")
+
+
 def main() -> int:
     allow = set()
     with open(ALLOWLIST_PATH, encoding="utf-8") as fh:
@@ -263,6 +301,7 @@ def main() -> int:
                 continue
             path = os.path.join(subdir, fn)
             audit_includes(path, allow, problems)
+            audit_unsafe_buffers(path, problems)
             if fn.endswith(".h") and "unittest" not in fn:
                 audit_style(path, problems)
     if problems:

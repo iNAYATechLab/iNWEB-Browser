@@ -6,20 +6,17 @@
 
 #include <string>
 
+#include "base/containers/span.h"
+#include "base/strings/string_number_conversions.h"
 #include "crypto/sha2.h"
 
 namespace inweb::adblock {
 
 std::string Sha256Hex(const std::string& body) {
   const std::string digest = crypto::SHA256HashString(body);
-  static const char kHex[] = "0123456789abcdef";
-  std::string hex;
-  hex.reserve(digest.size() * 2);
-  for (const unsigned char byte : digest) {
-    hex.push_back(kHex[byte >> 4]);
-    hex.push_back(kHex[byte & 0x0f]);
-  }
-  return hex;
+  // base::HexEncodeLower = the lowercase hex sha256 convention; no raw
+  // C-array indexing anywhere (unsafe-buffers-clean).
+  return base::HexEncodeLower(base::as_byte_span(digest));
 }
 
 }  // namespace inweb::adblock
