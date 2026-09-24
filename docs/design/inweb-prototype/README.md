@@ -28,6 +28,9 @@ expectations and the merge workflow are defined in
 [`DESIGN-HANDOFF.md`](DESIGN-HANDOFF.md). Exact reference values are available
 in [`DESIGN-TOKENS.json`](DESIGN-TOKENS.json), and the recommended Home/page
 navigation model is documented in [`NAVIGATION-SPEC.md`](NAVIGATION-SPEC.md).
+Component states and truthful feedback behavior are defined in
+[`INTERACTION-STATE-SPEC.md`](INTERACTION-STATE-SPEC.md); native design reviews
+should use [`VISUAL-QA-CHECKLIST.md`](VISUAL-QA-CHECKLIST.md).
 
 ## Run locally
 
