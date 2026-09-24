@@ -14,6 +14,7 @@
 
 #include <string>
 
+#include "base/memory/raw_ptr.h"
 #include "chrome/android/inweb/adblock/inweb_filter_rule.h"
 #include "chrome/android/inweb/adblock/inweb_resource_type.h"
 #include "url/gurl.h"
@@ -34,8 +35,18 @@ enum class FilterAction { kBlock, kAllow, kPass };
 // `matched_rule` points into the engine's rule storage and is valid for
 // as long as the engine snapshot that produced the decision is alive.
 struct FilterDecision {
+  // Complex by the style plugin (raw_ptr + string members): full
+  // out-of-line rule-of-five, definitions in
+  // inweb_tracking_protection_engine.cc.
+  FilterDecision();
+  FilterDecision(const FilterDecision&);
+  FilterDecision& operator=(const FilterDecision&);
+  FilterDecision(FilterDecision&&);
+  FilterDecision& operator=(FilterDecision&&);
+  ~FilterDecision();
+
   FilterAction action = FilterAction::kPass;
-  const NetworkFilterRule* matched_rule = nullptr;
+  raw_ptr<const NetworkFilterRule> matched_rule;
   std::string allowlisted_site;
 };
 

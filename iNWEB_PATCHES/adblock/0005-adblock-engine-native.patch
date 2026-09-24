@@ -869,10 +869,10 @@ index 0000000..c1b89e269a51
 +#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_PATTERN_COMPILER_H_
 diff --git a/chrome/android/inweb/adblock/inweb_request_context.h b/chrome/android/inweb/adblock/inweb_request_context.h
 new file mode 100644
-index 0000000..4f2016c
+index 0000000..6c69fa53a38c
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_request_context.h
-@@ -0,0 +1,44 @@
+@@ -0,0 +1,55 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -889,6 +889,7 @@ index 0000000..4f2016c
 +
 +#include <string>
 +
++#include "base/memory/raw_ptr.h"
 +#include "chrome/android/inweb/adblock/inweb_filter_rule.h"
 +#include "chrome/android/inweb/adblock/inweb_resource_type.h"
 +#include "url/gurl.h"
@@ -909,8 +910,18 @@ index 0000000..4f2016c
 +// `matched_rule` points into the engine's rule storage and is valid for
 +// as long as the engine snapshot that produced the decision is alive.
 +struct FilterDecision {
++  // Complex by the style plugin (raw_ptr + string members): full
++  // out-of-line rule-of-five, definitions in
++  // inweb_tracking_protection_engine.cc.
++  FilterDecision();
++  FilterDecision(const FilterDecision&);
++  FilterDecision& operator=(const FilterDecision&);
++  FilterDecision(FilterDecision&&);
++  FilterDecision& operator=(FilterDecision&&);
++  ~FilterDecision();
++
 +  FilterAction action = FilterAction::kPass;
-+  const NetworkFilterRule* matched_rule = nullptr;
++  raw_ptr<const NetworkFilterRule> matched_rule;
 +  std::string allowlisted_site;
 +};
 +
@@ -1274,10 +1285,10 @@ index 0000000..fc4fe13
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
 new file mode 100644
-index 0000000..d431ccadd2e3
+index 0000000..34b67c68285b
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
-@@ -0,0 +1,178 @@
+@@ -0,0 +1,191 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -1404,7 +1415,7 @@ index 0000000..d431ccadd2e3
 +FilterDecision TrackingProtectionEngine::Decide(
 +    const RequestContext& request) const {
 +  if (!settings_.enabled()) {
-+    return FilterDecision{.action = FilterAction::kPass};
++    return FilterDecision();
 +  }
 +
 +  const std::string document_host = RuleMatcher::HostOf(request.document_url);
@@ -1422,7 +1433,10 @@ index 0000000..d431ccadd2e3
 +    }
 +    if (rule.is_exception) {
 +      statistics_.RecordAllow();
-+      return FilterDecision{.action = FilterAction::kAllow, .matched_rule = &rule};
++      FilterDecision decision;
++      decision.action = FilterAction::kAllow;
++      decision.matched_rule = &rule;
++      return decision;
 +    }
 +    if (block_match == nullptr) {
 +      block_match = &rule;
@@ -1431,13 +1445,23 @@ index 0000000..d431ccadd2e3
 +
 +  if (block_match == nullptr) {
 +    statistics_.RecordPass();
-+    return FilterDecision{.action = FilterAction::kPass};
++    return FilterDecision();
 +  }
 +  statistics_.RecordBlock(RuleMatcher::HostOf(request.request_url));
-+  return FilterDecision{.action = FilterAction::kBlock,
-+                        .matched_rule = block_match};
++  FilterDecision decision;
++  decision.action = FilterAction::kBlock;
++  decision.matched_rule = block_match;
++  return decision;
 +}
 +
++
++// FilterDecision rule-of-five (complex: raw_ptr + string members).
++FilterDecision::FilterDecision() = default;
++FilterDecision::FilterDecision(const FilterDecision&) = default;
++FilterDecision& FilterDecision::operator=(const FilterDecision&) = default;
++FilterDecision::FilterDecision(FilterDecision&&) = default;
++FilterDecision& FilterDecision::operator=(FilterDecision&&) = default;
++FilterDecision::~FilterDecision() = default;
 +
 +// Out-of-line ctor/dtor definitions (chromium-style fallout fix).
 +EngineStatistics::EngineStatistics() = default;

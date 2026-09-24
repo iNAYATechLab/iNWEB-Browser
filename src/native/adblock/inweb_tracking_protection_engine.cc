@@ -124,7 +124,7 @@ TrackingProtectionEngine::TrackingProtectionEngine(
 FilterDecision TrackingProtectionEngine::Decide(
     const RequestContext& request) const {
   if (!settings_.enabled()) {
-    return FilterDecision{.action = FilterAction::kPass};
+    return FilterDecision();
   }
 
   const std::string document_host = RuleMatcher::HostOf(request.document_url);
@@ -142,7 +142,10 @@ FilterDecision TrackingProtectionEngine::Decide(
     }
     if (rule.is_exception) {
       statistics_.RecordAllow();
-      return FilterDecision{.action = FilterAction::kAllow, .matched_rule = &rule};
+      FilterDecision decision;
+      decision.action = FilterAction::kAllow;
+      decision.matched_rule = &rule;
+      return decision;
     }
     if (block_match == nullptr) {
       block_match = &rule;
@@ -151,11 +154,13 @@ FilterDecision TrackingProtectionEngine::Decide(
 
   if (block_match == nullptr) {
     statistics_.RecordPass();
-    return FilterDecision{.action = FilterAction::kPass};
+    return FilterDecision();
   }
   statistics_.RecordBlock(RuleMatcher::HostOf(request.request_url));
-  return FilterDecision{.action = FilterAction::kBlock,
-                        .matched_rule = block_match};
+  FilterDecision decision;
+  decision.action = FilterAction::kBlock;
+  decision.matched_rule = block_match;
+  return decision;
 }
 
 EngineStatisticsSnapshot EngineStatistics::Snapshot() const {
@@ -173,6 +178,14 @@ void TrackingProtectionEngine::UpdateSettings(
   settings_ = std::move(settings);
 }
 
+
+// FilterDecision rule-of-five (complex: raw_ptr + string members).
+FilterDecision::FilterDecision() = default;
+FilterDecision::FilterDecision(const FilterDecision&) = default;
+FilterDecision& FilterDecision::operator=(const FilterDecision&) = default;
+FilterDecision::FilterDecision(FilterDecision&&) = default;
+FilterDecision& FilterDecision::operator=(FilterDecision&&) = default;
+FilterDecision::~FilterDecision() = default;
 
 // Out-of-line ctor/dtor definitions (chromium-style fallout fix).
 EngineStatisticsSnapshot::EngineStatisticsSnapshot() = default;

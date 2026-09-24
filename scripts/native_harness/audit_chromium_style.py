@@ -195,6 +195,11 @@ def audit_class(name: str, hline: int, body, base: str, problems: list) -> None:
                          r"(.+?)\s+\w+(\s*=[^;]*)?;$", plain.strip())
             if m and not any(m.group(1).startswith(k) for k in NON_MEMBER_STARTS):
                 members.append(m.group(1))
+    for t in members:
+        if t.rstrip().endswith("*") and not t.startswith(("char", "void", "const char", "const void")):
+            problems.append(f"{base}:{hline}: class {name}: raw pointer field "
+                            f"of type `{t.strip()}` — use raw_ptr<T> "
+                            f"(chromium-rawptr, check-raw-ptr-fields)")
     ctor_score = sum(member_points(t, True) for t in members)
     dtor_score = sum(member_points(t, False) for t in members)
     label = f"{base}:{hline}: class {name} (ctor-score {ctor_score}, dtor-score {dtor_score})"
@@ -282,15 +287,6 @@ def audit_unsafe_buffers(path: str, problems: list) -> None:
                 problems.append(f"{base}:{i}: C-array indexing on `{name}` "
                                 f"(unsafe-buffers) — use a Chromium API or "
                                 f"class operator[]")
-        # raw pointer CLASS FIELDS must be raw_ptr<T> (chromium-rawptr
-        # plugin, check-raw-ptr-fields; hop-19 lesson)
-        m = re.match(r"\s*(?:mutable\s+|static\s+|const\s+|volatile\s+)*"
-                     r"([A-Za-z_][\w:]*)(?:\s*<[^>]*>)?\s*\*\s*\w+_\s*"
-                     r"(?:=\s*[^;]*)?;", code)
-        if m and m.group(1) not in ("char", "void") and "raw_ptr" not in code \
-                and not code.strip().startswith("return"):
-            problems.append(f"{base}:{i}: raw pointer field `{m.group(1)}* "
-                            f"…_` — use raw_ptr<T> (chromium-rawptr)")
 
 
 def main() -> int:

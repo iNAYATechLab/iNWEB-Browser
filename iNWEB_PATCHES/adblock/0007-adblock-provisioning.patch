@@ -2370,11 +2370,11 @@ index 0000000..ee1dad3
 +
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
-index d431cca..26658ec 100644
+index 34b67c6..232c8c7 100644
 --- a/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
 +++ b/chrome/android/inweb/adblock/inweb_tracking_protection_engine.cc
-@@ -158,8 +158,26 @@ FilterDecision TrackingProtectionEngine::Decide(
-                         .matched_rule = block_match};
+@@ -163,6 +163,21 @@ FilterDecision TrackingProtectionEngine::Decide(
+   return decision;
  }
  
 +EngineStatisticsSnapshot EngineStatistics::Snapshot() const {
@@ -2393,6 +2393,11 @@ index d431cca..26658ec 100644
 +}
 +
  
+ // FilterDecision rule-of-five (complex: raw_ptr + string members).
+ FilterDecision::FilterDecision() = default;
+@@ -173,6 +188,9 @@ FilterDecision& FilterDecision::operator=(FilterDecision&&) = default;
+ FilterDecision::~FilterDecision() = default;
+ 
  // Out-of-line ctor/dtor definitions (chromium-style fallout fix).
 +EngineStatisticsSnapshot::EngineStatisticsSnapshot() = default;
 +EngineStatisticsSnapshot::~EngineStatisticsSnapshot() = default;
@@ -2400,7 +2405,7 @@ index d431cca..26658ec 100644
  EngineStatistics::EngineStatistics() = default;
  EngineStatistics::~EngineStatistics() = default;
  
-@@ -170,9 +188,13 @@ TrackingProtectionSettings::~TrackingProtectionSettings() = default;
+@@ -183,9 +201,13 @@ TrackingProtectionSettings::~TrackingProtectionSettings() = default;
  
  TrackingProtectionSettings::TrackingProtectionSettings(TrackingProtectionSettings&&) = default;
  TrackingProtectionSettings& TrackingProtectionSettings::operator=(TrackingProtectionSettings&&) = default;

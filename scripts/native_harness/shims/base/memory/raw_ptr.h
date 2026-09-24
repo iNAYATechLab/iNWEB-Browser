@@ -30,3 +30,9 @@ class raw_ptr {
 // the global namespace (line ~1079 upstream) so Chromium code can use
 // it unqualified inside any namespace.
 using base::raw_ptr;
+
+template <typename T>
+bool operator==(std::nullptr_t, const raw_ptr<T>& p) { return !p; }
+template <typename T>
+bool operator!=(std::nullptr_t, const raw_ptr<T>& p) { return static_cast<bool>(p); }
+
