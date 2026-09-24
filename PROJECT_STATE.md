@@ -1319,8 +1319,30 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   parser 0005→0012) reconstructed stage-correctly. Verification: audit
   clean, harness 128/128, full 12-patch E2E on pristine + verify + every
   inweb tree file byte-identical to src/native.
-- **Next build:** hop 17 resumes from state-16 (dispatched after
-  b001-verify @3b74fc3 passes) — chain continues until the first
+- **Hops 18–19 (runs 35970212432 @68b4545, 35975201279 @244e1b0,
+  2026-09-24): two more real error classes caught and batch-fixed.**
+  Hop-18: `third_party/re2/re2.h` file-not-found — re2 lives in a DEPS
+  checkout rooted at third_party/re2/src; canonical include is
+  `<re2/re2.h>`. This triggered a FULL HTTP verification of every
+  allowlist path against the pinned tag: also found
+  `net/base/redirect_info.h` → really `net/url_request/redirect_info.h`
+  (moved upstream), while `fetch_api.mojom-shared.h` is confirmed legit
+  (generated header via -Igen). All 40+ other paths HTTP-verified @154.
+  Fixed files: filter_rule.h (chain 0005→0012 reconstructed again),
+  pattern_compiler.h, rule_matcher.cc, adblock throttle .cc+unittest.
+  Hop-19 (advanced to [12/2633], re2/redirect_info fixes proven by
+  clean compiles): `[chromium-rawptr]` — raw pointer class fields must
+  be `raw_ptr<T>`; manager.h fetcher_/cache_ fixed; upstream mechanism
+  verified (base/memory/raw_ptr.h facade over partition_alloc, global
+  `using base::raw_ptr;`); harness shim mirrors it.
+  **Audit gate now covers FOUR bug classes** (style ctor/dtor,
+  include-allowlist — now HTTP-verified, unsafe-buffers indexing/
+  pointer-arithmetic, raw pointer fields). Verification at each fix:
+  audit clean, harness 128/128, 12-patch E2E + verify + byte-identical,
+  b001-verify + ci-authoring green at each head (8c193f7 → 3b74fc3 →
+  68b4545 → 244e1b0 → 20ea2ea).
+- **Next build:** hop 20 (run 35980825717, dispatched 2026-09-24T09:22Z
+  @20ea2ea) resumes from state-19 — chain continues until the first
   iNWEB-branded APK → v1.0.0-alpha.2.
 
 ## Test status
