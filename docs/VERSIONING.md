@@ -169,4 +169,9 @@ starts empty.
 
 | Tag | versionCode | Date | Chromium baseline | Patch-set hash | Container digest | Channel |
 |---|---|---|---|---|---|---|
-| *(none — no release exists; B-001)* | | | | | | |
+| `v1.0.0-alpha.1` | *(none — pristine baseline artifact, built before the registry existed)* | 2026-09-22 | `154.0.8037.21` | *(no series — pristine tree)* | *(not recorded)* | alpha |
+| `v1.0.0-alpha.2` | `1000002` | 2026-09-25 | `154.0.8037.21` | `registry OK` (`scripts/lint_manifest.py`, series `0001`–`0012`) | *(not recorded — GitHub-hosted runner, no pinned container)* | alpha |
+
+The registry, not the formula, is the source of truth; `v1.0.0-alpha.1`
+carried no iNWEB `versionCode` because it was the pristine upstream
+baseline and predates the first tag.

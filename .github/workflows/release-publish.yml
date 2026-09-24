@@ -159,5 +159,5 @@ jobs:
             echo "- asset: \`${{ inputs.apk_asset_name }}\`"
             echo "- sha256: \`${{ inputs.expected_sha256 }}\` (verdict == artifact == asset)"
             echo ""
-            gh release view "v$VERSION" --json url -q '- url: \(.url)'
+            gh release view "v$VERSION" --json url --jq '"- url: " + .url'
           } >> "$GITHUB_STEP_SUMMARY"
