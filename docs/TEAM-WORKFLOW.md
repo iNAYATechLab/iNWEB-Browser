@@ -85,11 +85,40 @@ decisions for the Home Page work:
 - **D4 — No PRs.** Branch → Lead diff review → Lead lands on `main`.
 - **D5 — No core-file edits** for Home Page convenience (directive #5).
 
-## 5. Live status
+## 5. Question protocol (code-block convention)
+
+**Standing project directive (2026-09-25): anything asked OF the Lead
+Developer is written inside a fenced code block.** The block is the signal
+that the message is a Lead-directed question rather than an instruction or
+passing remark, so it can be told apart instantly in a busy thread.
+
+- Asked **to** the Lead (by the Junior, or by the project owner): fenced
+  code block.
+- Answered **by** the Lead: fenced code block, same shape, so the exchange
+  stays quotable and unambiguous.
+- Everything else (reports, status, findings) stays normal prose.
+
+Suggested shape — copy, fill, keep it short:
+
+```text
+Q: <one-line question>
+context: <what you are working on / branch or commit>
+why: <what it blocks, if anything>
+options I see:
+  1. <option> — <consequence>
+  2. <option> — <consequence>
+my lean: <which one and why>
+blocking: yes | no
+```
+
+## 6. Live status
+
+
 
 | Date | Item | State |
 |---|---|---|
-| 2026-09-25 | Build chain: hop-24 = [64/1625], all iNWEB sources compile; hop-25 running | Lead |
-| 2026-09-25 | `feature/home-prototype` (design prototype, 31 files) | Junior — Lead does not touch |
-| 2026-09-25 | `src/core/home` (module skeleton + tests) | Junior, not started |
-| 2026-09-25 | Patch entry `ui/0026-home-page` | Lead, blocked until D1 module exists |
+| 2026-09-25 | First iNWEB-branded APK: hop-25 ([534/1496], 0 compile errors); hop-26 verifying the lint fix; hop-27 = versioned alpha.2 candidate | Lead |
+| 2026-09-25 | `src/core/home` — pure-JVM Home core (52 tests) reviewed, approved and merged into `main`; registered in `validate_kotlin_core.sh` (466 Kotlin tests enforced) | Junior → integrated by Lead |
+| 2026-09-25 | `feature/home-prototype` (design prototype + component inventory + localization spec) | Junior — Lead does not touch |
+| 2026-09-25 | Open question to the Junior: `src/core/home` Gradle files (CI uses pinned kotlinc, not Gradle) — issue #2 | Junior |
+| 2026-09-25 | Patch entry `ui/0026-home-page` | Lead, blocked until the Android view layer exists |
