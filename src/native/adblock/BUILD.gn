@@ -84,6 +84,7 @@ source_set("inweb_adblock_throttle") {
     "//net",
     "//services/network/public/cpp",
     "//third_party/blink/public/common",
+    "//third_party/re2",
     "//url",
   ]
 }
@@ -111,5 +112,6 @@ source_set("unittests") {
     "//base/test:test_support",
     "//testing/gtest",
     "//testing/gmock",
+    "//third_party/re2",
   ]
 }

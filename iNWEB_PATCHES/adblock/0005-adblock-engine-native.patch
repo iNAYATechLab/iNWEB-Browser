@@ -1,9 +1,9 @@
 diff --git a/chrome/android/inweb/adblock/BUILD.gn b/chrome/android/inweb/adblock/BUILD.gn
 new file mode 100644
-index 0000000..4dcc57d
+index 0000000..f594e41ac02e
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/BUILD.gn
-@@ -0,0 +1,46 @@
+@@ -0,0 +1,47 @@
 +# iNWEB Browser — native ad-block engine build (patch 0005, ADR-040).
 +#
 +# Sources are authored at src/native/adblock/ in the iNWEB repository and
@@ -48,6 +48,7 @@ index 0000000..4dcc57d
 +    ":inweb_adblock_engine",
 +    "//testing/gtest",
 +    "//testing/gmock",
++    "//third_party/re2",
 +  ]
 +}
 diff --git a/chrome/android/inweb/adblock/inweb_domain_classifier.cc b/chrome/android/inweb/adblock/inweb_domain_classifier.cc

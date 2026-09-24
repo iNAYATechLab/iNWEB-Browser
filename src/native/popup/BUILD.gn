@@ -13,6 +13,7 @@ source_set("inweb_popup_guard") {
   deps = [
     "//base",
     "//chrome/android/inweb/adblock:inweb_adblock_throttle",
+    "//third_party/re2",
     "//url",
   ]
 }
@@ -26,6 +27,7 @@ source_set("inweb_redirect_guard") {
   deps = [
     "//base",
     "//chrome/android/inweb/adblock:inweb_adblock_throttle",
+    "//third_party/re2",
     "//url",
   ]
 }
@@ -39,6 +41,7 @@ source_set("inweb_download_guard") {
   deps = [
     "//base",
     "//chrome/android/inweb/adblock:inweb_adblock_throttle",
+    "//third_party/re2",
     "//url",
   ]
 }
@@ -80,6 +83,7 @@ source_set("inweb_redirect_throttle") {
     "//base",
     "//content/public/browser",
     "//net",
+    "//third_party/re2",
     "//url",
   ]
 }
@@ -100,5 +104,6 @@ source_set("unittests") {
     "//chrome/android/inweb/adblock:inweb_adblock_engine",
     "//testing/gtest",
     "//testing/gmock",
+    "//third_party/re2",
   ]
 }

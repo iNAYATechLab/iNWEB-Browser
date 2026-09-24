@@ -1,5 +1,5 @@
 diff --git a/chrome/android/inweb/adblock/BUILD.gn b/chrome/android/inweb/adblock/BUILD.gn
-index 112e9b0..1efdcdf 100644
+index 39c24a5..5aa846b 100644
 --- a/chrome/android/inweb/adblock/BUILD.gn
 +++ b/chrome/android/inweb/adblock/BUILD.gn
 @@ -6,6 +6,8 @@
@@ -36,7 +36,7 @@ index 112e9b0..1efdcdf 100644
  source_set("inweb_adblock_throttle") {
    sources = [
      "inweb_adblock_engine_holder.cc",
-@@ -72,6 +92,7 @@ source_set("unittests") {
+@@ -73,6 +93,7 @@ source_set("unittests") {
    testonly = true
    sources = [
      "inweb_adblock_engine_holder_unittest.cc",

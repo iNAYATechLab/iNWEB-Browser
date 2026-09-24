@@ -1,8 +1,8 @@
 diff --git a/chrome/android/inweb/adblock/BUILD.gn b/chrome/android/inweb/adblock/BUILD.gn
-index 4dcc57d..4fe9f6a 100644
+index f594e41..96ba708 100644
 --- a/chrome/android/inweb/adblock/BUILD.gn
 +++ b/chrome/android/inweb/adblock/BUILD.gn
-@@ -29,17 +29,44 @@ source_set("inweb_adblock_engine") {
+@@ -29,17 +29,45 @@ source_set("inweb_adblock_engine") {
    ]
  }
  
@@ -24,6 +24,7 @@ index 4dcc57d..4fe9f6a 100644
 +    "//net",
 +    "//services/network/public/cpp",
 +    "//third_party/blink/public/common",
++    "//third_party/re2",
 +    "//url",
 +  ]
 +}
@@ -46,7 +47,7 @@ index 4dcc57d..4fe9f6a 100644
 +    "//base/test:test_support",
      "//testing/gtest",
      "//testing/gmock",
-   ]
+     "//third_party/re2",
 diff --git a/chrome/android/inweb/adblock/inweb_adblock_engine_holder.cc b/chrome/android/inweb/adblock/inweb_adblock_engine_holder.cc
 new file mode 100644
 index 0000000..360b6ab
@@ -622,7 +623,7 @@ index 0000000..eea92fe9aed9
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_request_destination_map.cc b/chrome/android/inweb/adblock/inweb_request_destination_map.cc
 new file mode 100644
-index 0000000..871e016
+index 0000000..133f045682c9
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_request_destination_map.cc
 @@ -0,0 +1,54 @@
@@ -676,7 +677,7 @@ index 0000000..871e016
 +    case network::mojom::RequestDestination::kText:
 +      return ResourceType::kOther;
 +  }
-+  NOTREACHED_NORETURN();
++  NOTREACHED();
 +}
 +
 +}  // namespace inweb::adblock

@@ -32,10 +32,10 @@ index a148999..5ef452d 100644
    FilterDecision Decide(const RequestContext& request) const;
 diff --git a/chrome/android/inweb/popup/BUILD.gn b/chrome/android/inweb/popup/BUILD.gn
 new file mode 100644
-index 0000000..c22511e
+index 0000000..86a2414520c9
 --- /dev/null
 +++ b/chrome/android/inweb/popup/BUILD.gn
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,35 @@
 +# iNWEB Browser — popup protection build (patch 0008).
 +#
 +# Sources are authored at src/native/popup/ in the iNWEB repository and
@@ -51,6 +51,7 @@ index 0000000..c22511e
 +  deps = [
 +    "//base",
 +    "//chrome/android/inweb/adblock:inweb_adblock_throttle",
++    "//third_party/re2",
 +    "//url",
 +  ]
 +}
@@ -67,6 +68,7 @@ index 0000000..c22511e
 +    "//chrome/android/inweb/adblock:inweb_adblock_engine",
 +    "//testing/gtest",
 +    "//testing/gmock",
++    "//third_party/re2",
 +  ]
 +}
 diff --git a/chrome/android/inweb/popup/inweb_popup_guard.cc b/chrome/android/inweb/popup/inweb_popup_guard.cc

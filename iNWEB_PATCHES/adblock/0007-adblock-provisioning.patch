@@ -1,5 +1,5 @@
 diff --git a/chrome/android/inweb/adblock/BUILD.gn b/chrome/android/inweb/adblock/BUILD.gn
-index 4fe9f6a..112e9b0 100644
+index 96ba708..39c24a5 100644
 --- a/chrome/android/inweb/adblock/BUILD.gn
 +++ b/chrome/android/inweb/adblock/BUILD.gn
 @@ -6,10 +6,23 @@
@@ -43,7 +43,7 @@ index 4fe9f6a..112e9b0 100644
      "//net",
      "//third_party/re2",
      "//url",
-@@ -57,9 +74,13 @@ source_set("unittests") {
+@@ -58,9 +75,13 @@ source_set("unittests") {
      "inweb_adblock_engine_holder_unittest.cc",
      "inweb_adblock_url_loader_throttle_unittest.cc",
      "inweb_domain_classifier_unittest.cc",

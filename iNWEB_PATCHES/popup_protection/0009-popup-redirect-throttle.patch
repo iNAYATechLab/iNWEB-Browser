@@ -1,5 +1,5 @@
 diff --git a/chrome/android/inweb/popup/BUILD.gn b/chrome/android/inweb/popup/BUILD.gn
-index c22511e..c036f2a 100644
+index 86a2414..b118b09 100644
 --- a/chrome/android/inweb/popup/BUILD.gn
 +++ b/chrome/android/inweb/popup/BUILD.gn
 @@ -1,4 +1,4 @@
@@ -8,7 +8,7 @@ index c22511e..c036f2a 100644
  #
  # Sources are authored at src/native/popup/ in the iNWEB repository and
  # synced into this patch; the patch series is the single authority for the
-@@ -17,14 +17,44 @@ source_set("inweb_popup_guard") {
+@@ -18,14 +18,46 @@ source_set("inweb_popup_guard") {
    ]
  }
  
@@ -21,6 +21,7 @@ index c22511e..c036f2a 100644
 +  deps = [
 +    "//base",
 +    "//chrome/android/inweb/adblock:inweb_adblock_throttle",
++    "//third_party/re2",
 +    "//url",
 +  ]
 +}
@@ -36,6 +37,7 @@ index c22511e..c036f2a 100644
 +    "//base",
 +    "//content/public/browser",
 +    "//net",
++    "//third_party/re2",
 +    "//url",
 +  ]
 +}

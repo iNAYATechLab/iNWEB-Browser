@@ -48,7 +48,7 @@ ResourceType ResourceTypeFromRequestDestination(
     case network::mojom::RequestDestination::kText:
       return ResourceType::kOther;
   }
-  NOTREACHED_NORETURN();
+  NOTREACHED();
 }
 
 }  // namespace inweb::adblock
