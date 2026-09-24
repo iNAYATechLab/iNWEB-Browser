@@ -1297,10 +1297,31 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   under it), full-series E2E on pristine tree (apply+verify+byte-identical),
   manifest lint OK, ci-authoring green, **b001-verify 35955910780 @8c193f7:
   `TAG: PASS`, `PATCHES: PASS` (12-patch series with fixed 0010)**.
-- **Next build:** hop 16 (run 35958620441, dispatched 2026-09-24T05:08Z,
-  @8c193f7) resumes from state-15 with the fixed 0010 — chain continues
-  until the first iNWEB-branded APK (expect further hops; link phase
-  heavy) → v1.0.0-alpha.2.
+- **Hop 16 (run 35958620441, 2026-09-24, @8c193f7): two more real errors
+  caught — batch-fixed with a new local audit gate.** The 0010 fix compiled
+  ([1/2638] clean) and the build advanced to [11/2638], then failed on:
+  (a) `net/base/registry_controlled_domains.h` **file not found — a
+  shim-invented path** (upstream real header:
+  `net/base/registry_controlled_domains/registry_controlled_domain.h`,
+  enum-class API); (b) `[chromium-style] Complex class/struct needs an
+  explicit out-of-line destructor` on `CosmeticFilterEngine`. State-16
+  packaged (done:false, APK:NONE). **Batch fix @3b74fc3:** domain
+  classifier moved to the real upstream include + `PrivateRegistryFilter::
+  EXCLUDE_PRIVATE_REGISTRIES`; **18 complex classes** across adblock/popup/
+  extensions given full out-of-line rule-of-five (copy+move for value
+  types, explicit deletes for frozen services / move-only composites);
+  shim moved to the real path with enum class. **New permanent local gate:**
+  `scripts/native_harness/audit_chromium_style.py` (+ verified
+  `upstream_includes.txt` allowlist) reproduces the style-plugin scoring
+  (templated member=10/non-POD=3/integral=1), the dtor-suppresses-moves
+  rule, and include-path honesty — wired into `run.sh` before compile.
+  Multi-patch chain files (tracking engine 0005→0006→0007, filter_rule/
+  parser 0005→0012) reconstructed stage-correctly. Verification: audit
+  clean, harness 128/128, full 12-patch E2E on pristine + verify + every
+  inweb tree file byte-identical to src/native.
+- **Next build:** hop 17 resumes from state-16 (dispatched after
+  b001-verify @3b74fc3 passes) — chain continues until the first
+  iNWEB-branded APK → v1.0.0-alpha.2.
 
 ## Test status
 
