@@ -1,3 +1,5 @@
+**হপ-২১ চলমান: state-20 resume।**
+
 # iNWEB Browser — Project State
 
 > Single source of truth for project progress (Master Specification §60).
