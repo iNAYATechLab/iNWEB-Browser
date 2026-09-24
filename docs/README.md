@@ -68,6 +68,7 @@ this index is the authoritative navigation for everything under `docs/`.
 |---|---|
 | [`design/BRAND.md`](design/BRAND.md) | Brand identity: naming (ADR-038), logo v1 provenance, asset-derivation spec, QA record, regeneration runbook |
 | [`design/assets/`](design/assets/) | Final icon renders + themed-icon silhouette preview (visual reference) |
+| [`design/inweb-prototype/`](design/inweb-prototype/) | Interactive Home / New Tab visual prototype (design reference only; not production implementation) |
 
 ## Releases — [`releases/`](releases/)
 
