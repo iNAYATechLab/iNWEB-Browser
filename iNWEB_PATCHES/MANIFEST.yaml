@@ -553,8 +553,10 @@ patches:
       re-resolution; GetLastCommittedOrigin().host()) was verified
       against the pinned tree (sparse partial clone @154).
       apply_patches E2E on the 12-patch series with byte-identical
-      applied files and PEEL idempotence; lint_manifest.py. Compile +
-      unit tests run in the b001-build-hop chain.
+      applied files and PEEL idempotence; lint_manifest.py; b001-verify
+      (patches mode) PASS on the real fetched tree (run 35889540963,
+      commit 2e3e4ee). Compile + unit tests run in the b001-build-hop
+      chain.
     rebase_notes: >-
       Two upstream hunks: chrome_content_browser_client.cc (sorted
       include between the adblock and popup inweb includes; the

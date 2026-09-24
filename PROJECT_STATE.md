@@ -1274,8 +1274,9 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   ExecuteJavaScriptInIsolatedWorld in the first embedder world — the
   pinned tree has no public CSS-insertion API, deviation documented;
   ADR-021 v1 subset ##/#@# only; documented flash/CSP/race limits) is
-  authored, harness-verified (117/117) and E2E-verified; CI verdict
-  pending (record when green). The Android UI sources compile inside
+  authored and CI-verified: b001-verify **35889540963 @2e3e4ee:
+  `PATCHES: PASS` (12-patch series — the adblock series 0005–0012 is
+  complete)**; ci-authoring 35889540862 green. The Android UI sources compile inside
   the Chromium build once the integration patches land (see
   `docs/phases/PHASE2-INTEGRATION-PLAN.md`).
 - **Next build:** incremental resume from cached state-13 → first
@@ -1308,12 +1309,16 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
 
 ## Next planned action
 
-**Stage 2 — continue the series (0013+):** patches 0001–0011 are all
-CI-verified (latest: b001-verify 35774091092 @ec1d157, 11-patch
-series; the popup_protection series 0008–0011 is complete). 0012
-(cosmetic injection) is authored, harness-verified (117/117) and E2E
-clean — record its CI verdict when green; it completes the adblock
-series (0005–0012). Product
+**Stage 2 — continue the series (0013+):** patches 0001–0012 are all
+CI-verified (latest: b001-verify 35889540963 @2e3e4ee, 12-patch
+series; the adblock series 0005–0012 and the popup_protection series
+0008–0011 are both complete). Product decision (2026-09-23, user
+approved): an **adult-content blocker** ships as a main feature —
+category-list blocking + enforced safe-search + PIN-protected
+parental lock on the existing engine; marketing wording must stay
+honest (NO "cannot access in any way" claim — list-based blocking
+cannot promise the unknown; §57). Schedule: settings patch (0023) or
+a dedicated 0025 — decided at authoring time. Product
 note: **K-1** (docs/KNOWN-ISSUES.md) — user reports intermittent hangs
 under heavy load on alpha.1; triaged honestly (alpha.1 has no Stage-2
 native code; ANR trace + device details wanted; device-matrix load
