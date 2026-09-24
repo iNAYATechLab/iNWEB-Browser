@@ -21,6 +21,12 @@ labels, counters, prayer data, Qur'an progress, extension entries and privacy
 states are illustrative only. Production UI must bind every claim to real
 application or Chromium state under the repository's truthfulness rules.
 
+## Design handoff
+
+Production component behavior, data requirements, design tokens, asset mapping,
+accessibility expectations and the merge workflow are defined in
+[`DESIGN-HANDOFF.md`](DESIGN-HANDOFF.md).
+
 ## Run locally
 
 From the repository root:
