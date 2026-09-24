@@ -17,25 +17,28 @@ phase_status: authoring_complete   # all 5 design-order items done; every remain
 step: 49
 chromium_baseline: 154.0.8037.21   # upstream Android stable, pinned 2026-09-12
 fork_strategy: tracked-patch-overlay-on-pinned-tags  # ADR-001
-build_status: not-built            # no Chromium artifact exists yet (B-001); Stage-1 fetch/tag/B-1/B-2 PROVEN on hosted runners
-test_status: unit-tests-passing    # 80 Python + 414 Kotlin tests (local + CI)
-ci_status: authoring-pipeline-live # Python + Kotlin core jobs + 5 gates (registry, strings, externalization, structure, storage inventory); upstream watch live; B-001 Stage-1 hosted-runner workflow (dispatch-only)
-known_blockers: [B-001]
+build_status: built                # B-001 RESOLVED. v1.0.0-alpha.2 PUBLISHED 2026-09-25:
+                                   # iNWEB-branded APK, 719,655,937 B, sha256 ae0553856d1c...b92d
+                                   # dev channel (is_debug=true); release build (is_official) not attempted yet
+test_status: unit-tests-passing    # 80 Python + 466 Kotlin (incl. Junior's Home core) + 140 native harness tests
+ci_status: authoring-pipeline-live # Python + Kotlin core jobs + 5 gates (registry, strings, externalization, structure, storage inventory); upstream watch live; b001-verify (patch series, no compile); b001-build-hop (real compile, resumable); release-publish (sha256-gated tagging + asset upload)
+known_blockers: []                 # B-001 closed at alpha.1 (pristine baseline, 2026-09-22). No authoring blocker remains; the device matrix (B-5..B-8) needs a physical device, not infra
 open_defects: 0
 next_action: >-
-  Proposed Step 50 — RESUMABLE CHAINED-JOB BUILD on GitHub Actions
-  (no local machine, per the standing directive): extend the Stage-1
-  workflow so each job uploads the out/ build state (and any missing
-  tree bits) as workflow artifacts and the next job downloads and
-  RESUMES autoninja, chaining ~6-hour free hosted jobs until
-  chrome_public_apk completes (corrected measurement: 267 edges/min,
-  ~4.5–5.5 h remaining — an estimated ~2 hops);
-  honest risks recorded up front: artifact transfer time per hop,
-  retention limits, and possible flakiness — every hop keeps the
-  PASS/FAIL/BLOCKED evidence discipline. Alternatives: (a) the user
-  funds a larger-runner org plan or cloud build capacity (one job,
-  no chaining); (b) record the current evidence as the Stage-1
-  endpoint and pause.
+  Step 50 DONE (resumable chained build; 27 hops; full graph green at
+  [1501/1501]). Next: continue the Stage-2 series, one patch group at a
+  time, each validated by b001-verify + a build hop before the next is
+  authored.
+    1. extension/0013-0016 — enablement is UNBLOCKED now that the series
+       builds end to end: flip enable_extensions in the args, probe hop,
+       collect the fallout into the 0013 patch, run the API audit script.
+    2. offline/0017-0019 (data-saver core already authored + tested).
+    3. security/0020-0021, ui/0022, settings/0023, ui/0024.
+    4. adult-content blocker (0025): category lists + enforced safe
+       search + PIN-locked parental controls on the existing engine.
+    5. Home Page (ui/0026) — Junior owns the UI/UX; Lead reviews and
+       generates the patch entry.
+  Then v1.0.0-alpha.3, and the device matrix B-5..B-8 on real hardware.
 ```
 
 ## Completed
@@ -1498,7 +1501,26 @@ build + CI ownership); **Junior Developer** = Home Page UI/UX only.
 - `src/core/home` does not exist yet; `ui/0026-home-page` is blocked until
   the module does.
 
+## Release — v1.0.0-alpha.2 (published 2026-09-25)
+
+- `docs/releases/v1.0.0-alpha.2.md` — the first **iNWEB-branded** build:
+  package `com.inweb.android`, `versionName 1.0.0-alpha.2`,
+  `versionCode 1000002`, app icon byte-identical to patch 0003's.
+- Artifact: `iNWEB-1.0.0-alpha.2-adblock-popup.apk`, 719,655,937 bytes,
+  sha256 `ae0553856d1c9dca0dd990a198209b5a39a0a42148d05e0ab5baace56fbba92d`
+  — verdict == Actions artifact == published asset (bit-for-bit).
+- Evidence: build hop 36048385327 `[1501/1501]`, 0 compile errors, 0 lint
+  warnings; b001-verify 36052233637 `TAG: PASS` / `PATCHES: PASS`;
+  ci-authoring 36042266590 (80 Python + 466 Kotlin + 5 gates).
+- Honest boundaries are written into the note: debug-signed development
+  build, no in-place upgrade to a future official build, no extensions
+  (0013-0016 not landed), no offline/security/settings/home patches, and
+  **no device-matrix verdict** (B-5...B-8 pending — nobody has installed
+  it on a device yet).
+- Registry: `docs/VERSIONING.md` Appendix A now has its first real row.
+
 ## Test status
+
 
 - **Python: 80/80 passing** — patch-series tooling, registry
   validation, baseline parsing, string-resource validation
