@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "iNWEB Home Design Tokens",
+  "version": "1.1.0",
+  "status": "design-reference",
+  "units": {
+    "layout": "dp",
+    "type": "sp"
+  },
+  "color": {
+    "dark": {
+      "background": "#061513",
+      "surface": "#091C1A",
+      "surfaceRaised": "#0D2421",
+      "surfaceStrong": "#12302B",
+      "surfaceOverlay": "rgba(13, 35, 32, 0.92)",
+      "outline": "rgba(128, 214, 193, 0.16)",
+      "outlineStrong": "rgba(45, 226, 178, 0.38)",
+      "primary": "#2BE1AE",
+      "primaryStrong": "#0CB68E",
+      "primaryContainer": "rgba(43, 225, 174, 0.12)",
+      "gold": "#E1B659",
+      "textPrimary": "#F3FAF8",
+      "textSecondary": "#9BB5B0",
+      "textSubtle": "#64847D",
+      "danger": "#FF6478"
+    }
+  },
+  "spacing": {
+    "0": 0,
+    "1": 4,
+    "2": 8,
+    "3": 12,
+    "4": 16,
+    "5": 20,
+    "6": 24,
+    "8": 32
+  },
+  "radius": {
+    "small": 9,
+    "tile": 13,
+    "medium": 16,
+    "card": 20,
+    "search": 24,
+    "sheet": 28,
+    "phoneFrame": 38,
+    "pill": 999
+  },
+  "stroke": {
+    "hairline": 1,
+    "focus": 2,
+    "progress": 2
+  },
+  "type": {
+    "appName": {
+      "size": 20,
+      "weight": 700,
+      "lineHeight": 22
+    },
+    "sectionTitle": {
+      "size": 14,
+      "weight": 700,
+      "lineHeight": 18
+    },
+    "cardTitle": {
+      "size": 16,
+      "weight": 700,
+      "lineHeight": 19
+    },
+    "body": {
+      "size": 12,
+      "weight": 400,
+      "lineHeight": 17
+    },
+    "label": {
+      "size": 10,
+      "weight": 650,
+      "lineHeight": 13
+    },
+    "eyebrow": {
+      "size": 8,
+      "weight": 750,
+      "lineHeight": 11,
+      "letterSpacingEm": 0.08
+    },
+    "caption": {
+      "size": 9,
+      "weight": 400,
+      "lineHeight": 12
+    }
+  },
+  "component": {
+    "minimumTouchTarget": 48,
+    "header": {
+      "statusBarHeight": 34,
+      "appBarMinimumHeight": 73,
+      "logoSize": 50,
+      "logoRadius": 15,
+      "privacyChipHeight": 37
+    },
+    "search": {
+      "minimumHeight": 62,
+      "horizontalInset": 16,
+      "iconSize": 24
+    },
+    "shortcut": {
+      "artworkSize": 48,
+      "narrowArtworkSize": 42,
+      "gap": 5,
+      "count": 7
+    },
+    "quickAccess": {
+      "tileHeight": 69,
+      "logoSize": 29,
+      "columns": 6
+    },
+    "popularSite": {
+      "tileWidth": 88,
+      "tileHeight": 105,
+      "artworkSize": 42
+    },
+    "continueCard": {
+      "minimumHeight": 108,
+      "horizontalInset": 15,
+      "progressHeight": 2
+    },
+    "dailyWisdomCard": {
+      "minimumHeight": 166,
+      "horizontalInset": 18
+    },
+    "prayerCard": {
+      "imageHeaderHeight": 92,
+      "rowHeight": 38
+    },
+    "bottomNavigation": {
+      "height": 91,
+      "itemCount": 6,
+      "iconSize": 22,
+      "activeIndicatorWidth": 25
+    }
+  },
+  "layout": {
+    "phoneReferenceWidth": 464,
+    "phoneReferenceHeight": 920,
+    "compactWidthMaximum": 390,
+    "mobileFrameMaximum": 520,
+    "homeHorizontalInset": 15,
+    "sectionGap": 12,
+    "sectionOrder": [
+      "search",
+      "shortcuts",
+      "quickAccess",
+      "popularIslamicWebsites",
+      "continueReadingListening",
+      "dailyWisdom",
+      "prayerTimes"
+    ]
+  },
+  "motion": {
+    "fastMilliseconds": 180,
+    "standardMilliseconds": 280,
+    "sheetMilliseconds": 360,
+    "easing": "cubic-bezier(0.2, 0.8, 0.2, 1)",
+    "mustRespectReducedMotion": true
+  },
+  "imagery": {
+    "header": "assets/header-ambient.jpg",
+    "continueReadingListening": "assets/quran-ambient.jpg",
+    "dailyWisdom": "assets/daily-wisdom.jpg",
+    "prayerTimes": "assets/prayer-dawn.jpg",
+    "overlayRule": "Use a dark directional gradient; never place body text directly on an unmasked image."
+  }
+}

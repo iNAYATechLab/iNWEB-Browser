@@ -136,7 +136,7 @@ svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1
   position: sticky;
   top: 0;
   z-index: 20;
-  background: linear-gradient(90deg, rgba(4, 22, 20, .99) 0%, rgba(4, 22, 20, .94) 48%, rgba(4, 20, 21, .78) 100%), url("assets/mosque-dusk.jpg") center 60% / cover no-repeat;
+  background: linear-gradient(90deg, rgba(4, 22, 20, .99) 0%, rgba(4, 22, 20, .94) 48%, rgba(4, 20, 21, .78) 100%), url("assets/header-ambient.jpg") center 56% / cover no-repeat;
   backdrop-filter: blur(22px);
   border-bottom: 1px solid rgba(47, 218, 175, .2);
   box-shadow: 0 10px 28px rgba(0, 0, 0, .16);
@@ -251,7 +251,7 @@ svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1
 .quran-art .ornament { fill: none; stroke: #e1bb62; stroke-width: 2; }
 
 .prayer-card { padding: 16px 16px 11px; isolation: isolate; }
-.prayer-card::before { content: ""; position: absolute; z-index: -1; inset: 0 0 auto; height: 92px; background: linear-gradient(180deg, rgba(5, 27, 25, .38), rgba(9, 28, 26, .96)), url("assets/mosque-dusk.jpg") center 61% / cover no-repeat; opacity: .72; pointer-events: none; }
+.prayer-card::before { content: ""; position: absolute; z-index: -1; inset: 0 0 auto; height: 92px; background: linear-gradient(180deg, rgba(5, 27, 25, .38), rgba(9, 28, 26, .96)), url("assets/prayer-dawn.jpg") center 58% / cover no-repeat; opacity: .72; pointer-events: none; }
 .prayer-card > * { position: relative; z-index: 1; }
 .section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 .heading-line { display: flex; align-items: center; gap: 9px; }
@@ -274,7 +274,7 @@ svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1
 .prayer-row time { font-size: 12px; font-weight: 650; }
 .row-arrow { font-size: 13px; color: #789b93; }
 
-.daily-card { min-height: 166px; padding: 17px 18px; isolation: isolate; border-color: rgba(211, 172, 85, .28); background: linear-gradient(90deg, rgba(6, 31, 28, .98) 0%, rgba(6, 29, 28, .90) 52%, rgba(5, 20, 24, .48) 100%), url("assets/mosque-dusk.jpg") center 62% / cover no-repeat; }
+.daily-card { min-height: 166px; padding: 17px 18px; isolation: isolate; border-color: rgba(211, 172, 85, .28); background: linear-gradient(90deg, rgba(6, 31, 28, .98) 0%, rgba(6, 29, 28, .90) 52%, rgba(5, 20, 24, .48) 100%), url("assets/daily-wisdom.jpg") center 58% / cover no-repeat; }
 .daily-card::before { content: "☾"; position: absolute; right: 18px; top: 0; font-family: Georgia, serif; font-size: 110px; line-height: 1; color: rgba(224, 183, 90, .05); z-index: -1; transform: rotate(-15deg); }
 .daily-glow { position: absolute; z-index: -1; inset: auto -40px -70px 40%; height: 160px; background: radial-gradient(ellipse, rgba(31,218,163,.11), transparent 65%); }
 .daily-topline { display: flex; align-items: center; gap: 10px; }
@@ -401,4 +401,6 @@ svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
 }

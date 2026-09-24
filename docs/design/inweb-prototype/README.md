@@ -23,9 +23,11 @@ application or Chromium state under the repository's truthfulness rules.
 
 ## Design handoff
 
-Production component behavior, data requirements, design tokens, asset mapping,
-accessibility expectations and the merge workflow are defined in
-[`DESIGN-HANDOFF.md`](DESIGN-HANDOFF.md).
+Production component behavior, data requirements, asset mapping, accessibility
+expectations and the merge workflow are defined in
+[`DESIGN-HANDOFF.md`](DESIGN-HANDOFF.md). Exact reference values are available
+in [`DESIGN-TOKENS.json`](DESIGN-TOKENS.json), and the recommended Home/page
+navigation model is documented in [`NAVIGATION-SPEC.md`](NAVIGATION-SPEC.md).
 
 ## Run locally
 
@@ -46,8 +48,10 @@ scripts, icons and image assets are local.
 - `styles.css` — responsive presentation and mobile application frame
 - `app.js` — prototype-only interactions and demonstration state
 - `assets/icons/` — local SVG tile and brand-reference artwork
-- `assets/quran-ambient.jpg` — prototype card artwork
-- `assets/mosque-dusk.jpg` — prototype header/card artwork
+- `assets/quran-ambient.jpg` — Continue Reading & Listening artwork
+- `assets/header-ambient.jpg` — dedicated header artwork
+- `assets/daily-wisdom.jpg` — dedicated Daily Wisdom artwork
+- `assets/prayer-dawn.jpg` — dedicated Prayer Times artwork
 - `assets/logo-mark.jpg` — prototype crop derived from the provided iNWEB logo
 
 ## Integration boundary

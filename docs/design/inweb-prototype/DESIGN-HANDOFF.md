@@ -190,9 +190,10 @@ reading`; never fabricate Al-Baqarah 255.
 - Save
 - Share
 
-Use the mosque-at-blue-hour image with a dark overlay. A citation is mandatory.
-Production content needs a reviewed source, licensing/provenance, stable content
-ID, localization policy and offline/cache behavior. A daily item must not be
+Use the dedicated lantern-and-manuscript image with a dark overlay. A citation
+is mandatory. Production content needs a reviewed source,
+licensing/provenance, stable content ID, localization policy and offline/cache
+behavior. A daily item must not be
 presented as authenticated unless its source metadata supports that claim.
 
 ## 10. Prayer Times
@@ -292,7 +293,9 @@ still needs design and verification before a light build claims parity.
 |---|---|
 | `assets/logo-mark.jpg` | Prototype header mark; production should derive from the governed logo master |
 | `assets/quran-ambient.jpg` | Continue Reading & Listening card |
-| `assets/mosque-dusk.jpg` | Header, Daily Wisdom and Prayer header with distinct crops/overlays |
+| `assets/header-ambient.jpg` | Header-only visual: private web + Islamic identity |
+| `assets/daily-wisdom.jpg` | Daily Wisdom card: lantern/manuscript scene |
+| `assets/prayer-dawn.jpg` | Prayer Times header: dawn mosque scene |
 | `assets/icons/quran.svg` | Qur’an utility/category |
 | `assets/icons/hadith.svg` | Hadith utility/category |
 | `assets/icons/prayer.svg` | Prayer utility |
