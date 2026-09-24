@@ -31,7 +31,7 @@
 #include "chrome/android/inweb/adblock/inweb_cosmetic_filter.h"
 
 #include "chrome/android/inweb/adblock/inweb_resource_type.h"
-#include "third_party/re2/re2.h"
+#include "re2/re2.h"
 
 namespace inweb::adblock {
 

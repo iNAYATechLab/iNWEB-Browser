@@ -633,7 +633,7 @@ index 0000000..0374e5b
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_filter_rule.h b/chrome/android/inweb/adblock/inweb_filter_rule.h
 new file mode 100644
-index 0000000..34594c01ca21
+index 0000000..8906aef823ca
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_filter_rule.h
 @@ -0,0 +1,104 @@
@@ -668,7 +668,7 @@ index 0000000..34594c01ca21
 +#include <vector>
 +
 +#include "chrome/android/inweb/adblock/inweb_resource_type.h"
-+#include "third_party/re2/re2.h"
++#include "re2/re2.h"
 +
 +namespace inweb::adblock {
 +
@@ -816,7 +816,7 @@ index 0000000..4da8165
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_pattern_compiler.h b/chrome/android/inweb/adblock/inweb_pattern_compiler.h
 new file mode 100644
-index 0000000..808b263
+index 0000000..c1b89e269a51
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_pattern_compiler.h
 @@ -0,0 +1,47 @@
@@ -843,7 +843,7 @@ index 0000000..808b263
 +#include <memory>
 +#include <string>
 +
-+#include "third_party/re2/re2.h"
++#include "re2/re2.h"
 +
 +namespace inweb::adblock {
 +
@@ -959,7 +959,7 @@ index 0000000..2167646
 +#endif  // CHROME_ANDROID_INWEB_ADBLOCK_INWEB_RESOURCE_TYPE_H_
 diff --git a/chrome/android/inweb/adblock/inweb_rule_matcher.cc b/chrome/android/inweb/adblock/inweb_rule_matcher.cc
 new file mode 100644
-index 0000000..d2f9eea
+index 0000000..707fca5fe817
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_rule_matcher.cc
 @@ -0,0 +1,111 @@
@@ -975,7 +975,7 @@ index 0000000..d2f9eea
 +
 +#include "base/strings/string_util.h"
 +#include "chrome/android/inweb/adblock/inweb_domain_classifier.h"
-+#include "third_party/re2/re2.h"
++#include "re2/re2.h"
 +
 +namespace inweb::adblock {
 +

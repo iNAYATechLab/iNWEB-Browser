@@ -21,7 +21,7 @@
 #include <memory>
 #include <string>
 
-#include "third_party/re2/re2.h"
+#include "re2/re2.h"
 
 namespace inweb::adblock {
 

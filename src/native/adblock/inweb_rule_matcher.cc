@@ -10,7 +10,7 @@
 
 #include "base/strings/string_util.h"
 #include "chrome/android/inweb/adblock/inweb_domain_classifier.h"
-#include "third_party/re2/re2.h"
+#include "re2/re2.h"
 
 namespace inweb::adblock {
 

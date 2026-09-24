@@ -936,7 +936,7 @@ index 7a01586..b689317 100644
      if (!rule) {
        ++parsed.invalid_rule_count;
 diff --git a/chrome/android/inweb/adblock/inweb_filter_rule.h b/chrome/android/inweb/adblock/inweb_filter_rule.h
-index 34594c0..b21100a 100644
+index 8906aef..e579f76 100644
 --- a/chrome/android/inweb/adblock/inweb_filter_rule.h
 +++ b/chrome/android/inweb/adblock/inweb_filter_rule.h
 @@ -28,6 +28,8 @@
@@ -946,7 +946,7 @@ index 34594c0..b21100a 100644
 +#include "chrome/android/inweb/adblock/inweb_cosmetic_filter.h"
 +
  #include "chrome/android/inweb/adblock/inweb_resource_type.h"
- #include "third_party/re2/re2.h"
+ #include "re2/re2.h"
  
 @@ -88,6 +90,10 @@ struct ParsedFilterList {
  

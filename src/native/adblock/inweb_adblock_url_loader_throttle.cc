@@ -12,7 +12,7 @@
 #include "base/task/thread_pool.h"
 #include "chrome/android/inweb/adblock/inweb_request_destination_map.h"
 #include "net/base/net_errors.h"
-#include "net/base/redirect_info.h"
+#include "net/url_request/redirect_info.h"
 #include "services/network/public/cpp/resource_request.h"
 #include "url/origin.h"
 

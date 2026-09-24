@@ -44,12 +44,12 @@ content/public/browser/web_contents_user_data.h                 # pinned (0012 i
 content/public/common/isolated_world_ids.h                      # pinned (0012 research)
 crypto/sha2.h                                                   # stable
 net/base/net_errors.h                                           # stable
-net/base/redirect_info.h                                        # stable
+net/url_request/redirect_info.h                                     # verified @154 (moved from net/base; gitiles net/url_request listing)
 net/base/registry_controlled_domains/registry_controlled_domain.h  # stable (real upstream path since 2014; hop-17 oracle)
 services/network/public/cpp/resource_request.h                  # stable
-services/network/public/mojom/fetch_api.mojom-shared.h          # stable
+services/network/public/mojom/fetch_api.mojom-shared.h               # GENERATED header (mojom-shared) — resolves via -Igen; source .mojom exists @154
 third_party/blink/public/common/loader/url_loader_throttle.h    # pinned (0006 research)
-third_party/re2/re2.h                                           # stable
+re2/re2.h                                                           # verified @154: re2 BUILD.gn include_dirs=["src"]; sources src/re2/re2.h (DEPS-managed)
 third_party/zlib/zlib.h                                         # stable (harness shims to system zlib)
 url/gurl.h                                                      # stable
 url/origin.h                                                    # stable
