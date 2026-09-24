@@ -57,3 +57,4 @@ testing/gtest/include/gtest/gtest.h                                      # stabl
 base/test/task_environment.h                                             # stable (testonly targets)
 base/files/scoped_temp_dir.h                                             # stable (testonly targets)
 base/containers/span.h                                                   # verified @154 (raw.githubusercontent fetch, as_byte_span line 1740)
+base/memory/raw_ptr.h                                           # verified @154 (HTTP 200)

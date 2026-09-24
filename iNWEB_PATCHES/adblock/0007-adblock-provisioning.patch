@@ -1245,10 +1245,10 @@ index 0000000..d1df3d2d4a2c
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_filter_list_manager.h b/chrome/android/inweb/adblock/inweb_filter_list_manager.h
 new file mode 100644
-index 0000000..25a149936d60
+index 0000000..35a166243528
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_filter_list_manager.h
-@@ -0,0 +1,145 @@
+@@ -0,0 +1,147 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -1262,6 +1262,7 @@ index 0000000..25a149936d60
 +#include <string>
 +#include <vector>
 +
++#include "base/memory/raw_ptr.h"
 +#include "chrome/android/inweb/adblock/inweb_filter_list_cache.h"
 +#include "chrome/android/inweb/adblock/inweb_filter_list_fetcher.h"
 +#include "chrome/android/inweb/adblock/inweb_filter_list_source.h"
@@ -1384,8 +1385,9 @@ index 0000000..25a149936d60
 +  void Record(const std::string& source_id, ListUpdateStatus status);
 +
 +  std::vector<FilterListSource> sources_;
-+  FilterListFetcher* fetcher_ = nullptr;
-+  FilterListCache* cache_ = nullptr;
++  // Borrowed, non-owning dependencies (raw_ptr per Chromium policy).
++  raw_ptr<FilterListFetcher> fetcher_;
++  raw_ptr<FilterListCache> cache_;
 +  UpdatePolicy policy_;
 +  std::map<std::string, ManagedList> lists_;
 +  std::map<std::string, ListUpdateStatus> last_status_;

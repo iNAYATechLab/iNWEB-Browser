@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "base/memory/raw_ptr.h"
 #include "chrome/android/inweb/adblock/inweb_filter_list_cache.h"
 #include "chrome/android/inweb/adblock/inweb_filter_list_fetcher.h"
 #include "chrome/android/inweb/adblock/inweb_filter_list_source.h"
@@ -133,8 +134,9 @@ class FilterListManager {
   void Record(const std::string& source_id, ListUpdateStatus status);
 
   std::vector<FilterListSource> sources_;
-  FilterListFetcher* fetcher_ = nullptr;
-  FilterListCache* cache_ = nullptr;
+  // Borrowed, non-owning dependencies (raw_ptr per Chromium policy).
+  raw_ptr<FilterListFetcher> fetcher_;
+  raw_ptr<FilterListCache> cache_;
   UpdatePolicy policy_;
   std::map<std::string, ManagedList> lists_;
   std::map<std::string, ListUpdateStatus> last_status_;

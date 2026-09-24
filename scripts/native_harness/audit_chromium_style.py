@@ -282,6 +282,15 @@ def audit_unsafe_buffers(path: str, problems: list) -> None:
                 problems.append(f"{base}:{i}: C-array indexing on `{name}` "
                                 f"(unsafe-buffers) — use a Chromium API or "
                                 f"class operator[]")
+        # raw pointer CLASS FIELDS must be raw_ptr<T> (chromium-rawptr
+        # plugin, check-raw-ptr-fields; hop-19 lesson)
+        m = re.match(r"\s*(?:mutable\s+|static\s+|const\s+|volatile\s+)*"
+                     r"([A-Za-z_][\w:]*)(?:\s*<[^>]*>)?\s*\*\s*\w+_\s*"
+                     r"(?:=\s*[^;]*)?;", code)
+        if m and m.group(1) not in ("char", "void") and "raw_ptr" not in code \
+                and not code.strip().startswith("return"):
+            problems.append(f"{base}:{i}: raw pointer field `{m.group(1)}* "
+                            f"…_` — use raw_ptr<T> (chromium-rawptr)")
 
 
 def main() -> int:
