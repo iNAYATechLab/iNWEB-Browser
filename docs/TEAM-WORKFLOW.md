@@ -87,16 +87,19 @@ decisions for the Home Page work:
 
 ## 5. Question protocol (code-block convention)
 
-**Standing project directive (2026-09-25): anything asked OF the Lead
-Developer is written inside a fenced code block.** The block is the signal
-that the message is a Lead-directed question rather than an instruction or
-passing remark, so it can be told apart instantly in a busy thread.
+**Standing project directive (2026-09-25), both directions: a question
+asked of the Lead Developer, or of the Junior Developer, is written inside
+a fenced code block.** The block is the signal that the message is a real
+question rather than an instruction, a status note, or a passing remark —
+so it can be told apart instantly in a busy thread, and quoted back
+verbatim when it is answered.
 
-- Asked **to** the Lead (by the Junior, or by the project owner): fenced
-  code block.
-- Answered **by** the Lead: fenced code block, same shape, so the exchange
-  stays quotable and unambiguous.
-- Everything else (reports, status, findings) stays normal prose.
+| Direction | Rule |
+|---|---|
+| Anyone → **Lead Developer** | fenced code block |
+| Lead Developer → **Junior Developer** | fenced code block |
+| The answer to such a question | fenced code block, same shape |
+| Everything else (reports, status, findings) | normal prose |
 
 Suggested shape — copy, fill, keep it short:
 
