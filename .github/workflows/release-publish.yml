@@ -1,0 +1,158 @@
+# iNWEB — publish a build-hop APK as a tagged GitHub release (§45, §47).
+#
+# Why this runs on a runner and not in the agent sandbox: the APK is ~700 MB.
+# Publishing from the runner keeps that traffic off the workspace and, more
+# importantly, keeps the sha256 chain intact — the hash is computed on the
+# artifact as built, and re-computed on the asset after upload, with the
+# build hop's own verdict hash as the gate between them (the bit-for-bit
+# discipline release v1.0.0-alpha.1 established).
+
+name: Release publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Semver string — e.g. 1.0.0-alpha.2 (versionName, §3)"
+        required: true
+      source_run_id:
+        description: "b001-build-hop run that produced the APK artifact"
+        required: true
+      artifact_name:
+        description: "APK artifact name in that run — e.g. b001-apk-27"
+        required: true
+      expected_sha256:
+        description: "sha256 from that hop's verdict (bit-for-bit gate)"
+        required: true
+      apk_asset_name:
+        description: "Asset name on the release — e.g. iNWEB-1.0.0-alpha.2-adblock-popup.apk"
+        required: true
+      notes_file:
+        description: "Release note under docs/releases/"
+        required: true
+        default: "docs/releases/v1.0.0-alpha.2.md"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Publish release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Preconditions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version }}
+          NOTES: ${{ inputs.notes_file }}
+        run: |
+          set -euo pipefail
+          test -f "$NOTES" || { echo "::error::release note missing: $NOTES"; exit 1; }
+          if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+            echo "::error::tag v$VERSION already exists"; exit 1
+          fi
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "::error::release v$VERSION already exists"; exit 1
+          fi
+          # The note's sha256 placeholder must have been filled in by the
+          # time this runs — an unfinished note is never published.
+          if grep -q 'TBD\|<hash>\|XXXX' "$NOTES"; then
+            echo "::error::release note still has placeholders"; exit 1
+          fi
+          echo "preconditions OK for v$VERSION"
+
+      - name: Download the APK artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p apk
+          gh run download "${{ inputs.source_run_id }}" \
+            --repo "${{ github.repository }}" \
+            -n "${{ inputs.artifact_name }}" -D apk
+          ls -l apk
+
+      - name: Gate — artifact sha256 must equal the build verdict
+        env:
+          EXPECTED: ${{ inputs.expected_sha256 }}
+          ASSET: ${{ inputs.apk_asset_name }}
+        run: |
+          set -euo pipefail
+          APK="$(find apk -name '*.apk' | head -1)"
+          test -n "$APK" || { echo "::error::no APK in the artifact"; exit 1; }
+          ACTUAL="$(sha256sum "$APK" | cut -d' ' -f1)"
+          echo "verdict sha256: $EXPECTED"
+          echo "artifact sha256: $ACTUAL"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::sha256 mismatch — refusing to publish"; exit 1
+          fi
+          echo "sha256 gate PASS ($(stat -c%s "$APK") bytes)"
+          mv "$APK" "apk/$ASSET"
+          sha256sum "apk/$ASSET" | tee apk/sha256.txt
+
+      - name: Create the annotated tag
+        env:
+          VERSION: ${{ inputs.version }}
+          RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          set -euo pipefail
+          git config user.email "build@inweb.local"
+          git config user.name "iNWEB Build Agent"
+          git tag -a "v$VERSION" -m \
+            "iNWEB Browser v$VERSION
+
+          Development-channel milestone build (§47).
+          Chromium baseline: $(sed -n 's/^CHROMIUM_TAG=//p' config/chromium/BASELINE)
+          Patch series: $(sed -n 's/^series_hash: //p' iNWEB_PATCHES/MANIFEST.yaml)
+          Source run: $RUN_ID
+          Release record: docs/releases/v$VERSION.md"
+          git push origin "v$VERSION"
+
+      - name: Create the release and upload the APK
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version }}
+          NOTES: ${{ inputs.notes_file }}
+        run: |
+          set -euo pipefail
+          gh release create "v$VERSION" \
+            --title "iNWEB Browser v$VERSION" \
+            --notes-file "$NOTES" \
+            --prerelease \
+            apk/*.apk
+
+      - name: Re-verify the published asset (bit-for-bit chain)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version }}
+          EXPECTED: ${{ inputs.expected_sha256 }}
+        run: |
+          set -euo pipefail
+          mkdir -p verify
+          gh release download "v$VERSION" -D verify
+          DOWN="$(find verify -name '*.apk' | head -1)"
+          ACTUAL="$(sha256sum "$DOWN" | cut -d' ' -f1)"
+          echo "published asset sha256: $ACTUAL"
+          [ "$ACTUAL" = "$EXPECTED" ] || {
+            echo "::error::published asset hash differs from the verdict"; exit 1; }
+          echo "RELEASE CHAIN OK: verdict == artifact == published asset"
+
+      - name: Summary
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          {
+            echo "### Release v$VERSION published"
+            echo ""
+            echo "- source: run ${{ inputs.source_run_id }} (${{ inputs.artifact_name }})"
+            echo "- asset: \`${{ inputs.apk_asset_name }}\`"
+            echo "- sha256: \`${{ inputs.expected_sha256 }}\` (verdict == artifact == asset)"
+            echo ""
+            gh release view "v$VERSION" --json url -q '- url: \(.url)'
+          } >> "$GITHUB_STEP_SUMMARY"

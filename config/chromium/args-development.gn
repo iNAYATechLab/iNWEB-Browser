@@ -27,3 +27,12 @@ android_channel = "default"
 # android_channel = "default" appends no suffix, so the id stays exactly
 # com.inweb.android. Permanent once released (updates require same id).
 chrome_public_manifest_package = "com.inweb.android"
+
+# Android identity (VERSIONING §3). versionName carries the iNWEB semver
+# string EXACTLY; versionCode = MAJOR*1e6 + MINOR*1e4 + PATCH*100 +
+# channelRank(alpha.N -> N) = 1,000,002 for 1.0.0-alpha.2. BOTH must be
+# bumped together at every release and recorded in the Appendix A
+# registry in docs/VERSIONING.md; the registry, not the formula, is the
+# source of truth.
+android_override_version_name = "1.0.0-alpha.2"
+android_override_version_code = "1000002"
