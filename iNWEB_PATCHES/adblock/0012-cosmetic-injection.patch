@@ -802,10 +802,10 @@ index 0000000..e4a8ef4
 +}  // namespace inweb::adblock
 diff --git a/chrome/android/inweb/adblock/inweb_cosmetic_injector.cc b/chrome/android/inweb/adblock/inweb_cosmetic_injector.cc
 new file mode 100644
-index 0000000..bf6c250516a4
+index 0000000..c76bd7d8306f
 --- /dev/null
 +++ b/chrome/android/inweb/adblock/inweb_cosmetic_injector.cc
-@@ -0,0 +1,111 @@
+@@ -0,0 +1,116 @@
 +// This Source Code Form is subject to the terms of the Mozilla Public
 +// License, v. 2.0. If a copy of the MPL was not distributed with this
 +// file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -847,7 +847,12 @@ index 0000000..bf6c250516a4
 +InwebCosmeticInjector::~InwebCosmeticInjector() = default;
 +
 +InwebCosmeticInjector::InwebCosmeticInjector(content::WebContents* web_contents)
-+    : content::WebContentsObserver(web_contents) {}
++    : content::WebContentsObserver(web_contents),
++      // @154: WebContentsUserData has no default ctor — it takes
++      // `WebContents&` and registers the instance under kUserDataKey, so
++      // the base must be initialized explicitly (declaration order:
++      // WebContentsObserver first, then WebContentsUserData).
++      content::WebContentsUserData<InwebCosmeticInjector>(*web_contents) {}
 +
 +void InwebCosmeticInjector::DidFinishNavigation(
 +    content::NavigationHandle* handle) {

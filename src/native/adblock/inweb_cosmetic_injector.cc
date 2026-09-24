@@ -39,7 +39,12 @@ std::u16string BuildInjectionScript(const std::string& json_css) {
 InwebCosmeticInjector::~InwebCosmeticInjector() = default;
 
 InwebCosmeticInjector::InwebCosmeticInjector(content::WebContents* web_contents)
-    : content::WebContentsObserver(web_contents) {}
+    : content::WebContentsObserver(web_contents),
+      // @154: WebContentsUserData has no default ctor — it takes
+      // `WebContents&` and registers the instance under kUserDataKey, so
+      // the base must be initialized explicitly (declaration order:
+      // WebContentsObserver first, then WebContentsUserData).
+      content::WebContentsUserData<InwebCosmeticInjector>(*web_contents) {}
 
 void InwebCosmeticInjector::DidFinishNavigation(
     content::NavigationHandle* handle) {
