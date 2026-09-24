@@ -1,4 +1,4 @@
-**হপ-২৩ চলমান: state-22 resume (hop-22 ফিক্স-ব্যাচ: injector re2, rule-of-five, WeakPtr, kUserDataKey)।**
+**হপ-২৪ চলমান: state-23 resume (hop-23 ফিক্স: injector base-init)।**
 
 # iNWEB Browser — Project State
 
@@ -1403,6 +1403,28 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   its iNWEB deps' sources) actually need — 64 audit findings, all closed.
 - **Next build:** hop 23 resumes from state-22 — chain continues until the
   first iNWEB-branded APK → v1.0.0-alpha.2.
+- **Hop 23 (run 36015934370 @775270b, 2026-09-24) — success, state-23
+  packaged, APK: NONE, [27/2633]. One error, down from four: the injector
+  constructor did not initialize its `content::WebContentsUserData<>`
+  base, which at @154 has no default ctor (its only ctor is
+  `explicit WebContentsUserData(WebContents&)`, registering the instance
+  under UserDataKey). Fixed with an explicit base initializer in
+  declaration order (WebContentsObserver, then WebContentsUserData).
+  That was the last defect we know of in our own sources.
+- **API-drift pre-check (2026-09-24):** the two remaining Chromium-facing
+  wrappers were compared against the pinned tag before they compile:
+  `inweb_redirect_throttle` (registry-based NavigationThrottle ctor,
+  WillStartRequest/WillRedirectRequest/GetNameForLogging) and
+  `inweb_notification_policy_ui_selector` (SelectUiToUse(WebContents*,
+  PermissionRequest*, DecisionMadeCallback), Cancel,
+  IsPermissionRequestSupported) — both match @154 exactly.
+- **Collaboration boundary (2026-09-24, user directive):** the iNWEB
+  repository has NO pull requests and none are expected — work lands on
+  `main` directly. `feature/home-prototype` (interactive home-page
+  prototype + design handoff docs) belongs to a designer; the build agent
+  does not touch it. Only PR presence is monitored.
+- **Next build:** hop 24 (run 36020050691 @e9d62e8) resumes from state-23
+  — chain continues until the first iNWEB-branded APK → v1.0.0-alpha.2.
 
 ## Test status
 
