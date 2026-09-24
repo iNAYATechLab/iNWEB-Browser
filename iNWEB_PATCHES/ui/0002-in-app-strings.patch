@@ -1534,3 +1534,36 @@ index efeb9f8..9340006 100644
        </message>
        <message name="IDS_ENTERPRISE_SIGNALS_DISCLAIMER_PROFILE_INFORMATION_TITLE" desc="Title of the profile information section in the enterprise signals disclaimer dialog.">
          Profile information
+diff --git a/chrome/android/expectations/lint-suppressions.xml b/chrome/android/expectations/lint-suppressions.xml
+index ba255f7..61a1aec 100644
+--- a/chrome/android/expectations/lint-suppressions.xml
++++ b/chrome/android/expectations/lint-suppressions.xml
+@@ -156,6 +156,28 @@ https://chromium.googlesource.com/chromium/src/+/main/build/android/docs/lint.md
+   <issue id="UnusedQuantity" severity="ignore"/>
+   <issue id="UnusedResources">
+     <!-- Do not add new suppressions without rationale. -->
++    <!-- iNWEB (patch 0002 renames Chrome -> iNWEB in these two strings).
++         The development build generates the RTL pseudo-locale
++         (values-ar-rXB) from the English source, and lint reports the
++         pseudo-locale copies of these two as unused; upstream's baseline
++         was captured without pseudo-locales, so there is no baseline
++         entry for them. Both strings are already baselined as unused in
++         the real locales upstream (lint-baseline.xml), so this accepts
++         the same known condition for the generated pseudo-locale.
++         Re-check if the strings stop being referenced. -->
++    <ignore regexp="The resource `R\.string\.fre_activity_label` appears to be unused"/>
++    <ignore regexp="The resource `R\.string\.search_widget_description` appears to be unused"/>
++    <!-- iNWEB (patch 0002 renames Chrome -> iNWEB in these two strings).
++         The development build generates the RTL pseudo-locale
++         (values-ar-rXB) from the English source, and lint reports the
++         pseudo-locale copies of these two as unused; upstream's baseline
++         was captured without pseudo-locales, so there is no baseline
++         entry for them. Both strings are already baselined as unused in
++         the real locales upstream (lint-baseline.xml), so this accepts
++         the same known condition for the generated pseudo-locale.
++         Re-check if the strings stop being referenced. -->
++    <ignore regexp="The resource `R\.string\.fre_activity_label` appears to be unused"/>
++    <ignore regexp="The resource `R\.string\.search_widget_description` appears to be unused"/>
+     <!-- TODO(crbug.com/543028748): Remove temporarily suppress Safety FRE carousel screen strings. -->
+     <ignore regexp="The resource `R\..*safety_promo_.*` appears to be unused"/>
+     <ignore regexp="The resource `R\..*safety_fre_.*` appears to be unused"/>

@@ -1,4 +1,4 @@
-**হপ-২৫ চলমান: state-24 resume (hop-24 ফিক্স: DownloadDecision enum কল-সাইট)।**
+**হপ-২৬ চলমান: state-24 resume (lint-সাপ্রেশন ফিক্স; প্রথম APK hop-25-এ তৈরি)।**
 
 # iNWEB Browser — Project State
 
@@ -1439,6 +1439,31 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   0011 regenerated from the pristine file).
 - **Next build:** hop 25 resumes from state-24 — chain continues until the
   first iNWEB-branded APK → v1.0.0-alpha.2.
+- **MILESTONE — hop 25 (run 36028449341 @9d33ed2, 2026-09-24): the first
+  iNWEB-branded APK exists.** `APK: FOUND`, 687 MB,
+  sha256 `0d58dff184adaf2c27fccc52757012a4cd2105d767b6c1de75c4a609283c0f31`
+  (hash computed on the runner), reached at [534/1496] with **0 compile
+  errors** — every iNWEB source compiles and links. Branding verified from
+  the artifact `b001-apk-25` itself, not asserted:
+  (a) `AndroidManifest.xml` package = `com.inweb.android`;
+  (b) `res/mipmap-xxxhdpi-v4/app_icon` is **byte-identical** to the icon
+  patch 0003 installs (sha256 `ec1b2abc…`), and NOT to the pristine Chrome
+  icon (`dffc9b77…`);
+  (c) `resources.arsc` carries 423 iNWEB strings (10,586 upstream "Chrome"
+  strings remain — only the brand-bearing ones are renamed).
+- **Why the hop still stops short:** `chrome_public_apk__lint` fails, and
+  lint runs with `--warnings-as-errors`. Two `UnusedResources` warnings on
+  RTL pseudo-locale (`values-ar-rXB`) copies of `fre_activity_label` and
+  `search_widget_description` — both strings patch 0002 renames. Root
+  cause: upstream's `lint-baseline.xml` accepts these as unused in the
+  real locales, keyed by file + message + **content**, and contains no
+  `ar-rXB` entries at all (the baseline was captured without
+  pseudo-locales, which only the development build generates). Fix: two
+  `ignore` regexps in `chrome/android/expectations/lint-suppressions.xml`
+  with a written rationale — upstream's own mechanism for accepting a
+  known condition, not a blind suppression.
+- **Next build:** hop 26 resumes from state-24 with the lint fix — a clean
+  run confirms the APK reproduces with no failing action.
 
 ## Team & ownership (2026-09-25)
 
