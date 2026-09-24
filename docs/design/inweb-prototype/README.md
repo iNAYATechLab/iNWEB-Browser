@@ -30,7 +30,10 @@ in [`DESIGN-TOKENS.json`](DESIGN-TOKENS.json), and the recommended Home/page
 navigation model is documented in [`NAVIGATION-SPEC.md`](NAVIGATION-SPEC.md).
 Component states and truthful feedback behavior are defined in
 [`INTERACTION-STATE-SPEC.md`](INTERACTION-STATE-SPEC.md); native design reviews
-should use [`VISUAL-QA-CHECKLIST.md`](VISUAL-QA-CHECKLIST.md).
+should use [`VISUAL-QA-CHECKLIST.md`](VISUAL-QA-CHECKLIST.md). The proposed
+English/Bengali copy deck is in
+[`CONTENT-LOCALIZATION-SPEC.md`](CONTENT-LOCALIZATION-SPEC.md), and native UI
+boundaries are mapped in [`COMPONENT-INVENTORY.md`](COMPONENT-INVENTORY.md).
 
 ## Run locally
 
