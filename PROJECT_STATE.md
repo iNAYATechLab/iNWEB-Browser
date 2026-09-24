@@ -4,7 +4,7 @@
 > Updated at the end of every development step. Must always reflect the real repository
 > state — never a desired or simulated state (§57, §65).
 >
-> Last updated: **2026-09-12** — Step 49 (B-001 Stage 1 EXECUTED on GitHub Actions; authoring active on the hosted-runner path)
+> Last updated: **2026-09-24** — Stage 2 patch series 12/24 authored; hop-15 real compile caught + fixed a NoDestructor static_assert error (8c193f7); hop 16 building
 
 ```yaml
 project: iNWEB Browser
@@ -1279,8 +1279,28 @@ Full record: `docs/phases/PHASE0-ENVIRONMENT-ASSESSMENT.md` §5.
   complete)**; ci-authoring 35889540862 green. The Android UI sources compile inside
   the Chromium build once the integration patches land (see
   `docs/phases/PHASE2-INTEGRATION-PLAN.md`).
-- **Next build:** incremental resume from cached state-13 → first
-  iNWEB-branded APK → v1.0.0-alpha.2.
+- **Hop 15 (run 35953643726, 2026-09-24, @b2db190 12-patch series): REAL
+  COMPILE STARTED — first real error caught.** The 12-patch series applied
+  clean on the resumed state (verify OK), ninja began the 2640-target
+  incremental delta, and the REAL Chromium toolchain rejected
+  `base::NoDestructor<InwebNotificationPolicy>` at
+  `base/no_destructor.h:91` — upstream static_assert forbids
+  trivially-destructible types inside NoDestructor (the policy class has a
+  single atomic member). Build stopped at [1/2640]; the hop honestly
+  packaged resumable state-15 (3.4 GB, part-00 only) with done:false,
+  APK:NONE. **Fix @8c193f7 (2026-09-24):** styleguide pattern applied —
+  plain function-local static in `GetNotificationPolicy()`;
+  `no_destructor.h` include dropped; **harness shim now mirrors upstream's
+  static_assert** (this bug class is harness-detectable from now on);
+  0010 patch regenerated for the fixed file. Re-verification: harness
+  128/128 (new assert active, all six other NoDestructor users compile
+  under it), full-series E2E on pristine tree (apply+verify+byte-identical),
+  manifest lint OK, ci-authoring green, **b001-verify 35955910780 @8c193f7:
+  `TAG: PASS`, `PATCHES: PASS` (12-patch series with fixed 0010)**.
+- **Next build:** hop 16 (run 35958620441, dispatched 2026-09-24T05:08Z,
+  @8c193f7) resumes from state-15 with the fixed 0010 — chain continues
+  until the first iNWEB-branded APK (expect further hops; link phase
+  heavy) → v1.0.0-alpha.2.
 
 ## Test status
 
