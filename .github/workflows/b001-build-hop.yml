@@ -99,7 +99,11 @@ jobs:
 
       - name: Fetch pinned Chromium (fetch_chromium.sh)
         id: fetch
-        timeout-minutes: 75
+        # Measured: hop 32's gclient stalled and hit a 75-minute cap at
+        # 1:15:10, leaving a partial tree that no step detected. The job
+        # limit is 6h, so this is raised and the build step's safety net
+        # below is lowered to keep the worst case inside it.
+        timeout-minutes: 150
         continue-on-error: true
         run: |
           set -o pipefail
@@ -205,8 +209,11 @@ jobs:
       # ---- the build (resumes autoninja state when present) ----------------
       - name: Boxed build (build_android.sh development)
         id: build
-        if: ${{ inputs.resume-from == '' || steps.resume.outcome == 'success' }}
-        timeout-minutes: 340  # safety net; the inner `timeout` does the precise boxing
+        # Never build on a tree that did not arrive: hop 32 ran the build
+        # after the fetch timed out, and the patch series conflicted on an
+        # incomplete checkout instead of saying so.
+        if: ${{ steps.fetch.outcome == 'success' && steps.tag.outcome == 'success' && (inputs.resume-from == '' || steps.resume.outcome == 'success') }}
+        timeout-minutes: 170  # safety net; the inner `timeout` does the precise boxing
         continue-on-error: true
         env:
           HOP_BUILD_MINUTES: ${{ inputs.build-minutes }}
@@ -242,10 +249,29 @@ jobs:
       # ---- verdict: APK or resumable state ---------------------------------
       - name: Post-build evidence, APK check, state packaging
         id: verdict
-        if: ${{ always() && steps.fetch.outcome == 'success' && steps.tag.outcome == 'success' }}
+        # always(), with the checks moved inside: hop 32 skipped this step
+        # entirely because the fetch had failed, and a hop that never built
+        # reported success. A hop must never end green without saying why.
+        if: ${{ always() }}
         timeout-minutes: 60
         run: |
           set -o pipefail
+          # A hop that did not get a tree, or got the wrong one, is a failed
+          # hop — not a skipped verdict. Checked here rather than in the
+          # step's `if`, because a condition that skips the step also skips
+          # the explanation, which is how hop 32 reported success with
+          # build_exit=3 sitting in its own log.
+          if [ "${{ steps.fetch.outcome }}" != "success" ]; then
+            echo "BUILD: FAILED — the Chromium fetch did not succeed (see 10-fetch.log)."
+            echo "        No build was attempted; this hop is not a green hop."
+            echo "state=none" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          if [ "${{ steps.tag.outcome }}" != "success" ]; then
+            echo "BUILD: FAILED — the pinned tag check failed (see 15-tag.txt)."
+            echo "state=none" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
           WS="$PWD/chromium"
           OUT="$WS/src/out/inweb-development"
           # A hop that failed for real is not a hop that succeeded slowly:
