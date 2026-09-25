@@ -176,6 +176,8 @@ class HomePageModelTest {
         category = PopularSiteCategory.QURAN,
         url = "https://example.org/quran",
         artworkId = "art-1",
+        destinationName = "Example Qur'an",
+        accessibilityLabel = "Open Example Qur'an",
     )
 
 }

@@ -53,17 +53,26 @@ enum class PopularSiteCategory(val wireId: String) {
     NEWS("news"),
 }
 
-/** One product-reviewed curated destination. No default URLs live in this core. */
+/**
+ * One provider-supplied curated destination. No default URLs or approval list
+ * live in this core; the provider admits only product-approved catalog rows.
+ */
 data class PopularSite(
     val id: String,
     val category: PopularSiteCategory,
     val url: String,
     val artworkId: String,
+    /** Reviewed destination name, localized by the provider when appropriate. */
+    val destinationName: String,
+    /** Complete locale-appropriate announcement for the outbound tile. */
+    val accessibilityLabel: String,
 ) {
     init {
         require(id.isNotBlank()) { "popular-site id must not be blank" }
         require(artworkId.isNotBlank()) { "popular-site artworkId must not be blank" }
-        require(HomeWebAddresses.isReviewedHttps(url)) {
+        require(destinationName.isNotBlank()) { "popular-site destinationName must not be blank" }
+        require(accessibilityLabel.isNotBlank()) { "popular-site accessibilityLabel must not be blank" }
+        require(HomeWebAddresses.isHttps(url)) {
             "popular-site URL must be a valid HTTPS destination"
         }
     }
@@ -135,7 +144,7 @@ data class WisdomItem(
         require(id.isNotBlank()) { "wisdom id must not be blank" }
         require(body.isNotBlank()) { "wisdom body must not be blank" }
         require(citation.isNotBlank()) { "wisdom citation must not be blank" }
-        require(sourceUrl == null || HomeWebAddresses.isReviewedHttps(sourceUrl)) {
+        require(sourceUrl == null || HomeWebAddresses.isHttps(sourceUrl)) {
             "wisdom sourceUrl must be null or valid HTTPS"
         }
     }

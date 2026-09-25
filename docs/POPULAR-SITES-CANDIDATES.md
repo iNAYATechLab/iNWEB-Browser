@@ -26,7 +26,7 @@ deferred and one held for the future. Per the agreed process:
 | Why | Full Qur'an text with translations; the reference most users already trust. |
 | Provenance | `curl -L`: `200` for `/` and `200` for `/bn`, 2026-09-25 |
 | Artwork | one governed neutral QURAN-category artwork — **shared** by both locale variants |
-| Tile label | `Qur'an` / `কুরআন` *(pending Junior confirmation)* |
+| Tile label | `Qur’an` / `কুরআন` **confirmed by Junior, 2026-09-25** |
 | Accessibility name | `Quran.com` (full destination name) |
 | Language | multi-language, including Bengali |
 | Status | **candidate** |
@@ -42,7 +42,7 @@ variant; both variants carry the same stable ID and the same artwork.
 | Canonical URL | `https://sunnah.com/` |
 | Why | The standard English hadith corpus reference; matches the HADITH category directly. |
 | Provenance | `curl -L`: `200` with a browser User-Agent, `403` to a bare scripted probe, 2026-09-25 |
-| Tile label | `Hadith` / `হাদিস` *(pending Junior confirmation)* |
+| Tile label | `Hadith` / `হাদিস` **confirmed by Junior, 2026-09-25** |
 | Accessibility name | `Sunnah.com` |
 | Language limitation | **English destination only** — recorded in the catalog metadata, and the tile must not imply a Bengali destination |
 | Status | **candidate** |
@@ -141,14 +141,16 @@ Sunnah.com and every other already-approved source proceed unaffected.
 
 ## Binding UI/content requirements (from the review)
 
-- **R1 — the renderer must not know providers.** `PopularSite` currently
-  carries no display name, so the renderer shows only the category label.
-  Before the section is enabled, the model/adapter must carry a
-  product-reviewed, localized destination name and an accessibility
-  label. Verified today: the renderer hardcodes no URL or domain.
-- **R2 — tile labels stay short.** "Islamic Q&A" / "ইসলামিক প্রশ্নোত্তর"
-  is risky at 200% font scale. The tile shows `Q&A` / `প্রশ্নোত্তর`; the
-  full destination name lives in the accessibility description.
+- **R1 — the renderer must not know providers.** `PopularSite` carries the
+  provider-supplied `destinationName` and `accessibilityLabel`; both are
+  immutable and non-blank. The renderer displays/announces those values and
+  hardcodes no URL or domain. Catalog membership and localization remain at
+  the provider boundary.
+- **R2 — tile labels stay short.** `Qur’an` / `কুরআন` and `Hadith` /
+  `হাদিস` are confirmed. "Islamic Q&A" / "ইসলামিক প্রশ্নোত্তর" is risky at
+  200% font scale, so that candidate uses `Q&A` / `প্রশ্নোত্তর`; the full
+  destination name lives in the accessibility description. The Q&A resource
+  shortening remains a Lead-owned resource update before that row can render.
 - **R3 — 200% font-scale screenshot tests** for all three tiles. Silent
   truncation after two lines is not acceptable.
 - **R4 — locale variants share one artwork.**
@@ -158,30 +160,23 @@ Sunnah.com and every other already-approved source proceed unaffected.
 - **R6 — every row stays `candidate`** until product and security sign
   off. Only `approved` rows may be hardcoded into a provider.
 
-## Lead finding: `isReviewedHttps` promises more than it checks
+## Decision: HTTPS validation and catalog approval are separate
 
-`PopularSite.init` requires `HomeWebAddresses.isReviewedHttps(url)`, which
-reads as if an approved set were being enforced. Its implementation
-(`src/core/home/.../WebAddresses.kt:38`) checks **only** that the scheme
-is `https`:
+**Junior decision, 2026-09-25: option 2.** `isReviewedHttps` is renamed to
+`isHttps`, and the pure Home model enforces exactly what that name promises:
+valid URL shape and HTTPS transport. It does not claim to prove product
+approval.
 
-```kotlin
-scheme.equals("https", ignoreCase = true)
-```
+Catalog admission belongs to the Lead-owned provider/adapter. Before enabling
+the section, that provider must have a focused test proving that every emitted
+row is an `approved` stable ID/URL/locale variant from this catalog. Candidate,
+conditional, deferred, and unknown rows must not enter `HomePageModel`.
 
-That is a real gap, not a nitpick: the code's name makes a promise about
-review that it does not keep, and §57 is about exactly this kind of
-honesty. Two honest options, and it must be one of them before the
-section is enabled:
-
-1. **Implement the set** — the approved rows of this catalog become the
-   reviewed set, and `isReviewedHttps` checks membership. Then the name
-   tells the truth and the approval gate is enforced in code.
-2. **Rename** to something like `isHttps`, and let the provider own
-   approval — with a test asserting the approved list.
-
-Ownership: `src/core/home` is the Junior's (D1); the provider/adapter is
-the Lead's. Tracked as a blocking item for enabling the section.
+This separation keeps the pure model reusable without hardcoding a changing
+product catalog, while making the approval boundary explicit and testable.
+`PopularSite` also requires non-blank `destinationName` and
+`accessibilityLabel` values so the renderer can identify the real outbound
+destination without knowing providers.
 
 ## Lead technical/security review — QURAN and HADITH (measured, 2026-09-25)
 
@@ -227,7 +222,7 @@ protect.
 
 ```csv
 id,canonical_url,locale_variant_url,category,tile_label_en,tile_label_bn,accessibility_name,artwork_id,language_limitation,review_date,provenance,status
-popular_quran,https://quran.com/,https://quran.com/bn,QURAN,Qur'an,কুরআন,Quran.com,artwork_quran,,2026-09-25,"curl -L: 200 (/ and /bn); tech review done 2026-09-25",candidate
+popular_quran,https://quran.com/,https://quran.com/bn,QURAN,Qur’an,কুরআন,Quran.com,artwork_quran,,2026-09-25,"curl -L: 200 (/ and /bn); tech review done 2026-09-25",candidate
 popular_sunnah,https://sunnah.com/,,HADITH,Hadith,হাদিস,Sunnah.com,artwork_hadith,"english_only",2026-09-25,"curl -L: 200 (UA) / 403 (bare); tech review done 2026-09-25",candidate
 popular_seekers,https://seekersguidance.org/,,ISLAMIC_QA,Q&A,প্রশ্নোত্তর,SeekersGuidance,artwork_islamic_qa,,2026-09-25,"curl -L: 200; no security review scheduled",conditional_hold
 ```
