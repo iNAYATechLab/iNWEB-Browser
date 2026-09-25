@@ -30,10 +30,10 @@ index 2133a964d0c..230c41911a5 100644
        ":chrome_public_apk_template_resources",
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/BUILD.gn b/chrome/android/java/src/org/chromium/chrome/browser/inweb/BUILD.gn
 new file mode 100644
-index 00000000000..a200acf147d
+index 00000000000..2c93cd94ebc
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/BUILD.gn
-@@ -0,0 +1,43 @@
+@@ -0,0 +1,52 @@
 +# iNWEB Browser — authored app layer (patch 0013, REAL SOURCE PROBE).
 +#
 +# Sources are authored at src/core/ and src/android-app/ in the iNWEB
@@ -50,17 +50,26 @@ index 00000000000..a200acf147d
 +
 +import("//build/config/android/rules.gni")
 +
++# glob() is a function, and GN does not allow function calls inside a
++# template invocation block — writing `sources = glob([...])` there fails
++# gn gen with "Unknown function" and cost hop 31 entirely. Resolve the
++# globs at file scope and pass the results in.
++# scripts/validate_patch_gn.sh enforces this on every iNWEB GN file.
++_inweb_resources = glob([ "res/**/*.xml" ])
++_inweb_core_sources = glob([ "core/**/*.kt" ])
++_inweb_ui_sources = glob([ "ui/**/*.kt" ])
++
 +android_resources("inweb_app_resources") {
 +  # The authored code imports com.inweb.browser.R, so the generated R.java
 +  # must be emitted into that package.
 +  custom_package = "com.inweb.browser"
-+  sources = glob([ "res/**/*.xml" ])
++  sources = _inweb_resources
 +}
 +
 +android_library("inweb_app_java") {
 +  # Pure-JVM core modules (no android/androidx imports) + the Compose
 +  # renderer, compiled together: the renderer consumes the core directly.
-+  sources = glob([ "core/**/*.kt" ]) + glob([ "ui/**/*.kt" ])
++  sources = _inweb_core_sources + _inweb_ui_sources
 +
 +  # compile_kt() adds the Compose compiler plugin when this is set.
 +  enable_compose = true

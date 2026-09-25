@@ -213,9 +213,18 @@ jobs:
           INWEB_BUILD_TOOL: ${{ inputs.build-tool }}
           INWEB_BUILD_DRYRUN: ${{ inputs.probe-dryrun }}
         run: |
+          # GitHub runs steps with `bash -eo pipefail`. With -e, a failed
+          # build kills this step before the lines below can record why,
+          # so build_status is never written, the verdict step sees an
+          # empty string instead of "failed", and the hop reports success
+          # while nothing was built — exactly what happened in hop 31.
+          # The exit code is captured deliberately, so -e is suspended
+          # for the duration of the build and nothing else.
           set -o pipefail
+          set +e
           timeout "${HOP_BUILD_MINUTES}m" bash scripts/build_android.sh development 2>&1 | tee b001-logs/30-build.log
           BUILD_EC=${PIPESTATUS[0]}
+          set -e
           echo "build_exit=$BUILD_EC" | tee -a b001-logs/30-build.log
           # 124 = the hop ran out of its time box: expected, package state and
           # continue. ANY other non-zero exit is a real failure (gn gen error,

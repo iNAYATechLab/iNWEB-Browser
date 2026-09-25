@@ -41,8 +41,14 @@ export PATH="$WORKSPACE/depot_tools:$PATH"
 cd "$WORKSPACE/src"
 
 # Ensure the iNWEB patch series is applied before building (idempotent).
-python3 "$ROOT/scripts/apply_patches.py" apply "$WORKSPACE/src"
-python3 "$ROOT/scripts/apply_patches.py" verify "$WORKSPACE/src"
+# Every step here is checked explicitly: hop 31 reported "success" while
+# gn gen had failed with an unknown-function error, because the failure
+# was not propagated and the hop went on to package state as if nothing
+# had happened. A hop that cannot build must fail loudly.
+python3 "$ROOT/scripts/apply_patches.py" apply "$WORKSPACE/src" ||
+  { echo "FATAL: patch series failed to apply" >&2; exit 3; }
+python3 "$ROOT/scripts/apply_patches.py" verify "$WORKSPACE/src" ||
+  { echo "FATAL: patch series failed verification" >&2; exit 3; }
 
 OUT_DIR="out/inweb-$CHANNEL"
 
@@ -62,7 +68,8 @@ OUT_DIR="out/inweb-$CHANNEL"
 # apply/verify pair above; moving it earlier silently disables it.
 find "$WORKSPACE/src" -path "$OUT_DIR" -prune -o \
   -exec touch -h -c -d '2020-01-01 00:00:00 UTC' {} +
-gn gen "$OUT_DIR" --args="$(cat "$ARGS_FILE")"
+gn gen "$OUT_DIR" --args="$(cat "$ARGS_FILE")" ||
+  { echo "FATAL: gn gen failed (see the error above)" >&2; exit 4; }
 
 # Record build metadata for reproducibility (stamp consumed by CI).
 {
