@@ -419,3 +419,30 @@ appends `--compiler-plugin-jar
 //third_party/kotlinc/current/lib/compose-compiler-plugin.jar` to kotlinc
 (`build/config/android/internal_rules.gni`, lines 3280-3286 and
 4033-4034). This is what patch `0013` probes in the real build.
+
+### A11 — The app-layer build path is proven (hop 29, 2026-09-25)
+
+Patch `0013` asked one question of the real build: does the authored
+Kotlin + Compose app layer compile inside Chromium? It does.
+
+```
+[11/2646] ACTION //chrome/android/java/src/org/chromium/chrome/browser/inweb/app:inweb_app_java__compile_kt(...)
+  ** androidx.compose.ui.text.style.TextAlign (needed by org.chromium.chrome.browser.inweb.app.InwebProbeKt)
+  ** androidx.compose.ui.text.TextStyle            (needed by ...InwebProbeKt)
+```
+
+- `gn gen` passed (the allowlist assert no longer fires), `compile_kt`
+  ran for the iNWEB target, and the generated code references Compose
+  runtime types — so the Compose compiler plugin ran, not merely kotlinc.
+- 0 compile errors; the hop reached `[220/1534]` before its time box and
+  packaged resumable state, so the APK is still to come in hop 30.
+- Two upstream facts now recorded in the manifest and worth remembering:
+  Kotlin in Chromium is gated by a four-pattern allowlist that we extend
+  by one path, and `androidx.compose.material.icons` does not exist in
+  the pinned tree.
+
+What follows, in order: replace material-icons usage in the 12 authored
+files, land the 59 catalog strings, then inject `src/core` + the real
+sources. The renderer draft (PR #3, merged) is the view layer those
+depend on, and it was reviewed against this reality — no material icons,
+state-only privacy, focus-only search, model-driven provider gating.

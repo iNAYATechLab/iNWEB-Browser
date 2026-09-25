@@ -29,15 +29,17 @@ next_action: >-
   [1501/1501]). Next: continue the Stage-2 series, one patch group at a
   time, each validated by b001-verify + a build hop before the next is
   authored.
-    0. ui/0013-app-layer-build-probe (2026-09-25, authored): the authored
-       app layer never reached the APK — no patch carried .kt/.java.
-       0013 adds one android_library with enable_compose = true and a
-       single trivial @Composable wired into chrome_java, and exists only
-       to prove Kotlin + the Compose compiler plugin run in the real
-       build. Scaffolding: replaced by the real injection once green.
-       Because 0013 is taken, the plan below shifts by one. Open before
-       the full injection: androidx.compose.material.icons is absent from
-       the pinned tree and used by 12 of 23 authored files.
+    0. ui/0013-app-layer-build-probe (2026-09-25, PROVEN in the real
+       build): the authored app layer never reached the APK — no patch
+       carried .kt/.java. 0013 adds one android_library with
+       enable_compose = true plus a single trivial @Composable wired into
+       chrome_java. hop 29: gn gen passed, compile_kt ran for the iNWEB
+       target, the generated code references Compose types (so the
+       Compose compiler plugin ran), 0 errors — the mechanism is proven,
+       not assumed. Scaffolding: replaced by the real injection. Because
+       0013 is taken, the plan below shifts by one. Open before the full
+       injection: androidx.compose.material.icons is absent from the
+       pinned tree and used by 12 of 23 authored files.
     1. extension/0014-0017 — enablement: flip enable_extensions, probe
        hop, collect the fallout, run the API audit script.
     2. offline/0018-0020 (data-saver core already authored + tested).
