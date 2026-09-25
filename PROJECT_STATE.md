@@ -40,6 +40,22 @@ next_action: >-
        0013 is taken, the plan below shifts by one. Open before the full
        injection: androidx.compose.material.icons is absent from the
        pinned tree and used by 12 of 23 authored files.
+
+    Content gates (decided 2026-09-25, both docs are the record):
+    Popular Islamic Websites narrowed 6 -> 3 candidates (Quran.com as one
+    logical tile with a Bengali locale variant, Sunnah.com carrying an
+    explicit English-only limitation, SeekersGuidance as a conditional
+    candidate because it is a scholarly institution and not a neutral
+    corpus); IslamicFinder and Islamicity deferred with reasons recorded,
+    Islamic Foundation Bangladesh held until reachability and human
+    review. Nothing hardcoded; the section stays hidden until product +
+    security sign-off. Blocking honesty item: isReviewedHttps enforces
+    only the scheme despite its name, so the reviewed set must be
+    implemented or the function renamed before the section is enabled.
+    Prayer Times (ADR-039, draft): approved to start, but only after all
+    three gates are true — PR #3 merged (done), the real Chromium
+    ComposeView path builds and passes a device smoke test, and the ADR
+    is approved. No dependency added at this stage.
     1. extension/0014-0017 — enablement: flip enable_extensions, probe
        hop, collect the fallout, run the API audit script.
     2. offline/0018-0020 (data-saver core already authored + tested).
