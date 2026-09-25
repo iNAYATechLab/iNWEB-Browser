@@ -96,6 +96,15 @@ surface that does not work.
 |---|---|
 | Scope | inspection / audit / gating / probe only |
 | Branch | `feature/extensions-0014-0017` — **preserved, never deleted** |
+| Rebase | rebased onto `main` at `65a90dbef5b52e06a1e2d1bb47535d6640aecc34` — 6 commits carried, 40 files,
+  +2622/−261, and the file set verified identical to the pre-rebase diff |
+| Pre-rebase backup | `backup/extensions-pre-rebase` @ `337c454`, kept so the
+  original history stays recoverable after the force-push |
+
+The rebase resolved one conflict, in `src/core/extensions/README.md`, by
+keeping **both** facts rather than choosing between them: the baseline does
+not build the extensions platform, and the series is inspection / audit /
+gating / probe only rather than a shipped capability.
 | Capability claim | **none** — no native Android extension capability |
 | Default user-facing UI | **none** |
 | Required by main build path | **no** |
