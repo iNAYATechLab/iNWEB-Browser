@@ -18,10 +18,10 @@ the extension patches?" has a written answer here rather than a hole.
 
 | Id | Intended content | Status |
 |---|---|---|
-| 0014 | build-time API audit + `enable_inweb_android_extensions` probe | authored on branch `feature/extensions-0014-0017`; **never built, never merged** |
-| 0015 | CRX3/ZIP inspector, manifest/version validation, native tests | authored on the same branch; **never built, never merged** |
-| 0016 | closes Android extension UI/action/options surfaces by default | authored on the same branch; **never built, never merged** |
-| 0017 | sideload/update policy gate (review required, MV2 warning) | authored on the same branch; **never built, never merged** |
+| 0014 | build-time API audit + `enable_inweb_android_extensions` probe | **dormant / audit-only** — probe run 36159490822: gn accepted the arg, then failed on an upstream `!is_android` assert |
+| 0015 | CRX3/ZIP inspector, manifest/version validation, native tests | **dormant / audit-only** — never merged |
+| 0016 | closes Android extension UI/action/options surfaces by default | **dormant / audit-only** — never merged |
+| 0017 | sideload/update policy gate (review required, MV2 warning) | **dormant / audit-only** — never merged |
 
 "Reserved" here means **not in the main build path**. It does not mean the
 files do not exist: a branch carries all four, unbuilt and unmerged, and

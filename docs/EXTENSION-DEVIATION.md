@@ -129,7 +129,30 @@ identity and documentation instead of being renumbered around a gap. See
 | Run | Commit | Outcome |
 |---|---|---|
 | 36158864743 | `65a90db` | **invalid** — run before the patch-0013 fix, so it failed on 0013's `glob()` in gn gen, not on anything to do with extensions. Recorded here rather than quietly re-run: a green result would have been meaningless and a red one would have blamed the wrong patch. |
-| (this run) | `159c35f` | pending — the real probe, on the corrected series |
+| 36159490822 | `159c35f` | **FAILED — measured, and accepted as the answer.** All 17 patches applied cleanly (13 main + 4 extension); `gn gen` accepted the GN argument and then failed on an upstream assertion: `//ui/webui/resources/cr_components/color_change_listener/BUILD.gn:10` — `assert((!is_android && !is_ios) || is_desktop_android)`, reached through `chrome/browser/BUILD.gn:1909`, i.e. a dependency the extension-enabled path pulls in. `build_exit=4`, verdict `BUILD: FAILED`, no state published. |
+
+### Probe outcome (2026-09-25)
+
+The probe answered its two questions, and the answer is no:
+
+1. **GN argument accepted** — yes. `gn gen` evaluated with
+   `enable_inweb_android_extensions`; the failure is not an unknown
+   argument, it is a downstream dependency refusing to build.
+2. **Target/config parse and generation successful** — **no.** An
+   upstream target on the extension-enabled path asserts that it is not
+   Android.
+
+Causal attribution is clean: the same tree, the same base and the same
+13 main patches generated successfully in hop 34. The only difference
+here is the four extension patches.
+
+**Consequence, exactly as ADR-042 requires:** the series stays
+**dormant / audit-only**, is **not merged**, and the failure is recorded
+rather than smoothed over. This is the empirical confirmation of the
+baseline finding — the extensions path on Android at pin 154.0.8037.21
+pulls in desktop-only components that refuse to build, which is why no
+capability can honestly be claimed. Nothing here blocks Home, the app
+layer, or the APK path.
 
 ### Probing rules
 
