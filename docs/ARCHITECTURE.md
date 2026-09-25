@@ -59,6 +59,7 @@ iNWEB BROWSER (development → beta → stable channels)
 | `src/core/tracking-protection` | Implemented & unit-tested (116 tests): EasyList-family parser, URL matching, request-decision engine, per-site allowlist, cosmetic filtering, filter-list download/cache/update management with SHA-256 content pinning (ADR-036) |
 | `src/core/extensions` | Implemented & unit-tested (17 tests): extension management state machine (§16, ADR-023) |
 | `src/core/offline` | Implemented & unit-tested (15 tests): offline library — quota accounting, LRU eviction (§17) |
+| `src/core/content-catalog` | Implemented & unit-tested (4 tests): approved popular-site catalogue — admission is catalogue-membership only, reviewed destination name + accessibility label per row; ships empty, which is what keeps the Home rail hidden (§57) |
 | `src/core/vpn` | Implemented & unit-tested (17 tests): VPN config validation, opaque secrets (§15, ADR-025) |
 | `src/core/profiles` | Implemented & unit-tested (12 tests): profile isolation contract (§28, ADR-026) |
 | `src/core/backup` | Implemented & unit-tested (13 tests): backup bundles — checksums, version gating (§32, ADR-026) |

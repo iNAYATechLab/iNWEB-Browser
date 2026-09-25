@@ -162,5 +162,8 @@ run_module "src/core/home" --deps "browser-shell tracking-protection offline" \
   com.inweb.browser.home.HomeSearchTest \
   com.inweb.browser.home.QuickAccessTest
 
+run_module "src/core/content-catalog" --deps "home browser-shell tracking-protection offline" \
+  com.inweb.browser.contentcatalog.ApprovedPopularSitesCatalogTest
+
 echo ""
 echo "[kotlin-core] ALL MODULES PASSED"
