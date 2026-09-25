@@ -44,7 +44,7 @@ fun HomePage(viewModel: BrowserViewModel, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = stringResource(R.string.app_name),
+            text = stringResource(R.string.inweb_app_name),
             style = MaterialTheme.typography.displaySmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,

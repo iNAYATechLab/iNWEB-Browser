@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
-        android:label="@string/app_name"
+        android:label="@string/inweb_app_name"
         android:theme="@style/Theme.iNWEB"
         android:allowBackup="false"
         android:supportsRtl="true"

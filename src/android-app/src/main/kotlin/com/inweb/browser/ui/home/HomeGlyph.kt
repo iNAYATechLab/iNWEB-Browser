@@ -74,8 +74,8 @@ internal fun HomeGlyph(
                     moveTo(w * 0.5f, h * 0.12f)
                     lineTo(w * 0.82f, h * 0.25f)
                     lineTo(w * 0.77f, h * 0.62f)
-                    quadraticBezierTo(w * 0.72f, h * 0.82f, w * 0.5f, h * 0.9f)
-                    quadraticBezierTo(w * 0.28f, h * 0.82f, w * 0.23f, h * 0.62f)
+                    quadraticTo(w * 0.72f, h * 0.82f, w * 0.5f, h * 0.9f)
+                    quadraticTo(w * 0.28f, h * 0.82f, w * 0.23f, h * 0.62f)
                     lineTo(w * 0.18f, h * 0.25f)
                     close()
                 }

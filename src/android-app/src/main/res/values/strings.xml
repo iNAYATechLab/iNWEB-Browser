@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Brand -->
-    <string name="app_name" translatable="false">iNWEB Browser</string>
+    <string name="inweb_app_name" translatable="false">iNWEB Browser</string>
 
     <!-- Omnibox -->
     <string name="omnibox_hint">Search or enter address</string>
