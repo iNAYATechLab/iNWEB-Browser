@@ -1,0 +1,60 @@
+id,en,bn,translatable,notes
+home_product_name,iNWEB,iNWEB,false,Non-translatable brand mark text
+home_product_descriptor,Browser,ব্রাউজার,true,Renderer UI/accessibility copy
+home_open_menu,Open menu,মেনু খুলুন,true,Renderer UI/accessibility copy
+home_privacy_center,Privacy Center,গোপনীয়তা কেন্দ্র,true,Renderer UI/accessibility copy
+home_privacy_active,Protection is active,সুরক্ষা সক্রিয় আছে,true,Renderer UI/accessibility copy
+home_privacy_partial,Some protections are off,কিছু সুরক্ষা বন্ধ আছে,true,Renderer UI/accessibility copy
+home_privacy_loading,Loading protection status,সুরক্ষার অবস্থা লোড হচ্ছে,true,Renderer UI/accessibility copy
+home_privacy_unavailable,Protection status is unavailable,সুরক্ষার অবস্থা পাওয়া যাচ্ছে না,true,Renderer UI/accessibility copy
+home_search_hint_web,Search or enter address,খুঁজুন অথবা ওয়েব ঠিকানা লিখুন,true,Renderer UI/accessibility copy
+home_search_hint_quran,"Search surah, ayah or topic","সূরা, আয়াত অথবা বিষয় খুঁজুন",true,Renderer UI/accessibility copy
+home_voice_search,Voice search,ভয়েস সার্চ,true,Renderer UI/accessibility copy
+home_voice_listening,Listening…,শুনছি…,true,Renderer UI/accessibility copy
+home_voice_processing,Processing speech…,কণ্ঠস্বর প্রক্রিয়া করা হচ্ছে…,true,Renderer UI/accessibility copy
+home_voice_permission_denied,Microphone permission is denied,মাইক্রোফোনের অনুমতি দেওয়া হয়নি,true,Renderer UI/accessibility copy
+home_voice_unavailable,Voice search is unavailable,ভয়েস সার্চ পাওয়া যাচ্ছে না,true,Renderer UI/accessibility copy
+home_voice_error,Voice search failed. Try again.,ভয়েস সার্চ ব্যর্থ হয়েছে। আবার চেষ্টা করুন।,true,Renderer UI/accessibility copy
+home_quick_access,Quick Access,দ্রুত অ্যাক্সেস,true,Renderer UI/accessibility copy
+home_quick_access_empty,Add your first site,আপনার প্রথম সাইট যোগ করুন,true,Renderer UI/accessibility copy
+home_add_site,Add site,সাইট যোগ করুন,true,Renderer UI/accessibility copy
+home_items_shown,%1$d shown,%1$dটি দেখানো হচ্ছে,true,Renderer UI/accessibility copy
+home_see_all,See all,সব দেখুন,true,Renderer UI/accessibility copy
+home_popular_islamic_websites,Popular Islamic Websites,জনপ্রিয় ইসলামিক ওয়েবসাইট,true,Renderer UI/accessibility copy
+home_shortcut_quran,Qur’an,কুরআন,true,Renderer UI/accessibility copy
+home_shortcut_hadith,Hadith,হাদিস,true,Renderer UI/accessibility copy
+home_shortcut_prayer,Prayer,নামাজ,true,Renderer UI/accessibility copy
+home_shortcut_qibla,Qibla,কিবলা,true,Renderer UI/accessibility copy
+home_shortcut_dua,Dua,দোয়া,true,Renderer UI/accessibility copy
+home_shortcut_halal_life,Halal Life,হালাল জীবন,true,Renderer UI/accessibility copy
+home_shortcut_news,News,সংবাদ,true,Renderer UI/accessibility copy
+home_popular_quran,Qur’an,কুরআন,true,Renderer UI/accessibility copy
+home_popular_hadith,Hadith,হাদিস,true,Renderer UI/accessibility copy
+home_popular_qa,Islamic Q&A,ইসলামিক প্রশ্নোত্তর,true,Renderer UI/accessibility copy
+home_popular_articles,Articles,প্রবন্ধ,true,Renderer UI/accessibility copy
+home_popular_halal_life,Halal Life,হালাল জীবন,true,Renderer UI/accessibility copy
+home_popular_news,News,সংবাদ,true,Renderer UI/accessibility copy
+home_continue_reading_listening,Continue reading & listening,পড়া ও শোনা চালিয়ে যান,true,Renderer UI/accessibility copy
+home_start_reading,Start reading,পড়া শুরু করুন,true,Renderer UI/accessibility copy
+home_continue,Continue,চালিয়ে যান,true,Renderer UI/accessibility copy
+home_reading_position,%1$s · Ayah %2$d,%1$s · আয়াত %2$d,true,Renderer UI/accessibility copy
+home_daily_wisdom,Daily Wisdom,প্রতিদিনের শিক্ষা,true,Renderer UI/accessibility copy
+home_wisdom_source,Source: %1$s,সূত্র: %1$s,true,Renderer UI/accessibility copy
+home_save,Save,সংরক্ষণ করুন,true,Renderer UI/accessibility copy
+home_remove_saved,Remove from saved,সংরক্ষিত তালিকা থেকে সরান,true,Renderer UI/accessibility copy
+home_prayer_times,Prayer Times,নামাজের সময়সূচি,true,Renderer UI/accessibility copy
+home_prayer_setup,Set up Prayer Times,নামাজের সময়সূচি সেট করুন,true,Renderer UI/accessibility copy
+home_prayer_setup_action,Choose location,অবস্থান বেছে নিন,true,Renderer UI/accessibility copy
+home_prayer_next,Next · %1$s · %2$s,পরবর্তী · %1$s · %2$s,true,Renderer UI/accessibility copy
+home_prayer_stale,Prayer times may be out of date,নামাজের সময়সূচি পুরোনো হতে পারে,true,Renderer UI/accessibility copy
+home_prayer_method,Method: %1$s · Asr: %2$s,পদ্ধতি: %1$s · আসর: %2$s,true,Renderer UI/accessibility copy
+home_prayer_fajr,Fajr,ফজর,true,Renderer UI/accessibility copy
+home_prayer_dhuhr,Dhuhr,যোহর,true,Renderer UI/accessibility copy
+home_prayer_asr,Asr,আসর,true,Renderer UI/accessibility copy
+home_prayer_maghrib,Maghrib,মাগরিব,true,Renderer UI/accessibility copy
+home_prayer_isha,Isha,ইশা,true,Renderer UI/accessibility copy
+home_retry,Try again,আবার চেষ্টা করুন,true,Renderer UI/accessibility copy
+home_failure_offline,No network connection,ইন্টারনেট সংযোগ নেই,true,Renderer UI/accessibility copy
+home_failure_load,This content could not be loaded,এই কনটেন্ট লোড করা যায়নি,true,Renderer UI/accessibility copy
+home_failure_permission,Permission is required,অনুমতি প্রয়োজন,true,Renderer UI/accessibility copy
+home_failure_unsupported,This feature is not supported,এই ফিচারটি সমর্থিত নয়,true,Renderer UI/accessibility copy

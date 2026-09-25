@@ -40,8 +40,8 @@ The canonical gate is:
 bash scripts/validate_kotlin_core.sh
 ```
 
-That script is Lead-owned and has an explicit module list. Until the Lead adds
-`home` with dependencies on `browser-shell`, `tracking-protection`, and
-`offline`, compile this module with the same pinned Kotlin/JUnit toolchain as a
-separate pre-integration check. See the branch delivery report for the exact
-command and result.
+That script is the single build authority and explicitly registers `home` with
+dependencies on `browser-shell`, `tracking-protection`, and `offline`. It runs
+all five Home test classes under the repository-pinned Kotlin/JUnit toolchain
+(466 total core tests at integration). This module deliberately carries no
+second Gradle build definition, so toolchain versions cannot drift.
