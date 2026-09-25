@@ -29,12 +29,20 @@ next_action: >-
   [1501/1501]). Next: continue the Stage-2 series, one patch group at a
   time, each validated by b001-verify + a build hop before the next is
   authored.
-    1. extension/0013-0016 — enablement is UNBLOCKED now that the series
-       builds end to end: flip enable_extensions in the args, probe hop,
-       collect the fallout into the 0013 patch, run the API audit script.
-    2. offline/0017-0019 (data-saver core already authored + tested).
-    3. security/0020-0021, ui/0022, settings/0023, ui/0024.
-    4. adult-content blocker (0025): category lists + enforced safe
+    0. ui/0013-app-layer-build-probe (2026-09-25, authored): the authored
+       app layer never reached the APK — no patch carried .kt/.java.
+       0013 adds one android_library with enable_compose = true and a
+       single trivial @Composable wired into chrome_java, and exists only
+       to prove Kotlin + the Compose compiler plugin run in the real
+       build. Scaffolding: replaced by the real injection once green.
+       Because 0013 is taken, the plan below shifts by one. Open before
+       the full injection: androidx.compose.material.icons is absent from
+       the pinned tree and used by 12 of 23 authored files.
+    1. extension/0014-0017 — enablement: flip enable_extensions, probe
+       hop, collect the fallout, run the API audit script.
+    2. offline/0018-0020 (data-saver core already authored + tested).
+    3. security/0021-0022, ui/0023, settings/0024.
+    4. adult-content blocker (0025, unchanged): category lists + enforced safe
        search + PIN-locked parental controls on the existing engine.
     5. Home Page (ui/0026) — Junior owns the UI/UX; Lead reviews and
        generates the patch entry.

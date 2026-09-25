@@ -375,3 +375,47 @@ prerequisite for Home; skipping it is correct.
 - [ ] no numeric privacy count anywhere in the draft
 - [ ] accessibility: 48dp targets, headings, focus order, 200% font scale,
       dark Material 3
+
+### A10 — What the renderer may import (verified against the pinned tree)
+
+Before writing the renderer draft, know what the real build can actually
+resolve. This is checked against `third_party/androidx/BUILD.gn` at
+`154.0.8037.21`, not assumed.
+
+**Available** (GN targets under `//third_party/androidx`):
+
+```
+androidx_compose_runtime_runtime_java            androidx_compose_ui_ui_java
+androidx_compose_runtime_runtime_saveable_java   androidx_compose_ui_ui_graphics_java
+androidx_compose_runtime_runtime_retain_java     androidx_compose_ui_ui_geometry_java
+androidx_compose_runtime_runtime_annotation_java androidx_compose_ui_ui_text_java
+androidx_compose_foundation_foundation_java      androidx_compose_animation_animation_java
+androidx_compose_foundation_foundation_layout_java
+androidx_compose_material3_material3_java        androidx_compose_material3_material3_ripple_java
+androidx_activity_activity_compose_java          androidx_lifecycle_lifecycle_*_compose_java
+androidx_navigation_navigation_compose_java      //third_party/kotlin_stdlib:kotlin_stdlib_java
+```
+
+**Not available — and this one is load-bearing:** `androidx.compose.material.icons.*`
+does not exist in the pinned tree. The string `icons` appears **zero**
+times in the 4,422-line `third_party/androidx/BUILD.gn`.
+
+- `androidx.compose.material.*` (Material 2) is likewise absent; only
+  `material_ripple` is present.
+- Consequence for the renderer draft: **do not import material icons.**
+  Use our own drawables under `src/android-app/src/main/res/drawable/`
+  with `painterResource(...)` — which is also what the design asks for
+  ("individual image-based icons or known site marks on small tiles").
+- Consequence for the Lead work: `androidx.compose.material.icons` is used
+  in **12 of the 23** authored Kotlin files today (41 import lines,
+  including `OmniboxBar.kt` and `BrowserBottomBar.kt`), so the existing
+  app layer cannot compile in the Chromium build until those are replaced.
+  That replacement is Lead-owned and precedes the full app-layer
+  injection.
+
+**Build mechanism (verified, not assumed):** `android_library {
+enable_compose = true }` → `java_library_impl` → `compile_kt`, which
+appends `--compiler-plugin-jar
+//third_party/kotlinc/current/lib/compose-compiler-plugin.jar` to kotlinc
+(`build/config/android/internal_rules.gni`, lines 3280-3286 and
+4033-4034). This is what patch `0013` probes in the real build.

@@ -1,0 +1,75 @@
+diff --git a/chrome/android/BUILD.gn b/chrome/android/BUILD.gn
+index 2133a964d0c..be6d7929c97 100644
+--- a/chrome/android/BUILD.gn
++++ b/chrome/android/BUILD.gn
+@@ -314,6 +314,7 @@ if (_is_default_toolchain) {
+ 
+   android_library("chrome_java") {
+     deps = [
++      "//chrome/android/java/src/org/chromium/chrome/browser/inweb/app:inweb_app_java",
+       ":base_module_java",
+       ":chrome_app_java_resources",
+       ":chrome_public_apk_template_resources",
+diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/app/BUILD.gn b/chrome/android/java/src/org/chromium/chrome/browser/inweb/app/BUILD.gn
+new file mode 100644
+index 00000000000..d90f358ae5e
+--- /dev/null
++++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/app/BUILD.gn
+@@ -0,0 +1,29 @@
++# iNWEB Browser — authored app layer (patch 0013, build probe).
++#
++# Sources are authored at src/android-app/ and src/core/ in the iNWEB
++# repository and synced into this patch; the patch series is the single
++# authority for the Chromium tree.
++#
++# PROBE ONLY. This target carries one trivial composable whose only job is
++# to prove that Kotlin compiles and the Jetpack Compose compiler plugin
++# runs inside the Chromium build. It is replaced by the real app-layer
++# injection once that is proven, and it is never a user-facing surface.
++
++import("//build/config/android/rules.gni")
++
++android_library("inweb_app_java") {
++  sources = [ "InwebProbe.kt" ]
++
++  # internal_rules.gni compile_kt() adds the Compose compiler plugin
++  # (//third_party/kotlinc/current/lib/compose-compiler-plugin.jar) when
++  # this is set; without it @Composable functions do not compile.
++  enable_compose = true
++
++  deps = [
++    "//third_party/androidx:androidx_compose_foundation_foundation_java",
++    "//third_party/androidx:androidx_compose_material3_material3_java",
++    "//third_party/androidx:androidx_compose_runtime_runtime_java",
++    "//third_party/androidx:androidx_compose_ui_ui_java",
++    "//third_party/kotlin_stdlib:kotlin_stdlib_java",
++  ]
++}
+diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/app/InwebProbe.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/app/InwebProbe.kt
+new file mode 100644
+index 00000000000..89b131daa61
+--- /dev/null
++++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/app/InwebProbe.kt
+@@ -0,0 +1,22 @@
++// Copyright 2026 The iNWEB Browser authors.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++package org.chromium.chrome.browser.inweb.app
++
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++
++/**
++ * Build probe for patch 0013 — not a product surface.
++ *
++ * Its only purpose is to make the Compose compiler plugin run inside the
++ * real Chromium build: if this file compiles, the authored Kotlin +
++ * Compose app layer has a working path into ChromePublic.apk, and the
++ * remaining work is wiring the real sources, not discovering a mechanism.
++ * It is removed when the real app-layer injection lands.
++ */
++@Composable
++fun InwebProbeLabel(text: String) {
++    Text(text = text)
++}

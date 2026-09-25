@@ -570,3 +570,42 @@ patches:
       operator==/!= came with 0011. The isolated-world script only
       touches the shared DOM (appends one <style data-inweb="cosmetic">
       element); it never reads page JS state.
+
+  - id: 0013-app-layer-build-probe
+    file: ui/0013-app-layer-build-probe.patch
+    area: ui
+    description: >-
+      App-layer build probe: proves that the authored Kotlin + Jetpack
+      Compose app layer compiles inside the Chromium build. Nothing put
+      src/android-app or src/core into the tree before this patch, so 23
+      authored Kotlin files and 11 core modules were compiled by CI but
+      never by the real build, and therefore absent from the shipped APK.
+      This patch adds one android_library with enable_compose = true
+      (internal_rules.gni compile_kt() then passes
+      //third_party/kotlinc/current/lib/compose-compiler-plugin.jar to
+      kotlinc), carrying a single trivial @Composable, and wires it into
+      chrome_java. Scaffolding, not a product surface: it is replaced by
+      the real app-layer injection once this is green. Verified against
+      the pinned tree before writing: the Compose AAR targets exist under
+      //third_party/androidx (material3, foundation, foundation-layout,
+      ui, ui-graphics, runtime, runtime-saveable, animation,
+      activity-compose, lifecycle-*-compose, navigation-compose) and
+      androidx.compose.material.icons does NOT exist in the tree at 154 —
+      so authored code must not import material icons.
+    upstream_files:
+      - chrome/android/BUILD.gn
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/app/BUILD.gn
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/app/InwebProbe.kt
+    risk: low
+    validation: >-
+      build hop — the probe compiles as part of chrome_java, so a green
+      hop proves Kotlin + the Compose compiler plugin run in the real
+      build; failure modes are diagnosed from the hop log (missing GN
+      target, missing AAR, or Compose plugin not applied).
+    rebase_notes: >-
+      chrome/android/BUILD.gn is a large, frequently-upstream-churning
+      file; the hunk adds one line inside android_library("chrome_java")
+      deps and should rebase trivially. Re-verify that enable_compose and
+      //third_party/kotlinc/current/lib/compose-compiler-plugin.jar still
+      exist in internal_rules.gni at the new pin; if upstream removes
+      either, the app layer needs a different Compose path.
