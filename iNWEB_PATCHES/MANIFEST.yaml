@@ -575,47 +575,100 @@ patches:
     file: ui/0013-app-layer-build-probe.patch
     area: ui
     description: >-
-      App-layer build probe: proves that the authored Kotlin + Jetpack
-      Compose app layer compiles inside the Chromium build. Nothing put
-      src/android-app or src/core into the tree before this patch, so 23
-      authored Kotlin files and 11 core modules were compiled by CI but
-      never by the real build, and therefore absent from the shipped APK.
-      This patch adds one android_library with enable_compose = true
-      (internal_rules.gni compile_kt() then passes
-      //third_party/kotlinc/current/lib/compose-compiler-plugin.jar to
-      kotlinc), carrying a single trivial @Composable, and wires it into
-      chrome_java. Scaffolding, not a product surface: it is replaced by
-      the real app-layer injection once this is green. Second hunks: the
-      Kotlin allowlist in build/config/android/internal_rules.gni —
-      upstream permits .kt sources only at four patterns, so the assert
-      (_found_kt == []) rejected the probe at gn gen on the first attempt
-      (hop 28); this patch adds the iNWEB path to that list rather than
-      removing the assert, so the gate keeps applying to everything that
-      is not ours. Verified against the pinned tree before writing: the
-      Compose AAR targets exist under //third_party/androidx (material3,
-      foundation, foundation-layout, ui, ui-graphics, runtime,
-      runtime-saveable, animation, activity-compose, lifecycle-*-compose,
-      navigation-compose) and androidx.compose.material.icons does NOT
-      exist in the tree at 154 — so authored code must not import
-      material icons.
+      App-layer build probe, second stage: the REAL authored sources. The
+      first stage proved the mechanism with one trivial composable; this
+      one carries 42 pure-JVM core files (browser-shell,
+      tracking-protection, offline, home), the 2 Compose renderer files
+      from PR #3, and the authored resources, and answers what the first
+      deliberately left open: whether Kotlin whose package does not match
+      its tree path compiles (authored code is com.inweb.browser.* under
+      an org.chromium.chrome tree path), whether the real renderer
+      compiles against the pinned Compose version, and whether R resolves
+      for the authored package (android_resources custom_package =
+      "com.inweb.browser"). Carries the two hunks the first stage needed:
+      one dep line in android_library("chrome_java"), and the iNWEB path
+      in Chromium's Kotlin allowlist in build/config/android/
+      internal_rules.gni (upstream permits .kt at four patterns only).
+      Scaffolding: replaced by the complete injection once green.
     upstream_files:
-      - chrome/android/BUILD.gn
       - build/config/android/internal_rules.gni
-      - chrome/android/java/src/org/chromium/chrome/browser/inweb/app/BUILD.gn
-      - chrome/android/java/src/org/chromium/chrome/browser/inweb/app/InwebProbe.kt
+      - chrome/android/BUILD.gn
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/BUILD.gn
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/BookmarkStore.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/BrowserEngine.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/DownloadPreferences.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/Downloads.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/DownloadsStore.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/FileBookmarkStore.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/FileHistoryStore.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/HistoryStore.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/Omnibox.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/SearchEngine.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/SessionManager.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/SessionStore.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/Settings.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/TabState.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/TabsController.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/TopSites.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/ZoomPreferences.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomeAdapters.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomeContent.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomePageModel.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomeSearch.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/QuickAccess.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/WebAddresses.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/offline/com/inweb/browser/offline/OfflineLibrary.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/CombinedMatcher.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/CosmeticFilter.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/DomainClassifier.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/FilterListParser.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/FilterRule.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/PatternCompiler.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/ResourceType.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/RuleMatcher.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/SecurityCenter.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/TrackingProtectionEngine.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/TrackingProtectionSettings.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListCache.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListChecksum.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListFetcher.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListManager.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListSource.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListVersion.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/UpdatePolicy.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_add.xml
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_arrow_back.xml
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_arrow_forward.xml
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_check_circle.xml
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_chevron_down.xml
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_chevron_right.xml
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_chevron_up.xml
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_close.xml
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_delete.xml
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_home.xml
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_lock.xml
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_menu.xml
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_refresh.xml
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_search.xml
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_tab.xml
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/res/values-bn/strings.xml
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/res/values/strings.xml
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/res/values/themes.xml
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/ui/home/HomeGlyph.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/ui/home/InwebHomeRenderer.kt
     risk: low
     validation: >-
       build hop — the probe compiles as part of chrome_java, so a green
-      hop proves Kotlin + the Compose compiler plugin run in the real
-      build; failure modes are diagnosed from the hop log (missing GN
-      target, missing AAR, or Compose plugin not applied).
+      hop proves the real authored sources compile in the real build;
+      failures are diagnosed from the hop log (package/path rule, Compose
+      API drift against the pinned version, R package, missing dep).
     rebase_notes: >-
-      chrome/android/BUILD.gn is a large, frequently-upstream-churning
-      file; the hunk adds one line inside android_library("chrome_java")
-      deps and should rebase trivially. The internal_rules.gni hunk sits
-      inside the _kt_allowlist literal: if upstream changes which paths
-      are allowed (Kotlin adoption moves fast), re-add our path next to
-      theirs rather than deleting upstream entries. Re-verify that
-      enable_compose and //third_party/kotlinc/current/lib/
-      compose-compiler-plugin.jar still exist at the new pin; if upstream
-      removes either, the app layer needs a different Compose path.
+      chrome/android/BUILD.gn is large and churns upstream; the hunk adds
+      one line inside android_library("chrome_java") deps. The
+      internal_rules.gni hunk sits inside the _kt_allowlist literal — if
+      upstream changes the allowed paths, re-add ours beside theirs
+      rather than deleting upstream entries. The source files are synced
+      from src/core and src/android-app: regenerate the patch, do not
+      hand-edit it. Re-verify enable_compose and
+      //third_party/kotlinc/current/lib/compose-compiler-plugin.jar still
+      exist at the new pin.
