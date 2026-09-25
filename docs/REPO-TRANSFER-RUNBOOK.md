@@ -91,3 +91,36 @@ Transfer back with the same endpoint and `new_owner=iNWEB-Management`.
 Prefer not to bounce the repository repeatedly: every transfer leaves
 another redirect behind, and redirects are what blocked the name in the
 first place.
+
+## MEASURED 2026-09-26 — the target name is RETIRED, not merely occupied
+
+Attempt (hop-36 terminal, so the transfer window was open):
+
+    gh api -X POST repos/iNWEB-Management/iNWEB-Browser/transfer -f new_owner=iNAYATechLab
+
+Result — HTTP 422, hard failure:
+
+    {"message":"Validation Failed","errors":[{"resource":"Repository",
+     "code":"unprocessable","field":"data",
+     "message":"Repository name iNAYATechLab/iNWEB-Browser has been retired
+      and cannot be reused"}],"status":"422"}
+
+Corroborating evidence (independent of the transfer call): pushing to
+`https://github.com/iNAYATechLab/iNWEB-Browser.git` returns
+
+    remote: This repository moved. Please use the new location:
+    remote:   https://github.com/iNWEB-Management/iNWEB-Browser.git
+
+So a repository previously lived at `iNAYATechLab/iNWEB-Browser`, was moved
+out to `iNWEB-Management`, and GitHub has since **retired** the vacated name.
+
+Consequences (measured, not speculated):
+- The exact name `iNAYATechLab/iNWEB-Browser` cannot be reclaimed by transfer.
+- Retrying the transfer call is pointless; it is not a transient error.
+- Verified free: `GET /repos/iNAYATechLab/iNWEB-Browser-Android` -> **404**,
+  so that fallback name is available today.
+
+Open decision for the project owner (not a Lead decision):
+  A. transfer as `iNAYATechLab/iNWEB-Browser-Android` (works now, name differs)
+  B. ask GitHub Support to un-retire `iNAYATechLab/iNWEB-Browser` (days, may refuse)
+  C. create a fresh repo in the org and push history (loses issues/PRs/releases)

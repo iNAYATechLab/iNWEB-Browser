@@ -143,3 +143,39 @@ hop 33 died on it with "Unknown function". The other iNWEB targets
 (`chrome/android/inweb/{adblock,popup}/BUILD.gn`) never use it — they list
 `sources` explicitly — so patch 0013 does the same. Explicit lists also
 make the patch diff show exactly which files enter the build.
+
+## hop-36 — run 36162922524 @ ab7fc2a2 (completed failure) — R fix CONFIRMED
+
+Step 13 "Boxed build" reported success, step 14 (evidence/APK check) failed;
+`45-verdict.txt` is authoritative: `BUILD: FAILED`, `build_exit=1`, no state
+published. (Confirms the standing trap: `continue-on-error` on the build step
+masks the outcome; the verdict step is the only trustworthy signal.)
+
+**The `resources_package` fix worked.** compile_kt now receives the generated
+R srcjar:
+
+    --java-srcjars=[\"gen/.../inweb_app_java__assetres.srcjar\"]
+
+and `unresolved reference 'R'` — the hop-34 killer — is **gone**. Progress
+moved from `[30/1367]` (hop-34) to `[33/1367]`, and `SOLINK ./libchrome.so`
+completed cleanly at `[20/1367]` with no OOM at `ninja-jobs=6`.
+
+Two NEW, independent blockers (both fixed in commit 597e52d3):
+
+1. **compile_kt failed on a warning, not an error.** `compile_kt.py` runs with
+   `--warnings-as-errors`, so a deprecation is fatal:
+   `HomeGlyph.kt:77,78 warning: quadraticBezierTo is deprecated`.
+   Fix: `quadraticTo()`. This is also a latent drawing bug — `quadraticBezierTo`
+   is RELATIVE and pushed the shield control points to (1.49w, 1.44h), far off
+   canvas; `quadraticTo` is ABSOLUTE and restores the intended shape.
+
+2. **Resource value conflict.** `error: resource 'string/app_name' has a
+   conflicting value for configuration ()` — ours vs Chromium's
+   `chrome_base_module_resources`/`values/channel_constants.xml:10`, then
+   `error: failed to merge resource table` / `failed parsing input`.
+   Fix: rename ours to `inweb_app_name`.
+
+Residual risk recorded honestly: aapt2 aborts on the FIRST conflict, so further
+our-resource-vs-Chromium collisions (e.g. `action_back`, `theme_light`,
+`omnibox_hint`) may surface after this one is cleared. We have no local
+Chromium tree to pre-compute the full collision set.
