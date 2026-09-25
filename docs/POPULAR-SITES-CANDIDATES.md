@@ -57,12 +57,34 @@ variant; both variants carry the same stable ID and the same artwork.
 | Provenance | `curl -L`: `200`, 2026-09-25 |
 | Tile label | `Q&A` / `প্রশ্নোত্তর` (short form — see R2) |
 | Accessibility name | `SeekersGuidance` |
-| Status | **conditional candidate — not enabled without product, community and security approval** |
+| Status | **`conditional_candidate` — held indefinitely. Hidden in the Home model; no bundled logo or wordmark, no production URL wiring, and no security review scheduled.** |
 
 **Curation note, and it matters:** SeekersGuidance is a scholarly
 institution, not a neutral corpus. Answers reflect that institution's
 methodology and school. Any curation policy for this rail must say so
 explicitly rather than presenting it as a neutral reference.
+
+**Why it is held, and by whom.** Showing a site as a *default Home
+recommendation* is a product endorsement; being a safe HTTPS destination
+does not by itself make something suitable to recommend. That judgement
+needs a community/scholarly suitability and editorial-neutrality review,
+which is **not** a technical security review and cannot be substituted
+for one. The reviewer of this document is a UI/content reviewer — not a
+product approver and not a scholarly authority — so that review is
+advisory only (label length, Bengali presentation, accessibility and
+category fit). No reviewer's name is recorded here, because a name would
+have to be invented, and an invented approver is worse than none.
+
+**Exit criteria — all five, in this order, before this row is enabled:**
+
+1. The project owner nominates an accountable **Product Owner**.
+2. The Product Owner nominates a **community/scholarly reviewer**, or
+   takes documented responsibility for that judgement personally.
+3. That reviewer **approves in writing** the site's suitability as a
+   default recommendation.
+4. Only then does the Lead run the **technical/security review**.
+5. Every approval is recorded in this catalog (and the ADR if one is
+   opened) with **reviewer role, date, scope and rationale**.
 
 ## Deferred (with the reason, so this is not re-litigated each time)
 
@@ -118,11 +140,51 @@ section is enabled:
 Ownership: `src/core/home` is the Junior's (D1); the provider/adapter is
 the Lead's. Tracked as a blocking item for enabling the section.
 
+## Lead technical/security review — QURAN and HADITH (measured, 2026-09-25)
+
+Measured with `openssl s_client` and `curl -sSI -L` from this workspace.
+This is the Lead's part of the review only; it says nothing about content
+suitability or editorial neutrality, which is the Product Owner's and the
+community reviewer's call.
+
+| | Quran.com (`/` and `/bn`) | Sunnah.com |
+|---|---|---|
+| TLS issuer | Google Trust Services (WE1) | Let's Encrypt (YE2) |
+| Certificate valid until | 2026-12-20 | 2026-12-10 |
+| HTTP/2 | yes | yes |
+| HSTS | `max-age=15552000; preload` | **absent** |
+| Content-Security-Policy | present, but permissive (`'unsafe-inline'`, `'unsafe-eval'`, ~20 third-party script sources) | **absent** |
+| `x-content-type-options: nosniff` | yes | absent |
+| `referrer-policy` | `origin-when-cross-origin` | absent |
+| Reachability | `200` | `200` with a browser UA; `403` to a bare scripted probe |
+
+**What that means, stated plainly.** Both are legitimate HTTPS
+destinations with valid certificates; neither fails a security check in
+the sense of being unsafe to visit. They differ in posture: Quran.com
+sends HSTS with preload and a CSP, Sunnah.com sends neither. Those are
+observations about the destinations, not about us, and neither is a
+disqualifier — but they are recorded rather than smoothed over.
+
+**One thing we control: tracking on arrival.** Quran.com's policy lists
+Google Analytics/Tag Manager, Amplitude, LogRocket, Mouseflow, Clarity,
+LinkedIn, Stripe, PayPal and Vercel Insights among its script sources,
+and `connect-src *`. We cannot change what a site loads. We *can* say
+honestly that these destinations are opened through the ordinary
+navigation path, so the ad-block and tracking-protection engine (patches
+`0005`-`0007`, `0012`) applies to them like any other page — the same
+protection the user has everywhere else, not a special case.
+
+**Status of these two rows: technical review complete (measured);
+product and community approval pending. They are not hardcoded and the
+section is not enabled.** That does not change until an approver signs
+off, which is exactly the discipline the SeekersGuidance hold exists to
+protect.
+
 ## Machine-readable form (for whichever store is chosen later)
 
 ```csv
 id,canonical_url,locale_variant_url,category,tile_label_en,tile_label_bn,accessibility_name,artwork_id,language_limitation,review_date,provenance,status
-popular_quran,https://quran.com/,https://quran.com/bn,QURAN,Qur'an,কুরআন,Quran.com,artwork_quran,,2026-09-25,"curl -L: 200 (/ and /bn)",candidate
-popular_sunnah,https://sunnah.com/,,HADITH,Hadith,হাদিস,Sunnah.com,artwork_hadith,"english_only",2026-09-25,"curl -L: 200 (UA) / 403 (bare)",candidate
-popular_seekers,https://seekersguidance.org/,,ISLAMIC_QA,Q&A,প্রশ্নোত্তর,SeekersGuidance,artwork_islamic_qa,,2026-09-25,"curl -L: 200",conditional
+popular_quran,https://quran.com/,https://quran.com/bn,QURAN,Qur'an,কুরআন,Quran.com,artwork_quran,,2026-09-25,"curl -L: 200 (/ and /bn); tech review done 2026-09-25",candidate
+popular_sunnah,https://sunnah.com/,,HADITH,Hadith,হাদিস,Sunnah.com,artwork_hadith,"english_only",2026-09-25,"curl -L: 200 (UA) / 403 (bare); tech review done 2026-09-25",candidate
+popular_seekers,https://seekersguidance.org/,,ISLAMIC_QA,Q&A,প্রশ্নোত্তর,SeekersGuidance,artwork_islamic_qa,,2026-09-25,"curl -L: 200; no security review scheduled",conditional_hold
 ```
