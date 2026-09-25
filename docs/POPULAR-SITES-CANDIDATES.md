@@ -75,9 +75,44 @@ advisory only (label length, Bengali presentation, accessibility and
 category fit). No reviewer's name is recorded here, because a name would
 have to be invented, and an invented approver is worse than none.
 
+**Governance record — why this is held (2026-09-25)**
+
+| Field | Value |
+|---|---|
+| `status` | no Product Owner nominated |
+| `recorded_on` | 2026-09-25 |
+| `decision_owner` | project owner |
+| `affected_candidate` | SeekersGuidance |
+| `effect` | remains `conditional_candidate` and hidden |
+| `technical_security_review` | not initiated |
+| `blocking_other_sites` | no |
+
+Rationale, as recorded:
+
+> SeekersGuidance একটি scholarly institution এবং default Home
+> recommendation হিসেবে এর inclusion-এর জন্য product/editorial ও
+> community-suitability approval প্রয়োজন। Project owner এখনো কোনো
+> accountable Product Owner মনোনীত করেননি। তাই candidate-টি প্রত্যাখ্যাত
+> নয়, তবে approval chain শুরু না হওয়া পর্যন্ত hidden থাকবে।
+
+No name or role is entered on anyone's behalf: nominating a Product Owner
+is the project owner's decision, and the reviewer of this catalog is a
+UI/content reviewer without that authority. The Quran.com and Sunnah.com
+technical review already completed is **not affected** by this hold
+(`blocking_other_sites: no`) — those two proceed on their own track.
+
+**Reconsideration triggers** — any one of these reopens the question:
+
+1. The project owner nominates a Product Owner.
+2. The nominated Product Owner names a community/scholarly reviewer, or
+   establishes a documented approval process.
+3. That decision is added to this catalog (or an ADR) with **role, date,
+   scope and rationale**.
+
 **Exit criteria — all five, in this order, before this row is enabled:**
 
 1. The project owner nominates an accountable **Product Owner**.
+   *(status 2026-09-25: not nominated — see the governance record above)*
 2. The Product Owner nominates a **community/scholarly reviewer**, or
    takes documented responsibility for that judgement personally.
 3. That reviewer **approves in writing** the site's suitability as a
