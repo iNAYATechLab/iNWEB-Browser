@@ -101,6 +101,14 @@ UI/content reviewer without that authority. The Quran.com and Sunnah.com
 technical review already completed is **not affected** by this hold
 (`blocking_other_sites: no`) — those two proceed on their own track.
 
+**Consulted, 2026-09-25.** The project owner was asked directly and
+declined to appoint a Product Owner for now: they act as the owner of this
+workflow, but not as Product Owner for content. So the two fields above
+are confirmed unchanged — `no Product Owner nominated`, `decision_owner:
+project owner` — and no role or date has been invented to fill them.
+SeekersGuidance stays hidden until the chain starts; Quran.com,
+Sunnah.com and every other already-approved source proceed unaffected.
+
 **Reconsideration triggers** — any one of these reopens the question:
 
 1. The project owner nominates a Product Owner.
