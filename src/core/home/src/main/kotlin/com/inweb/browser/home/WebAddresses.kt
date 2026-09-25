@@ -35,7 +35,8 @@ internal object HomeWebAddresses {
     fun isWebDestination(url: String): Boolean =
         normalizeParsedUrl(url) is WebAddressResult.Valid
 
-    fun isReviewedHttps(url: String): Boolean =
+    /** Validates URL shape and HTTPS transport only; catalog approval is provider-owned. */
+    fun isHttps(url: String): Boolean =
         when (val result = normalizeParsedUrl(url)) {
             is WebAddressResult.Valid -> {
                 val scheme = runCatching { URI(result.url).scheme }.getOrNull()

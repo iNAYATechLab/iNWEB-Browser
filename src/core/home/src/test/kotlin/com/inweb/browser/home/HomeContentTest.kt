@@ -1,6 +1,7 @@
 package com.inweb.browser.home
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -34,21 +35,38 @@ class HomeContentTest {
     }
 
     @Test
-    fun popularSiteRequiresReviewedHttpsAddress() {
+    fun popularSiteRequiresHttpsAddressAndProviderSuppliedNames() {
         val site = PopularSite(
             id = "quran-directory",
             category = PopularSiteCategory.QURAN,
             url = "https://example.org/quran",
             artworkId = "quran_art",
+            destinationName = "Example Qur'an",
+            accessibilityLabel = "Open Example Qur'an",
         )
         assertEquals("https://example.org/quran", site.url)
+        assertEquals("Example Qur'an", site.destinationName)
+        assertEquals("Open Example Qur'an", site.accessibilityLabel)
 
         assertThrows(IllegalArgumentException::class.java) {
-            PopularSite("insecure", PopularSiteCategory.NEWS, "http://example.org", "news")
+            popularSite(url = "http://example.org")
         }
         assertThrows(IllegalArgumentException::class.java) {
-            PopularSite("invalid", PopularSiteCategory.NEWS, "not a url", "news")
+            popularSite(url = "not a url")
         }
+        assertThrows(IllegalArgumentException::class.java) {
+            popularSite(destinationName = " ")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            popularSite(accessibilityLabel = "")
+        }
+    }
+
+    @Test
+    fun httpsValidationDoesNotClaimCatalogApproval() {
+        assertTrue(HomeWebAddresses.isHttps("https://unreviewed.example/path"))
+        assertFalse(HomeWebAddresses.isHttps("http://unreviewed.example/path"))
+        assertFalse(HomeWebAddresses.isHttps("not a url"))
     }
 
     @Test
@@ -144,6 +162,19 @@ class HomeContentTest {
             prayerSchedule(wrongOrder)
         }
     }
+
+    private fun popularSite(
+        url: String = "https://example.org",
+        destinationName: String = "Example",
+        accessibilityLabel: String = "Open Example",
+    ) = PopularSite(
+        id = "example",
+        category = PopularSiteCategory.NEWS,
+        url = url,
+        artworkId = "example_art",
+        destinationName = destinationName,
+        accessibilityLabel = accessibilityLabel,
+    )
 
     private fun readingPosition(
         progress: Double = 0.5,

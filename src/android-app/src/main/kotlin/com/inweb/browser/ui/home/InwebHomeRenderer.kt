@@ -557,7 +557,8 @@ private fun PopularSitesSection(
         items(sites, key = { it.id }) { site ->
             HomeRailTile(
                 label = popularSiteLabel(site.category),
-                supporting = site.url,
+                supporting = site.destinationName,
+                accessibilityLabel = site.accessibilityLabel,
                 onClick = { onOpen(site) },
             )
         }
@@ -895,13 +896,15 @@ private fun HomeRailTile(
     label: String,
     onClick: () -> Unit,
     supporting: String? = null,
+    accessibilityLabel: String = label,
     icon: HomeGlyphKind? = null,
     enabled: Boolean = true,
 ) {
     Surface(
         modifier = Modifier
-            .width(112.dp)
+            .width(128.dp)
             .heightIn(min = 96.dp)
+            .semantics { contentDescription = accessibilityLabel }
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
         shape = MaterialTheme.shapes.medium,
         tonalElevation = 1.dp,
@@ -932,7 +935,7 @@ private fun HomeRailTile(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             if (supporting != null) {
@@ -940,7 +943,7 @@ private fun HomeRailTile(
                     text = supporting,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
