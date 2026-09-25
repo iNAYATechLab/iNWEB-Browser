@@ -96,7 +96,7 @@ surface that does not work.
 |---|---|
 | Scope | inspection / audit / gating / probe only |
 | Branch | `feature/extensions-0014-0017` — **preserved, never deleted** |
-| Rebase | rebased onto `main` at `65a90dbef5b52e06a1e2d1bb47535d6640aecc34` — 6 commits carried, 40 files,
+| Rebase | rebased onto `main` at `159c35fb6e303214fedd6c816382b3ff38d01550` — 6 commits carried, 40 files,
   +2622/−261, and the file set verified identical to the pre-rebase diff |
 | Pre-rebase backup | `backup/extensions-pre-rebase` @ `337c454`, kept so the
   original history stays recoverable after the force-push |
