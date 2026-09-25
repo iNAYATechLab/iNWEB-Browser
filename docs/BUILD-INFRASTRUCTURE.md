@@ -102,3 +102,44 @@ release notes.
   unchanged for full builds.
 - Still blocked until B-001 resolution: the first complete BUILD
   artifact. **No APK exists or is claimed.**
+
+## Hop 33 — the two fixes, measured at runtime
+
+Hop 33 is the first hop that failed out loud, and that is the useful
+part: it proves the integrity fixes are reachable rather than merely
+written.
+
+**mtime discipline (runtime evidence).** `26-normalize.log`:
+
+```
+normalized: all tree mtimes -> 2020-01-01 (out/ excluded)
+--- sanity: sources must all be <= 2020-01-01 ---   (empty: nothing newer)
+--- sanity: out artifacts (sample) are newer ---    chromium/src/out/.../toolchain.ninja
+```
+
+Both sanity checks pass, so the resumed `out/` artifacts are newer than
+every source input — which is the condition that makes siso/ninja resume
+instead of re-execute.
+
+**Failure truthfulness (runtime evidence).** `gn gen` failed, and the hop
+reported it instead of packaging state:
+
+```
+30-build.log:  FATAL: gn gen failed (see the error above)   build_exit=4
+45-verdict.txt: BUILD: FAILED — the build exited non-zero (see 30-build.log).
+                No resumable state is published: resuming from a stale out/
+                would hide the failure instead of fixing it.
+run conclusion: failure
+```
+
+Hops 28 and 31 produced the same class of error and both concluded
+success. The chain that failed before — exit code captured only when the
+step survived, `build_status` written before the verdict read it, and the
+verdict running at all — now works end to end.
+
+**The GN rule (learned twice).** `glob()` is rejected in this file, at
+file scope as well as inside a template invocation block; both hop 31 and
+hop 33 died on it with "Unknown function". The other iNWEB targets
+(`chrome/android/inweb/{adblock,popup}/BUILD.gn`) never use it — they list
+`sources` explicitly — so patch 0013 does the same. Explicit lists also
+make the patch diff show exactly which files enter the build.

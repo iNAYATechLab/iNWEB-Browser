@@ -30,46 +30,100 @@ index 2133a964d0c..230c41911a5 100644
        ":chrome_public_apk_template_resources",
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/BUILD.gn b/chrome/android/java/src/org/chromium/chrome/browser/inweb/BUILD.gn
 new file mode 100644
-index 00000000000..2c93cd94ebc
+index 00000000000..e21d0bc6380
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/BUILD.gn
-@@ -0,0 +1,52 @@
-+# iNWEB Browser — authored app layer (patch 0013, REAL SOURCE PROBE).
+@@ -0,0 +1,106 @@
++# iNWEB Browser — authored app layer (patch 0013, real-source probe).
 +#
-+# Sources are authored at src/core/ and src/android-app/ in the iNWEB
-+# repository and synced into this patch; the patch series is the single
++# Sources are the authored src/core modules and the Home renderer from
++# src/android-app, synced into this patch: the patch series is the single
 +# authority for the Chromium tree.
 +#
-+# This is the second probe. The first proved the mechanism with one
-+# trivial composable; this one carries the real thing and answers the
-+# questions the first deliberately left open:
-+#   * does Kotlin whose package does NOT match its tree path compile?
-+#     (the authored sources are com.inweb.browser.*, not org.chromium.*)
-+#   * does the real renderer compile against the pinned Compose version?
-+#   * does R resolve for the authored package (custom_package below)?
++# Sources are listed explicitly, matching the convention of the other
++# iNWEB targets (chrome/android/inweb/{adblock,popup}/BUILD.gn). glob() is
++# not used here because gn gen rejects it in this file at file scope as
++# well as inside the template block — measured in hop 31 and again in
++# hop 33, both failing with "Unknown function". Explicit lists also make
++# the patch diff show exactly which files enter the build.
 +
 +import("//build/config/android/rules.gni")
-+
-+# glob() is a function, and GN does not allow function calls inside a
-+# template invocation block — writing `sources = glob([...])` there fails
-+# gn gen with "Unknown function" and cost hop 31 entirely. Resolve the
-+# globs at file scope and pass the results in.
-+# scripts/validate_patch_gn.sh enforces this on every iNWEB GN file.
-+_inweb_resources = glob([ "res/**/*.xml" ])
-+_inweb_core_sources = glob([ "core/**/*.kt" ])
-+_inweb_ui_sources = glob([ "ui/**/*.kt" ])
 +
 +android_resources("inweb_app_resources") {
 +  # The authored code imports com.inweb.browser.R, so the generated R.java
 +  # must be emitted into that package.
 +  custom_package = "com.inweb.browser"
-+  sources = _inweb_resources
++  sources = [
++    "res/drawable/ic_inweb_add.xml",
++    "res/drawable/ic_inweb_arrow_back.xml",
++    "res/drawable/ic_inweb_arrow_forward.xml",
++    "res/drawable/ic_inweb_check_circle.xml",
++    "res/drawable/ic_inweb_chevron_down.xml",
++    "res/drawable/ic_inweb_chevron_right.xml",
++    "res/drawable/ic_inweb_chevron_up.xml",
++    "res/drawable/ic_inweb_close.xml",
++    "res/drawable/ic_inweb_delete.xml",
++    "res/drawable/ic_inweb_home.xml",
++    "res/drawable/ic_inweb_lock.xml",
++    "res/drawable/ic_inweb_menu.xml",
++    "res/drawable/ic_inweb_refresh.xml",
++    "res/drawable/ic_inweb_search.xml",
++    "res/drawable/ic_inweb_tab.xml",
++    "res/values-bn/strings.xml",
++    "res/values/strings.xml",
++    "res/values/themes.xml",
++  ]
 +}
 +
 +android_library("inweb_app_java") {
 +  # Pure-JVM core modules (no android/androidx imports) + the Compose
 +  # renderer, compiled together: the renderer consumes the core directly.
-+  sources = _inweb_core_sources + _inweb_ui_sources
++  sources = [
++    "core/browser-shell/com/inweb/browser/shell/BookmarkStore.kt",
++    "core/browser-shell/com/inweb/browser/shell/BrowserEngine.kt",
++    "core/browser-shell/com/inweb/browser/shell/DownloadPreferences.kt",
++    "core/browser-shell/com/inweb/browser/shell/Downloads.kt",
++    "core/browser-shell/com/inweb/browser/shell/DownloadsStore.kt",
++    "core/browser-shell/com/inweb/browser/shell/FileBookmarkStore.kt",
++    "core/browser-shell/com/inweb/browser/shell/FileHistoryStore.kt",
++    "core/browser-shell/com/inweb/browser/shell/HistoryStore.kt",
++    "core/browser-shell/com/inweb/browser/shell/Omnibox.kt",
++    "core/browser-shell/com/inweb/browser/shell/SearchEngine.kt",
++    "core/browser-shell/com/inweb/browser/shell/SessionManager.kt",
++    "core/browser-shell/com/inweb/browser/shell/SessionStore.kt",
++    "core/browser-shell/com/inweb/browser/shell/Settings.kt",
++    "core/browser-shell/com/inweb/browser/shell/TabState.kt",
++    "core/browser-shell/com/inweb/browser/shell/TabsController.kt",
++    "core/browser-shell/com/inweb/browser/shell/TopSites.kt",
++    "core/browser-shell/com/inweb/browser/shell/ZoomPreferences.kt",
++    "core/home/com/inweb/browser/home/HomeAdapters.kt",
++    "core/home/com/inweb/browser/home/HomeContent.kt",
++    "core/home/com/inweb/browser/home/HomePageModel.kt",
++    "core/home/com/inweb/browser/home/HomeSearch.kt",
++    "core/home/com/inweb/browser/home/QuickAccess.kt",
++    "core/home/com/inweb/browser/home/WebAddresses.kt",
++    "core/offline/com/inweb/browser/offline/OfflineLibrary.kt",
++    "core/tracking-protection/com/inweb/browser/privacy/CombinedMatcher.kt",
++    "core/tracking-protection/com/inweb/browser/privacy/CosmeticFilter.kt",
++    "core/tracking-protection/com/inweb/browser/privacy/DomainClassifier.kt",
++    "core/tracking-protection/com/inweb/browser/privacy/FilterListParser.kt",
++    "core/tracking-protection/com/inweb/browser/privacy/FilterRule.kt",
++    "core/tracking-protection/com/inweb/browser/privacy/PatternCompiler.kt",
++    "core/tracking-protection/com/inweb/browser/privacy/ResourceType.kt",
++    "core/tracking-protection/com/inweb/browser/privacy/RuleMatcher.kt",
++    "core/tracking-protection/com/inweb/browser/privacy/SecurityCenter.kt",
++    "core/tracking-protection/com/inweb/browser/privacy/TrackingProtectionEngine.kt",
++    "core/tracking-protection/com/inweb/browser/privacy/TrackingProtectionSettings.kt",
++    "core/tracking-protection/com/inweb/browser/privacy/lists/FilterListCache.kt",
++    "core/tracking-protection/com/inweb/browser/privacy/lists/FilterListChecksum.kt",
++    "core/tracking-protection/com/inweb/browser/privacy/lists/FilterListFetcher.kt",
++    "core/tracking-protection/com/inweb/browser/privacy/lists/FilterListManager.kt",
++    "core/tracking-protection/com/inweb/browser/privacy/lists/FilterListSource.kt",
++    "core/tracking-protection/com/inweb/browser/privacy/lists/FilterListVersion.kt",
++    "core/tracking-protection/com/inweb/browser/privacy/lists/UpdatePolicy.kt",
++    "ui/home/HomeGlyph.kt",
++    "ui/home/InwebHomeRenderer.kt",
++  ]
 +
 +  # compile_kt() adds the Compose compiler plugin when this is set.
 +  enable_compose = true
@@ -1849,10 +1903,10 @@ index 00000000000..3a9945e60ae
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomeContent.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomeContent.kt
 new file mode 100644
-index 00000000000..e9b43c0e84c
+index 00000000000..4aaa791d5b4
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomeContent.kt
-@@ -0,0 +1,202 @@
+@@ -0,0 +1,211 @@
 +package com.inweb.browser.home
 +
 +import java.time.ZoneId
@@ -1908,17 +1962,26 @@ index 00000000000..e9b43c0e84c
 +    NEWS("news"),
 +}
 +
-+/** One product-reviewed curated destination. No default URLs live in this core. */
++/**
++ * One provider-supplied curated destination. No default URLs or approval list
++ * live in this core; the provider admits only product-approved catalog rows.
++ */
 +data class PopularSite(
 +    val id: String,
 +    val category: PopularSiteCategory,
 +    val url: String,
 +    val artworkId: String,
++    /** Reviewed destination name, localized by the provider when appropriate. */
++    val destinationName: String,
++    /** Complete locale-appropriate announcement for the outbound tile. */
++    val accessibilityLabel: String,
 +) {
 +    init {
 +        require(id.isNotBlank()) { "popular-site id must not be blank" }
 +        require(artworkId.isNotBlank()) { "popular-site artworkId must not be blank" }
-+        require(HomeWebAddresses.isReviewedHttps(url)) {
++        require(destinationName.isNotBlank()) { "popular-site destinationName must not be blank" }
++        require(accessibilityLabel.isNotBlank()) { "popular-site accessibilityLabel must not be blank" }
++        require(HomeWebAddresses.isHttps(url)) {
 +            "popular-site URL must be a valid HTTPS destination"
 +        }
 +    }
@@ -1990,7 +2053,7 @@ index 00000000000..e9b43c0e84c
 +        require(id.isNotBlank()) { "wisdom id must not be blank" }
 +        require(body.isNotBlank()) { "wisdom body must not be blank" }
 +        require(citation.isNotBlank()) { "wisdom citation must not be blank" }
-+        require(sourceUrl == null || HomeWebAddresses.isReviewedHttps(sourceUrl)) {
++        require(sourceUrl == null || HomeWebAddresses.isHttps(sourceUrl)) {
 +            "wisdom sourceUrl must be null or valid HTTPS"
 +        }
 +    }
@@ -2601,10 +2664,10 @@ index 00000000000..6c4a6ea9a20
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/WebAddresses.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/WebAddresses.kt
 new file mode 100644
-index 00000000000..8e50c7e7f4d
+index 00000000000..70474ad3b65
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/WebAddresses.kt
-@@ -0,0 +1,78 @@
+@@ -0,0 +1,79 @@
 +package com.inweb.browser.home
 +
 +import com.inweb.browser.shell.OmniboxInput
@@ -2642,7 +2705,8 @@ index 00000000000..8e50c7e7f4d
 +    fun isWebDestination(url: String): Boolean =
 +        normalizeParsedUrl(url) is WebAddressResult.Valid
 +
-+    fun isReviewedHttps(url: String): Boolean =
++    /** Validates URL shape and HTTPS transport only; catalog approval is provider-owned. */
++    fun isHttps(url: String): Boolean =
 +        when (val result = normalizeParsedUrl(url)) {
 +            is WebAddressResult.Valid -> {
 +                val scheme = runCatching { URI(result.url).scheme }.getOrNull()
@@ -5565,10 +5629,10 @@ index 00000000000..1f0ad42433e
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/ui/home/InwebHomeRenderer.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/ui/home/InwebHomeRenderer.kt
 new file mode 100644
-index 00000000000..524e6e46729
+index 00000000000..94f48b5e8ea
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/ui/home/InwebHomeRenderer.kt
-@@ -0,0 +1,1042 @@
+@@ -0,0 +1,1045 @@
 +package com.inweb.browser.ui.home
 +
 +import androidx.compose.foundation.clickable
@@ -6128,7 +6192,8 @@ index 00000000000..524e6e46729
 +        items(sites, key = { it.id }) { site ->
 +            HomeRailTile(
 +                label = popularSiteLabel(site.category),
-+                supporting = site.url,
++                supporting = site.destinationName,
++                accessibilityLabel = site.accessibilityLabel,
 +                onClick = { onOpen(site) },
 +            )
 +        }
@@ -6466,13 +6531,15 @@ index 00000000000..524e6e46729
 +    label: String,
 +    onClick: () -> Unit,
 +    supporting: String? = null,
++    accessibilityLabel: String = label,
 +    icon: HomeGlyphKind? = null,
 +    enabled: Boolean = true,
 +) {
 +    Surface(
 +        modifier = Modifier
-+            .width(112.dp)
++            .width(128.dp)
 +            .heightIn(min = 96.dp)
++            .semantics { contentDescription = accessibilityLabel }
 +            .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
 +        shape = MaterialTheme.shapes.medium,
 +        tonalElevation = 1.dp,
@@ -6503,7 +6570,7 @@ index 00000000000..524e6e46729
 +            Text(
 +                text = label,
 +                style = MaterialTheme.typography.labelLarge,
-+                maxLines = 1,
++                maxLines = 2,
 +                overflow = TextOverflow.Ellipsis,
 +            )
 +            if (supporting != null) {
@@ -6511,7 +6578,7 @@ index 00000000000..524e6e46729
 +                    text = supporting,
 +                    style = MaterialTheme.typography.labelSmall,
 +                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-+                    maxLines = 1,
++                    maxLines = 2,
 +                    overflow = TextOverflow.Ellipsis,
 +                )
 +            }
