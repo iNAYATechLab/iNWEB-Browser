@@ -1,83 +1,128 @@
-# Popular Islamic Websites — candidate catalog (Lead draft, awaiting approval)
+# Popular Islamic Websites — candidate catalog
 
 **Status: CANDIDATE. Nothing here is shipped, and no URL is hardcoded.**
 
-The Home section "Popular Islamic Websites" (approved order position 4)
-needs content, and content is a product decision, not an engineering one.
-This document is the Lead's candidate list for review. Per the agreed
-process:
+Content is a product decision, not an engineering one. The catalog was
+reviewed down from six proposed sites to three candidates, with two
+deferred and one held for the future. Per the agreed process:
 
 - the Lead proposes (display name, canonical HTTPS URL, one-line reason,
   provenance, review date);
-- the Junior reviews UI/content fit, label length, Bengali presentation
-  and logo-slot requirements;
-- **no URL enters the code until final product/security approval**;
-- until then the model leaves the section hidden, so nothing fake or
-  unreviewed reaches a user and the implementation is not blocked.
+- the Junior reviewed UI/content fit, label length, Bengali presentation
+  and logo-slot requirements — findings below are **binding**;
+- no URL enters the code until final product/security approval;
+- until then the model leaves the section hidden, so nothing unreviewed
+  reaches a user and the implementation is not blocked.
 
-## How the provenance column was produced
+## Candidates (3)
 
-Every row was probed from this workspace with `curl -L` (TLS, redirects
-followed) on 2026-09-25, once without and once with a browser
-User-Agent. The status codes below are **measured, not recalled**:
+### 1. Quran.com — QURAN category
 
-- `200` — reachable over HTTPS at the time of the probe.
-- `403 to a scripted probe` — commonly bot protection, **not** evidence
-  that the site is down; these need a human browser check before
-  nomination, so they are listed separately rather than proposed.
-- `000` — no response (DNS/connection); exclude until someone confirms.
+| Field | Value |
+|---|---|
+| Stable ID | `popular_quran` |
+| Canonical URL | `https://quran.com/` |
+| Locale variant | `https://quran.com/bn` **when the UI is Bengali** |
+| Why | Full Qur'an text with translations; the reference most users already trust. |
+| Provenance | `curl -L`: `200` for `/` and `200` for `/bn`, 2026-09-25 |
+| Artwork | one governed neutral QURAN-category artwork — **shared** by both locale variants |
+| Tile label | `Qur'an` / `কুরআন` *(pending Junior confirmation)* |
+| Accessibility name | `Quran.com` (full destination name) |
+| Language | multi-language, including Bengali |
+| Status | **candidate** |
 
-A probe proves reachability only. It says nothing about content
-correctness, licence, long-term stability, or whether the site is
-appropriate for the product — that is what the review is for.
+**One logical tile, never two.** The Bengali UI resolves the `/bn`
+variant; both variants carry the same stable ID and the same artwork.
 
-## Proposed candidates (probed 200)
+### 2. Sunnah.com — HADITH category
 
-| # | Display name | Canonical HTTPS URL | Why this one (one line) | Provenance (measured) | Logo slot |
-|---|---|---|---|---|---|
-| 1 | Quran.com | `https://quran.com/` | Full Qur'an text with translations; the reference most users already trust. | `200` direct, 2026-09-25 | yes — wordmark |
-| 2 | Quran.com (Bengali) | `https://quran.com/bn` | Same source, Bengali locale — serves the primary audience directly. | `200` direct, 2026-09-25 (`/bn` resolves, not a redirect to `/ar`) | yes — wordmark |
-| 3 | Sunnah.com | `https://sunnah.com/` | The standard English hadith corpus reference. | `200` with a browser UA; `403` to a bare scripted probe, 2026-09-25 | yes — wordmark |
-| 4 | SeekersGuidance | `https://seekersguidance.org/` | Structured, cited fiqh and creed answers from an established teaching body. | `200` direct, 2026-09-25 | yes — wordmark |
-| 5 | IslamicFinder | `https://www.islamicfinder.org/` | Prayer times and qibla — the practical surface users open most. | `200` (redirects to `www`), 2026-09-25 | yes — wordmark |
-| 6 | Islamicity | `https://www.islamicity.org/` | Broad reference: articles, prayer times, zakat calculators. | `200` with a browser UA (redirects to `www`); `403` to a bare probe, 2026-09-25 | yes — wordmark |
+| Field | Value |
+|---|---|
+| Stable ID | `popular_sunnah` |
+| Canonical URL | `https://sunnah.com/` |
+| Why | The standard English hadith corpus reference; matches the HADITH category directly. |
+| Provenance | `curl -L`: `200` with a browser User-Agent, `403` to a bare scripted probe, 2026-09-25 |
+| Tile label | `Hadith` / `হাদিস` *(pending Junior confirmation)* |
+| Accessibility name | `Sunnah.com` |
+| Language limitation | **English destination only** — recorded in the catalog metadata, and the tile must not imply a Bengali destination |
+| Status | **candidate** |
 
-## Observed but not proposed
+### 3. SeekersGuidance — ISLAMIC_QA category
 
-| Site | Measured | Why it is not proposed yet |
+| Field | Value |
+|---|---|
+| Stable ID | `popular_seekers` |
+| Canonical URL | `https://seekersguidance.org/` |
+| Why | Structured, cited fiqh and creed answers from an established teaching body. |
+| Provenance | `curl -L`: `200`, 2026-09-25 |
+| Tile label | `Q&A` / `প্রশ্নোত্তর` (short form — see R2) |
+| Accessibility name | `SeekersGuidance` |
+| Status | **conditional candidate — not enabled without product, community and security approval** |
+
+**Curation note, and it matters:** SeekersGuidance is a scholarly
+institution, not a neutral corpus. Answers reflect that institution's
+methodology and school. Any curation policy for this rail must say so
+explicitly rather than presenting it as a neutral reference.
+
+## Deferred (with the reason, so this is not re-litigated each time)
+
+| Site | Decision | Why |
 |---|---|---|
-| `islamqa.info` | `200`, but redirects to `/ar` | Arabic default locale. Needs a product decision on whether an Arabic-first site fits an English/Bengali audience, and whether to link a locale path. |
-| `al-islam.org` | `403` even with a browser UA | Probe blocked, so reachability is unconfirmed; also a madhhab-specific source, which is a product/community decision before engineering. |
-| `islamicfoundation.gov.bd` | `000` (no response) | No response from this workspace; cannot nominate something we could not reach. Worth a human check because it is the Bangladesh state body. |
+| IslamicFinder | deferred | A prayer/qibla utility, but `PopularSiteCategory` has no prayer category and it overlaps the planned offline Prayer/Qibla feature. |
+| Islamicity | deferred | A broad portal spanning Articles, Prayer and Community at once; without a single clear editorial reason it does not belong in the initial rail. |
+| Islamic Foundation Bangladesh | future candidate | Needs stable HTTPS reachability and a human content review first. Our probe returned `000` (no response) on 2026-09-25, which is why it is not proposed. |
 
-## Notes for the reviewer
+**No new sites are being added at this stage.**
 
-- **Labels:** names above are the shortest commonly used forms. If any
-  overflows the tile at 200% font scale, the display name is the field to
-  shorten — not the URL.
-- **Bengali presentation:** rows 1-2 differ only by locale; if both are
-  approved, decide whether they are two tiles or one tile with a locale
-  affordance.
-- **Logo slots:** each row assumes a wordmark or site mark from the
-  governed bundled assets, with `HomeGlyph` as the dependency-free
-  fallback only (A13 item 4).
-- **Privacy:** these are ordinary outbound navigations. They open through
-  the normal navigation path, so the ad-block and tracking-protection
-  engine (patches `0005`-`0007`, `0012`) applies to them like any other
-  page — no special path, no data leaves the device beyond the user's own
-  navigation (ADR-037).
+## Binding UI/content requirements (from the review)
+
+- **R1 — the renderer must not know providers.** `PopularSite` currently
+  carries no display name, so the renderer shows only the category label.
+  Before the section is enabled, the model/adapter must carry a
+  product-reviewed, localized destination name and an accessibility
+  label. Verified today: the renderer hardcodes no URL or domain.
+- **R2 — tile labels stay short.** "Islamic Q&A" / "ইসলামিক প্রশ্নোত্তর"
+  is risky at 200% font scale. The tile shows `Q&A` / `প্রশ্নোত্তর`; the
+  full destination name lives in the accessibility description.
+- **R3 — 200% font-scale screenshot tests** for all three tiles. Silent
+  truncation after two lines is not acceptable.
+- **R4 — locale variants share one artwork.**
+- **R5 — no third-party marks.** No wordmark bundling and no runtime
+  favicon fetch without trademark/licence approval. Until approval:
+  governed neutral category artwork.
+- **R6 — every row stays `candidate`** until product and security sign
+  off. Only `approved` rows may be hardcoded into a provider.
+
+## Lead finding: `isReviewedHttps` promises more than it checks
+
+`PopularSite.init` requires `HomeWebAddresses.isReviewedHttps(url)`, which
+reads as if an approved set were being enforced. Its implementation
+(`src/core/home/.../WebAddresses.kt:38`) checks **only** that the scheme
+is `https`:
+
+```kotlin
+scheme.equals("https", ignoreCase = true)
+```
+
+That is a real gap, not a nitpick: the code's name makes a promise about
+review that it does not keep, and §57 is about exactly this kind of
+honesty. Two honest options, and it must be one of them before the
+section is enabled:
+
+1. **Implement the set** — the approved rows of this catalog become the
+   reviewed set, and `isReviewedHttps` checks membership. Then the name
+   tells the truth and the approval gate is enforced in code.
+2. **Rename** to something like `isHttps`, and let the provider own
+   approval — with a test asserting the approved list.
+
+Ownership: `src/core/home` is the Junior's (D1); the provider/adapter is
+the Lead's. Tracked as a blocking item for enabling the section.
 
 ## Machine-readable form (for whichever store is chosen later)
 
 ```csv
-id,display_name,url,locale,review_date,provenance,status
-popular_quran_com,Quran.com,https://quran.com/,en,2026-09-25,"curl -L: 200",candidate
-popular_quran_bn,Quran.com,https://quran.com/bn,bn,2026-09-25,"curl -L: 200",candidate
-popular_sunnah,Sunnah.com,https://sunnah.com/,en,2026-09-25,"curl -L: 200 (UA) / 403 (bare)",candidate
-popular_seekers,SeekersGuidance,https://seekersguidance.org/,en,2026-09-25,"curl -L: 200",candidate
-popular_islamicfinder,IslamicFinder,https://www.islamicfinder.org/,en,2026-09-25,"curl -L: 200 (www)",candidate
-popular_islamicity,Islamicity,https://www.islamicity.org/,en,2026-09-25,"curl -L: 200 (UA, www)",candidate
+id,canonical_url,locale_variant_url,category,tile_label_en,tile_label_bn,accessibility_name,artwork_id,language_limitation,review_date,provenance,status
+popular_quran,https://quran.com/,https://quran.com/bn,QURAN,Qur'an,কুরআন,Quran.com,artwork_quran,,2026-09-25,"curl -L: 200 (/ and /bn)",candidate
+popular_sunnah,https://sunnah.com/,,HADITH,Hadith,হাদিস,Sunnah.com,artwork_hadith,"english_only",2026-09-25,"curl -L: 200 (UA) / 403 (bare)",candidate
+popular_seekers,https://seekersguidance.org/,,ISLAMIC_QA,Q&A,প্রশ্নোত্তর,SeekersGuidance,artwork_islamic_qa,,2026-09-25,"curl -L: 200",conditional
 ```
-
-`status` stays `candidate` until product and security approvers sign off;
-only rows marked `approved` may be hardcoded into a provider.
