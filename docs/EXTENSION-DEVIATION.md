@@ -6,9 +6,24 @@
 
 MASTER-SPEC §16 (extensions) is **preserved as behavioural and
 specification intent**, and is **not implemented** on the current pinned
-Chromium Android baseline. No extension UI, no extension runtime binding,
-and no placeholder affordance is added. Patch numbers **0014–0017 stay
-reserved and unused**.
+Chromium Android baseline. No extension UI by default, no extension
+runtime binding, and no placeholder affordance is added.
+
+Patch numbers **0014–0017** are in use on a branch as an
+**inspection / audit / gating / probe-only series** — never as a shipped
+extension capability. Scope, stated so it cannot be read loosely:
+
+- They **do not** provide, and must not be described as providing, a
+  native Android extension capability.
+- They **do not** turn on any user-facing extension UI by default.
+- They contain **no** fake or placeholder capability and **no** claim of
+  an unsupported capability.
+- They are **not required** by the main Chromium runtime or build path:
+  the APK builds with the series absent, and nothing in Home, the app
+  layer, or any build hop depends on it.
+- A **successful probe is not a production extension implementation.** It
+  means a GN argument was accepted and the configuration generated —
+  nothing more, and it is never reported as more.
 
 ## Baseline limitation (measured, not assumed)
 
@@ -75,12 +90,47 @@ tree could not compile Kotlin.
 The absence of the feature is the honest state. A user cannot discover a
 surface that does not work.
 
-## Reserved series
+## Series status (recorded, kept current)
 
-`0014–0017` are **reserved for extensions and not reused** for any other
-area. Rationale: if the capability becomes available, the series resumes
-with its original identity and documentation instead of being
-renumbered around a gap. See `iNWEB_PATCHES/extension/RESERVED.md`.
+| Field | Value |
+|---|---|
+| Scope | inspection / audit / gating / probe only |
+| Branch | `feature/extensions-0014-0017` — **preserved, never deleted** |
+| Capability claim | **none** — no native Android extension capability |
+| Default user-facing UI | **none** |
+| Required by main build path | **no** |
+| Probing | GN argument/configuration compile probe (plan-only) — see below |
+
+`0014–0017` are **not reused** for any other area. Rationale: if the
+capability becomes available, the series resumes with its original
+identity and documentation instead of being renumbered around a gap. See
+`iNWEB_PATCHES/extension/RESERVED.md`.
+
+### What each patch is allowed to do
+
+| Patch | Permitted scope (and nothing beyond it) |
+|---|---|
+| 0014 | audit tooling that reads the **built** artifact, plus a dedicated GN argument used **as a probe** |
+| 0015 | package/archive inspection and validation — installs and enables **nothing** |
+| 0016 | **closing** extension UI surfaces by default; opt-in only for device verification |
+| 0017 | policy gating that stages decisions, with **no runtime capability claim** |
+
+### Probing rules
+
+- The probe runs in a **separate, controlled hop** and never delays the
+  extension-independent work (build hops, Home integration, APK path).
+- It answers exactly two questions: is the GN argument accepted, and do
+  target/config parse and generation succeed.
+- **Success is not classified as a production extension implementation.**
+- **Failure is recorded truthfully**, in the open, and the series stays
+  dormant / audit-only. A failed probe is not hidden and does not become
+  a silent "reserved".
+
+### Before any merge to `main`
+
+Recorded here, not assumed: the ADR update, the rebase state, the probe
+evidence, and the exact commit SHA. Nothing merges on the strength of a
+green plan-only run.
 
 ## Re-evaluation path
 
