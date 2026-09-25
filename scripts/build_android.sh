@@ -45,6 +45,23 @@ python3 "$ROOT/scripts/apply_patches.py" apply "$WORKSPACE/src"
 python3 "$ROOT/scripts/apply_patches.py" verify "$WORKSPACE/src"
 
 OUT_DIR="out/inweb-$CHANNEL"
+
+# mtime discipline, part 2 — the part that actually works.
+#
+# The hop workflow normalizes the tree to a fixed epoch BEFORE this script
+# runs, then this script applies the patch series, which rewrites every
+# patched file with a CURRENT mtime. Those files are then newer than the
+# resumed out/ artifacts, so siso/ninja treat every patched input as
+# changed and re-execute the graph instead of resuming. Measured: hop 29
+# advanced 220 edges and hop 30 only 49, both re-running the C++ and
+# errorprone edges of the patched targets — the resumed state was buying
+# almost nothing.
+#
+# Normalizing again here, with the patches already in place, is what makes
+# the inputs permanently "not newer" than the artifacts. Keep it after the
+# apply/verify pair above; moving it earlier silently disables it.
+find "$WORKSPACE/src" -path "$OUT_DIR" -prune -o \
+  -exec touch -h -c -d '2020-01-01 00:00:00 UTC' {} +
 gn gen "$OUT_DIR" --args="$(cat "$ARGS_FILE")"
 
 # Record build metadata for reproducibility (stamp consumed by CI).
