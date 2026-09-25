@@ -24,6 +24,31 @@ KOTLIN_VERSION="2.4.20"
 CACHE_DIR="${INWEB_KOTLIN_CACHE:-$HOME/.cache/inweb/kotlin}"
 KOTLINC="$CACHE_DIR/kotlinc-$KOTLIN_VERSION/bin/kotlinc"
 
+# Forbidden imports: the authored app layer compiles INSIDE the Chromium
+# build, so it may only import what the pinned tree actually provides.
+# Each entry below was checked against the pinned tag and is absent from
+# it (docs/HOME-PAGE-HANDOFF.md A10), which means a file importing it
+# compiles here and in CI and then fails in the real build — the exact
+# class of defect this gate exists to catch early.
+#
+#   androidx.compose.material.icons   no icons artifact in third_party/androidx
+#   androidx.compose.material.*       Material 2 absent (material3 is present)
+FORBIDDEN='androidx\.compose\.material\.icons|androidx\.compose\.material\.[a-z0-9.]*'
+SCAN_STATUS=0
+while IFS= read -r file; do
+  HITS="$(grep -nE "$FORBIDDEN" "$file" || true)"
+  if [ -n "$HITS" ]; then
+    echo "[authored-structure] FORBIDDEN IMPORT in ${file#"$ROOT"/}:"
+    printf '%s\n' "$HITS"
+    echo "[authored-structure]   (absent from the pinned Chromium tree — see A10)"
+    SCAN_STATUS=1
+  fi
+done < <(find "$ROOT/src/android-app/src" -name "*.kt" | sort)
+if [ "$SCAN_STATUS" -ne 0 ]; then
+  echo "[authored-structure] forbidden-import scan FAILED"
+  exit 1
+fi
+
 if [ ! -x "$KOTLINC" ]; then
   echo "[authored-structure] kotlinc not found at $KOTLINC —"
   echo "[authored-structure] run scripts/validate_kotlin_core.sh first (shared toolchain cache)."

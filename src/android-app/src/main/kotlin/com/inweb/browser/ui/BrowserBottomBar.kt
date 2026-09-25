@@ -3,12 +3,6 @@ package com.inweb.browser.ui
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Tab
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
@@ -21,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.inweb.browser.BrowserViewModel
@@ -59,7 +54,7 @@ private fun ToolbarItemButton(item: ToolbarItem, viewModel: BrowserViewModel, mo
             modifier = modifier,
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                painter = painterResource(R.drawable.ic_inweb_arrow_back),
                 contentDescription = stringResource(R.string.action_back),
             )
         }
@@ -69,7 +64,7 @@ private fun ToolbarItemButton(item: ToolbarItem, viewModel: BrowserViewModel, mo
             modifier = modifier,
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                painter = painterResource(R.drawable.ic_inweb_arrow_forward),
                 contentDescription = stringResource(R.string.action_forward),
             )
         }
@@ -78,7 +73,7 @@ private fun ToolbarItemButton(item: ToolbarItem, viewModel: BrowserViewModel, mo
             modifier = modifier,
         ) {
             Icon(
-                imageVector = Icons.Filled.Home,
+                painter = painterResource(R.drawable.ic_inweb_home),
                 contentDescription = stringResource(R.string.action_home),
             )
         }
@@ -92,7 +87,7 @@ private fun ToolbarItemButton(item: ToolbarItem, viewModel: BrowserViewModel, mo
                 // §49: the open-tab count is announced as the localized
                 // sentence, not a bare digit (audit finding A-5).
                 Icon(
-                    imageVector = Icons.Filled.Tab,
+                    painter = painterResource(R.drawable.ic_inweb_tab),
                     contentDescription = stringResource(
                         R.string.tabs_count,
                         viewModel.tabIds.size,
@@ -109,7 +104,7 @@ private fun MenuButton(viewModel: BrowserViewModel, modifier: Modifier = Modifie
     var expanded by remember { mutableStateOf(false) }
     IconButton(onClick = { expanded = true }, modifier = modifier) {
         Icon(
-            imageVector = Icons.Filled.Menu,
+            painter = painterResource(R.drawable.ic_inweb_menu),
             contentDescription = stringResource(R.string.action_menu),
         )
     }

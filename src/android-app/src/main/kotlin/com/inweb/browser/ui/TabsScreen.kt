@@ -14,11 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,6 +25,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,7 +51,7 @@ fun TabsScreen(viewModel: BrowserViewModel) {
                 navigationIcon = {
                     IconButton(onClick = { viewModel.closeOverlay() }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            painter = painterResource(R.drawable.ic_inweb_arrow_back),
                             contentDescription = stringResource(R.string.action_back),
                         )
                     }
@@ -63,13 +59,13 @@ fun TabsScreen(viewModel: BrowserViewModel) {
                 actions = {
                     IconButton(onClick = { viewModel.openTab(isPrivate = true) }) {
                         Icon(
-                            imageVector = Icons.Filled.Lock,
+                            painter = painterResource(R.drawable.ic_inweb_lock),
                             contentDescription = stringResource(R.string.action_new_private_tab),
                         )
                     }
                     IconButton(onClick = { viewModel.openTab() }) {
                         Icon(
-                            imageVector = Icons.Filled.Add,
+                            painter = painterResource(R.drawable.ic_inweb_add),
                             contentDescription = stringResource(R.string.action_new_tab),
                         )
                     }
@@ -142,7 +138,7 @@ private fun TabCard(
                 // compact 28dp sizing was an audit finding, A-1).
                 IconButton(onClick = onClose) {
                     Icon(
-                        imageVector = Icons.Filled.Close,
+                        painter = painterResource(R.drawable.ic_inweb_close),
                         contentDescription = stringResource(R.string.action_close_tab),
                         modifier = Modifier.size(18.dp),
                     )

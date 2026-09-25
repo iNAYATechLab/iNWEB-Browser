@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- iNWEB Browser — Delete icon.
+     Hand-authored geometry (no third-party icon pack, so no separate
+     licence or attribution). Stroke colour is black by design: Compose's
+     Icon() tints the painter with LocalContentColor, so these follow the
+     Material 3 content colour in light and dark themes.
+     Replaces androidx.compose.material.icons, which is absent from the
+     pinned Chromium tree (docs/HOME-PAGE-HANDOFF.md A10). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M4,7h16"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2"
+        android:strokeLineCap="Round"
+        android:strokeLineJoin="Round" />
+    <path
+        android:pathData="M9,4h6v3H9z"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2"
+        android:strokeLineCap="Round"
+        android:strokeLineJoin="Round" />
+    <path
+        android:pathData="M6,7l1,13h10l1,-13"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2"
+        android:strokeLineCap="Round"
+        android:strokeLineJoin="Round" />
+    <path
+        android:pathData="M10,11v6"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2"
+        android:strokeLineCap="Round"
+        android:strokeLineJoin="Round" />
+    <path
+        android:pathData="M14,11v6"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2"
+        android:strokeLineCap="Round"
+        android:strokeLineJoin="Round" />
+</vector>

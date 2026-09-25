@@ -5,10 +5,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -21,6 +17,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -48,7 +45,7 @@ fun CustomizeToolbarScreen(viewModel: BrowserViewModel) {
                 navigationIcon = {
                     IconButton(onClick = { viewModel.closeOverlay() }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            painter = painterResource(R.drawable.ic_inweb_arrow_back),
                             contentDescription = stringResource(R.string.action_back),
                         )
                     }
@@ -118,13 +115,13 @@ private fun ToolbarEntryRow(
         }
         IconButton(onClick = onMoveUp, enabled = !isFirst) {
             Icon(
-                imageVector = Icons.Filled.KeyboardArrowUp,
+                painter = painterResource(R.drawable.ic_inweb_chevron_up),
                 contentDescription = stringResource(R.string.toolbar_move_up),
             )
         }
         IconButton(onClick = onMoveDown, enabled = !isLast) {
             Icon(
-                imageVector = Icons.Filled.KeyboardArrowDown,
+                painter = painterResource(R.drawable.ic_inweb_chevron_down),
                 contentDescription = stringResource(R.string.toolbar_move_down),
             )
         }

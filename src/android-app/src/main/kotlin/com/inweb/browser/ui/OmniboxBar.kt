@@ -9,10 +9,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -42,7 +39,7 @@ fun OmniboxBar(viewModel: BrowserViewModel) {
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = Icons.Filled.Lock,
+                painter = painterResource(R.drawable.ic_inweb_lock),
                 contentDescription = stringResource(R.string.omnibox_security),
                 tint = MaterialTheme.colorScheme.primary,
             )
@@ -63,14 +60,14 @@ fun OmniboxBar(viewModel: BrowserViewModel) {
             if (tab?.lifecycle == TabLifecycle.LOADING) {
                 IconButton(onClick = { viewModel.stop() }) {
                     Icon(
-                        imageVector = Icons.Filled.Close,
+                        painter = painterResource(R.drawable.ic_inweb_close),
                         contentDescription = stringResource(R.string.omnibox_stop),
                     )
                 }
             } else {
                 IconButton(onClick = { viewModel.reload() }) {
                     Icon(
-                        imageVector = Icons.Filled.Refresh,
+                        painter = painterResource(R.drawable.ic_inweb_refresh),
                         contentDescription = stringResource(R.string.omnibox_reload),
                     )
                 }
