@@ -446,3 +446,63 @@ files, land the 59 catalog strings, then inject `src/core` + the real
 sources. The renderer draft (PR #3, merged) is the view layer those
 depend on, and it was reviewed against this reality — no material icons,
 state-only privacy, focus-only search, model-driven provider gating.
+
+### A12 — Lead integration decision: target layout and call site (2026-09-25)
+
+Decided after the probe (A11), and recorded because the choice is
+consequential and easy to second-guess later.
+
+**Target layout** — three GN targets under the path the probe proved and
+the allowlist already covers (`//chrome/android/java/src/org/chromium/chrome/browser/inweb/*`):
+
+| Target | Contents | Compose |
+|---|---|---|
+| `inweb/core` | the 11 pure-Kotlin `src/core` modules | no |
+| `inweb/home` | `src/core/home`, the renderer, Home resources | yes (`enable_compose = true`) |
+| `inweb/app` | hosting glue (ComposeView shims, bridges) | yes |
+
+All three wire into `chrome_java`, as the probe's single target already
+does. Splitting them keeps the pure-Kotlin core out of the Compose
+compilation and makes a failure attributable to one layer.
+
+**Call site — surgical, not a rewrite.** The Home surface is hosted from
+the **new-tab page**: a `ComposeView` created in the NTP path
+(`NewTabPageCoordinator` / `NewTabPageLayout`) renders
+`InwebHomeRenderer`. Everything else stays upstream Chrome for now.
+
+Why not replace the launcher with our authored `MainActivity`:
+our app layer is 23 Kotlin files that have never executed, wired to a
+browser shell that has never been bound to the real content surface.
+Swapping the launcher would put an unrun prototype in front of every
+screen at once, and a single failure would be unattributable (§55).
+Hosting the Home page first proves the binding on one surface, keeps the
+diff reviewable, and leaves the rest of Chrome working meanwhile.
+
+**Known risk to close before the real injection (next probe):** the probe
+used package `org.chromium.chrome.browser.inweb.app`, matching its path.
+The authored sources use `com.inweb.browser.*`, which does *not* match the
+tree path. Chromium may or may not enforce package/path agreement for a
+java target — the probe did not answer this, and 100+ files should not be
+injected on the assumption that it does not. The next probe therefore
+adds one file packaged `com.inweb.browser.*` plus a ComposeView shim, and
+answers both questions in a single hop.
+
+### A13 — Remaining Lead integration items (3-5 of the six)
+
+3. **Real providers → `HomePageModel`.** The renderer takes an immutable
+   model and nothing else, so the host builds it from the stores that
+   exist: `HistoryStore`/`BookmarkStore`/`DownloadsStore` for the
+   snapshots, `TopSites.compute` for shortcuts, `OfflineLibrary` for saved
+   pages, `SecurityCenterModel` for the privacy state. No field is
+   populated from anything that is not a real store — that is the §57
+   line the model's sealed states exist to hold.
+4. **Drawables.** The documented image/logo slots map to governed bundled
+   drawables (the same assets behind patches `0003`/`0004`). `HomeGlyph`
+   stays what it is: a dependency-free vector fallback for icons we have
+   no asset for yet, never the intended look.
+5. **Privacy stays state-only.** `0005`-`0007` expose no blocked-item
+   counter, so no number is shown. A future JNI bridge is Lead-owned and
+   lands only together with a real counter in the native engine.
+6. **Lead-owned, unchanged:** GN/resource wiring, patch generation,
+   bottom navigation and its versioned migration, device/APK validation,
+   and landing on `main`.
