@@ -577,9 +577,10 @@ patches:
     description: >-
       App-layer build probe, second stage: the REAL authored sources. The
       first stage proved the mechanism with one trivial composable; this
-      one carries 42 pure-JVM core files (browser-shell,
-      tracking-protection, offline, home), the 2 Compose renderer files
-      from PR #3, and the authored resources, and answers what the first
+      one carries 43 pure-JVM core files (browser-shell,
+      tracking-protection, offline, home, and the merged PR #4 approved
+      content-catalog provider), the 2 Compose renderer files from PR #3,
+      and the authored resources, and answers what the first
       deliberately left open: whether Kotlin whose package does not match
       its tree path compiles (authored code is com.inweb.browser.* under
       an org.chromium.chrome tree path), whether the real renderer
@@ -611,6 +612,7 @@ patches:
       - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/TabsController.kt
       - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/TopSites.kt
       - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/ZoomPreferences.kt
+      - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/content-catalog/com/inweb/browser/contentcatalog/ApprovedPopularSitesCatalog.kt
       - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomeAdapters.kt
       - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomeContent.kt
       - chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomePageModel.kt

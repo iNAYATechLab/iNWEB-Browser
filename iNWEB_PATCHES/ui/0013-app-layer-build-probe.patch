@@ -1,5 +1,5 @@
 diff --git a/build/config/android/internal_rules.gni b/build/config/android/internal_rules.gni
-index 18231e57e25..2a94ad6ea4c 100644
+index 18231e5..2a94ad6 100644
 --- a/build/config/android/internal_rules.gni
 +++ b/build/config/android/internal_rules.gni
 @@ -4007,6 +4007,13 @@ if (enable_java_templates) {
@@ -17,7 +17,7 @@ index 18231e57e25..2a94ad6ea4c 100644
          _found_kt = filter_exclude(_abs_kt_files, _kt_allowlist)
          assert(
 diff --git a/chrome/android/BUILD.gn b/chrome/android/BUILD.gn
-index 2133a964d0c..230c41911a5 100644
+index 2133a96..230c419 100644
 --- a/chrome/android/BUILD.gn
 +++ b/chrome/android/BUILD.gn
 @@ -314,6 +314,7 @@ if (_is_default_toolchain) {
@@ -30,7 +30,7 @@ index 2133a964d0c..230c41911a5 100644
        ":chrome_public_apk_template_resources",
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/BUILD.gn b/chrome/android/java/src/org/chromium/chrome/browser/inweb/BUILD.gn
 new file mode 100644
-index 00000000000..2c93cd94ebc
+index 0000000..2c93cd9
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/BUILD.gn
 @@ -0,0 +1,52 @@
@@ -88,7 +88,7 @@ index 00000000000..2c93cd94ebc
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/BookmarkStore.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/BookmarkStore.kt
 new file mode 100644
-index 00000000000..3fb383f1584
+index 0000000..3fb383f
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/BookmarkStore.kt
 @@ -0,0 +1,123 @@
@@ -217,7 +217,7 @@ index 00000000000..3fb383f1584
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/BrowserEngine.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/BrowserEngine.kt
 new file mode 100644
-index 00000000000..ee3908fb7c4
+index 0000000..ee3908f
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/BrowserEngine.kt
 @@ -0,0 +1,25 @@
@@ -248,7 +248,7 @@ index 00000000000..ee3908fb7c4
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/DownloadPreferences.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/DownloadPreferences.kt
 new file mode 100644
-index 00000000000..491960883b5
+index 0000000..4919608
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/DownloadPreferences.kt
 @@ -0,0 +1,137 @@
@@ -391,7 +391,7 @@ index 00000000000..491960883b5
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/Downloads.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/Downloads.kt
 new file mode 100644
-index 00000000000..a5cc237c73c
+index 0000000..a5cc237
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/Downloads.kt
 @@ -0,0 +1,58 @@
@@ -455,7 +455,7 @@ index 00000000000..a5cc237c73c
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/DownloadsStore.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/DownloadsStore.kt
 new file mode 100644
-index 00000000000..ffb45a90ba5
+index 0000000..ffb45a9
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/DownloadsStore.kt
 @@ -0,0 +1,42 @@
@@ -503,7 +503,7 @@ index 00000000000..ffb45a90ba5
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/FileBookmarkStore.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/FileBookmarkStore.kt
 new file mode 100644
-index 00000000000..484289a269a
+index 0000000..484289a
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/FileBookmarkStore.kt
 @@ -0,0 +1,165 @@
@@ -674,7 +674,7 @@ index 00000000000..484289a269a
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/FileHistoryStore.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/FileHistoryStore.kt
 new file mode 100644
-index 00000000000..8000d89586e
+index 0000000..8000d89
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/FileHistoryStore.kt
 @@ -0,0 +1,162 @@
@@ -842,7 +842,7 @@ index 00000000000..8000d89586e
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/HistoryStore.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/HistoryStore.kt
 new file mode 100644
-index 00000000000..3ffb506fecd
+index 0000000..3ffb506
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/HistoryStore.kt
 @@ -0,0 +1,129 @@
@@ -977,7 +977,7 @@ index 00000000000..3ffb506fecd
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/Omnibox.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/Omnibox.kt
 new file mode 100644
-index 00000000000..d1fcfe194ab
+index 0000000..d1fcfe1
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/Omnibox.kt
 @@ -0,0 +1,49 @@
@@ -1032,7 +1032,7 @@ index 00000000000..d1fcfe194ab
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/SearchEngine.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/SearchEngine.kt
 new file mode 100644
-index 00000000000..dffab245077
+index 0000000..dffab24
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/SearchEngine.kt
 @@ -0,0 +1,29 @@
@@ -1067,7 +1067,7 @@ index 00000000000..dffab245077
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/SessionManager.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/SessionManager.kt
 new file mode 100644
-index 00000000000..c34d551dd95
+index 0000000..c34d551
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/SessionManager.kt
 @@ -0,0 +1,67 @@
@@ -1140,7 +1140,7 @@ index 00000000000..c34d551dd95
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/SessionStore.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/SessionStore.kt
 new file mode 100644
-index 00000000000..77c02d78fbc
+index 0000000..77c02d7
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/SessionStore.kt
 @@ -0,0 +1,87 @@
@@ -1233,7 +1233,7 @@ index 00000000000..77c02d78fbc
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/Settings.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/Settings.kt
 new file mode 100644
-index 00000000000..30d79ba2a05
+index 0000000..30d79ba
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/Settings.kt
 @@ -0,0 +1,45 @@
@@ -1284,7 +1284,7 @@ index 00000000000..30d79ba2a05
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/TabState.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/TabState.kt
 new file mode 100644
-index 00000000000..d377bae0b50
+index 0000000..d377bae
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/TabState.kt
 @@ -0,0 +1,64 @@
@@ -1354,7 +1354,7 @@ index 00000000000..d377bae0b50
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/TabsController.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/TabsController.kt
 new file mode 100644
-index 00000000000..3255c66f7d8
+index 0000000..3255c66
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/TabsController.kt
 @@ -0,0 +1,85 @@
@@ -1445,7 +1445,7 @@ index 00000000000..3255c66f7d8
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/TopSites.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/TopSites.kt
 new file mode 100644
-index 00000000000..3c03d9394a5
+index 0000000..3c03d93
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/TopSites.kt
 @@ -0,0 +1,48 @@
@@ -1499,7 +1499,7 @@ index 00000000000..3c03d9394a5
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/ZoomPreferences.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/ZoomPreferences.kt
 new file mode 100644
-index 00000000000..be764a4a6e6
+index 0000000..be764a4
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/browser-shell/com/inweb/browser/shell/ZoomPreferences.kt
 @@ -0,0 +1,230 @@
@@ -1733,9 +1733,138 @@ index 00000000000..be764a4a6e6
 +    private fun persist() =
 +        store.save(ZoomStoreData(defaultFactor = prefs.defaultFactor, siteZooms = prefs.siteZooms))
 +}
+diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/content-catalog/com/inweb/browser/contentcatalog/ApprovedPopularSitesCatalog.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/content-catalog/com/inweb/browser/contentcatalog/ApprovedPopularSitesCatalog.kt
+new file mode 100644
+index 0000000..1419c4e
+--- /dev/null
++++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/content-catalog/com/inweb/browser/contentcatalog/ApprovedPopularSitesCatalog.kt
+@@ -0,0 +1,123 @@
++// iNWEB Browser — approved popular-site catalogue (pure JVM, Lead-owned).
++//
++// Why this is a separate module and not a file in the Home core: approval
++// is the provider's job, not the model's, and it needs real tests.
++// src/android-app has no Kotlin test harness, so the admission logic lives
++// here where it can be tested, and the app layer stays a thin consumer.
++//
++// The rule it enforces: the Home rail shows ONLY rows that are in this
++// catalogue, each carrying its reviewed name and accessibility label.
++
++package com.inweb.browser.contentcatalog
++
++import com.inweb.browser.home.PopularSite
++import com.inweb.browser.home.PopularSiteCategory
++import java.net.URI
++
++/**
++ * One reviewed destination the Home rail is allowed to show.
++ *
++ * Locale variants are part of the approval record. A locale can never rewrite
++ * or synthesize a URL: it selects an explicitly reviewed entry or falls back
++ * to [canonicalUrl].
++ *
++ * The four approval fields are not decoration: an approval that cannot say
++ * who approved it, when, for what scope and why cannot be audited later.
++ */
++data class ApprovedCatalogRow(
++    val id: String,
++    val category: PopularSiteCategory,
++    val canonicalUrl: String,
++    val localeVariantUrls: Map<String, String> = emptyMap(),
++    val artworkId: String,
++    val destinationName: String,
++    val accessibilityLabel: String,
++    val reviewerRole: String,
++    val approvedOn: String,
++    val scope: String,
++    val rationale: String,
++) {
++    init {
++        require(id.matches(Regex("[a-z0-9]+(?:_[a-z0-9]+)*"))) {
++            "approved row id must be a stable lowercase identifier"
++        }
++        require(artworkId.isNotBlank()) { "approved row artworkId must not be blank" }
++        require(destinationName.isNotBlank()) { "approved row destinationName must not be blank" }
++        require(accessibilityLabel.isNotBlank()) { "approved row accessibilityLabel must not be blank" }
++        require(reviewerRole.isNotBlank()) { "approved row reviewerRole must not be blank" }
++        require(approvedOn.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) {
++            "approved row approvedOn must be an ISO date"
++        }
++        require(scope.isNotBlank()) { "approved row scope must not be blank" }
++        require(rationale.isNotBlank()) { "approved row rationale must not be blank" }
++        require(isValidHttps(canonicalUrl)) { "approved row canonicalUrl must be valid HTTPS" }
++        localeVariantUrls.forEach { (localeTag, url) ->
++            require(
++                normalizeLocaleTag(localeTag) == localeTag &&
++                    localeTag.matches(Regex("[a-z]{2,3}(?:-[a-z0-9]{2,8})*")),
++            ) {
++                "locale variant keys must be normalized BCP-47 tags"
++            }
++            require(isValidHttps(url)) { "approved locale URL must be valid HTTPS" }
++        }
++    }
++
++    fun urlFor(localeTag: String?): String {
++        val normalized = normalizeLocaleTag(localeTag.orEmpty())
++        if (normalized.isEmpty()) return canonicalUrl
++        return localeVariantUrls[normalized]
++            ?: localeVariantUrls[normalized.substringBefore('-')]
++            ?: canonicalUrl
++    }
++
++    private fun isValidHttps(value: String): Boolean = runCatching {
++        val uri = URI(value).normalize()
++        uri.scheme.equals("https", ignoreCase = true) &&
++            !uri.host.isNullOrBlank() &&
++            uri.userInfo == null
++    }.getOrDefault(false)
++
++    private fun normalizeLocaleTag(value: String): String = value
++        .trim()
++        .replace('_', '-')
++        .lowercase()
++}
++
++object ApprovedPopularSitesCatalog {
++    /**
++     * Empty — and that is the current truth, not an oversight: nothing has
++     * been approved. docs/POPULAR-SITES-CANDIDATES.md holds the candidates
++     * and the reason each one is not approved yet.
++     *
++     * An empty catalogue means the rail admits nothing and the section
++     * stays hidden. Never a placeholder, never a "coming soon".
++     */
++    val rows: List<ApprovedCatalogRow> = emptyList()
++
++    /** Production admission has no arbitrary-list escape hatch. */
++    fun admit(category: PopularSiteCategory, localeTag: String?): List<PopularSite> =
++        admitApprovedRows(category, localeTag, rows)
++
++    fun isApproved(id: String): Boolean = rows.any { it.id == id }
++
++    /** Test seam is module-internal; production callers cannot substitute candidates. */
++    internal fun admitApprovedRows(
++        category: PopularSiteCategory,
++        localeTag: String?,
++        approvedRows: List<ApprovedCatalogRow>,
++    ): List<PopularSite> {
++        require(approvedRows.map { it.id }.distinct().size == approvedRows.size) {
++            "approved catalog stable IDs must be unique"
++        }
++        return approvedRows.filter { it.category == category }.map { row ->
++            PopularSite(
++                id = row.id,
++                category = row.category,
++                url = row.urlFor(localeTag),
++                artworkId = row.artworkId,
++                destinationName = row.destinationName,
++                accessibilityLabel = row.accessibilityLabel,
++            )
++        }
++    }
++}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomeAdapters.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomeAdapters.kt
 new file mode 100644
-index 00000000000..3a9945e60ae
+index 0000000..3a9945e
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomeAdapters.kt
 @@ -0,0 +1,108 @@
@@ -1849,10 +1978,10 @@ index 00000000000..3a9945e60ae
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomeContent.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomeContent.kt
 new file mode 100644
-index 00000000000..e9b43c0e84c
+index 0000000..4aaa791
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomeContent.kt
-@@ -0,0 +1,202 @@
+@@ -0,0 +1,211 @@
 +package com.inweb.browser.home
 +
 +import java.time.ZoneId
@@ -1908,17 +2037,26 @@ index 00000000000..e9b43c0e84c
 +    NEWS("news"),
 +}
 +
-+/** One product-reviewed curated destination. No default URLs live in this core. */
++/**
++ * One provider-supplied curated destination. No default URLs or approval list
++ * live in this core; the provider admits only product-approved catalog rows.
++ */
 +data class PopularSite(
 +    val id: String,
 +    val category: PopularSiteCategory,
 +    val url: String,
 +    val artworkId: String,
++    /** Reviewed destination name, localized by the provider when appropriate. */
++    val destinationName: String,
++    /** Complete locale-appropriate announcement for the outbound tile. */
++    val accessibilityLabel: String,
 +) {
 +    init {
 +        require(id.isNotBlank()) { "popular-site id must not be blank" }
 +        require(artworkId.isNotBlank()) { "popular-site artworkId must not be blank" }
-+        require(HomeWebAddresses.isReviewedHttps(url)) {
++        require(destinationName.isNotBlank()) { "popular-site destinationName must not be blank" }
++        require(accessibilityLabel.isNotBlank()) { "popular-site accessibilityLabel must not be blank" }
++        require(HomeWebAddresses.isHttps(url)) {
 +            "popular-site URL must be a valid HTTPS destination"
 +        }
 +    }
@@ -1990,7 +2128,7 @@ index 00000000000..e9b43c0e84c
 +        require(id.isNotBlank()) { "wisdom id must not be blank" }
 +        require(body.isNotBlank()) { "wisdom body must not be blank" }
 +        require(citation.isNotBlank()) { "wisdom citation must not be blank" }
-+        require(sourceUrl == null || HomeWebAddresses.isReviewedHttps(sourceUrl)) {
++        require(sourceUrl == null || HomeWebAddresses.isHttps(sourceUrl)) {
 +            "wisdom sourceUrl must be null or valid HTTPS"
 +        }
 +    }
@@ -2057,7 +2195,7 @@ index 00000000000..e9b43c0e84c
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomePageModel.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomePageModel.kt
 new file mode 100644
-index 00000000000..45de586ea33
+index 0000000..45de586
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomePageModel.kt
 @@ -0,0 +1,226 @@
@@ -2289,7 +2427,7 @@ index 00000000000..45de586ea33
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomeSearch.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomeSearch.kt
 new file mode 100644
-index 00000000000..0feff06a4ac
+index 0000000..0feff06
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/HomeSearch.kt
 @@ -0,0 +1,69 @@
@@ -2364,7 +2502,7 @@ index 00000000000..0feff06a4ac
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/QuickAccess.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/QuickAccess.kt
 new file mode 100644
-index 00000000000..6c4a6ea9a20
+index 0000000..6c4a6ea
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/QuickAccess.kt
 @@ -0,0 +1,231 @@
@@ -2601,10 +2739,10 @@ index 00000000000..6c4a6ea9a20
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/WebAddresses.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/WebAddresses.kt
 new file mode 100644
-index 00000000000..8e50c7e7f4d
+index 0000000..70474ad
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/home/com/inweb/browser/home/WebAddresses.kt
-@@ -0,0 +1,78 @@
+@@ -0,0 +1,79 @@
 +package com.inweb.browser.home
 +
 +import com.inweb.browser.shell.OmniboxInput
@@ -2642,7 +2780,8 @@ index 00000000000..8e50c7e7f4d
 +    fun isWebDestination(url: String): Boolean =
 +        normalizeParsedUrl(url) is WebAddressResult.Valid
 +
-+    fun isReviewedHttps(url: String): Boolean =
++    /** Validates URL shape and HTTPS transport only; catalog approval is provider-owned. */
++    fun isHttps(url: String): Boolean =
 +        when (val result = normalizeParsedUrl(url)) {
 +            is WebAddressResult.Valid -> {
 +                val scheme = runCatching { URI(result.url).scheme }.getOrNull()
@@ -2685,7 +2824,7 @@ index 00000000000..8e50c7e7f4d
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/offline/com/inweb/browser/offline/OfflineLibrary.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/offline/com/inweb/browser/offline/OfflineLibrary.kt
 new file mode 100644
-index 00000000000..e62834cfd8b
+index 0000000..e62834c
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/offline/com/inweb/browser/offline/OfflineLibrary.kt
 @@ -0,0 +1,169 @@
@@ -2860,7 +2999,7 @@ index 00000000000..e62834cfd8b
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/CombinedMatcher.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/CombinedMatcher.kt
 new file mode 100644
-index 00000000000..efe9706a457
+index 0000000..efe9706
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/CombinedMatcher.kt
 @@ -0,0 +1,116 @@
@@ -2982,7 +3121,7 @@ index 00000000000..efe9706a457
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/CosmeticFilter.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/CosmeticFilter.kt
 new file mode 100644
-index 00000000000..50a8d5c32bb
+index 0000000..50a8d5c
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/CosmeticFilter.kt
 @@ -0,0 +1,165 @@
@@ -3153,7 +3292,7 @@ index 00000000000..50a8d5c32bb
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/DomainClassifier.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/DomainClassifier.kt
 new file mode 100644
-index 00000000000..23e1dac7ff6
+index 0000000..23e1dac
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/DomainClassifier.kt
 @@ -0,0 +1,50 @@
@@ -3209,7 +3348,7 @@ index 00000000000..23e1dac7ff6
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/FilterListParser.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/FilterListParser.kt
 new file mode 100644
-index 00000000000..b04adda7128
+index 0000000..b04adda
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/FilterListParser.kt
 @@ -0,0 +1,166 @@
@@ -3381,7 +3520,7 @@ index 00000000000..b04adda7128
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/FilterRule.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/FilterRule.kt
 new file mode 100644
-index 00000000000..6dc0fab8cb6
+index 0000000..6dc0fab
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/FilterRule.kt
 @@ -0,0 +1,53 @@
@@ -3440,7 +3579,7 @@ index 00000000000..6dc0fab8cb6
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/PatternCompiler.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/PatternCompiler.kt
 new file mode 100644
-index 00000000000..229ba631f71
+index 0000000..229ba63
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/PatternCompiler.kt
 @@ -0,0 +1,36 @@
@@ -3482,7 +3621,7 @@ index 00000000000..229ba631f71
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/ResourceType.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/ResourceType.kt
 new file mode 100644
-index 00000000000..658a96c5431
+index 0000000..658a96c
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/ResourceType.kt
 @@ -0,0 +1,17 @@
@@ -3505,7 +3644,7 @@ index 00000000000..658a96c5431
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/RuleMatcher.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/RuleMatcher.kt
 new file mode 100644
-index 00000000000..33fb2c0df7e
+index 0000000..33fb2c0
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/RuleMatcher.kt
 @@ -0,0 +1,73 @@
@@ -3584,7 +3723,7 @@ index 00000000000..33fb2c0df7e
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/SecurityCenter.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/SecurityCenter.kt
 new file mode 100644
-index 00000000000..1add6a084eb
+index 0000000..1add6a0
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/SecurityCenter.kt
 @@ -0,0 +1,88 @@
@@ -3678,7 +3817,7 @@ index 00000000000..1add6a084eb
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/TrackingProtectionEngine.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/TrackingProtectionEngine.kt
 new file mode 100644
-index 00000000000..a93a41415a2
+index 0000000..a93a414
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/TrackingProtectionEngine.kt
 @@ -0,0 +1,122 @@
@@ -3806,7 +3945,7 @@ index 00000000000..a93a41415a2
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/TrackingProtectionSettings.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/TrackingProtectionSettings.kt
 new file mode 100644
-index 00000000000..ee1e2307664
+index 0000000..ee1e230
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/TrackingProtectionSettings.kt
 @@ -0,0 +1,34 @@
@@ -3846,10 +3985,10 @@ index 00000000000..ee1e2307664
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListCache.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListCache.kt
 new file mode 100644
-index 00000000000..1390b00482f
+index 0000000..999f85f
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListCache.kt
-@@ -0,0 +1,144 @@
+@@ -0,0 +1,143 @@
 +package com.inweb.browser.privacy.lists
 +
 +import java.io.File
@@ -3993,10 +4132,9 @@ index 00000000000..1390b00482f
 +        metadata.clear()
 +    }
 +}
-+
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListChecksum.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListChecksum.kt
 new file mode 100644
-index 00000000000..6c677e842dc
+index 0000000..6c677e8
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListChecksum.kt
 @@ -0,0 +1,24 @@
@@ -4026,7 +4164,7 @@ index 00000000000..6c677e842dc
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListFetcher.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListFetcher.kt
 new file mode 100644
-index 00000000000..9f6f15c100b
+index 0000000..9f6f15c
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListFetcher.kt
 @@ -0,0 +1,94 @@
@@ -4126,7 +4264,7 @@ index 00000000000..9f6f15c100b
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListManager.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListManager.kt
 new file mode 100644
-index 00000000000..a9ac5e6234b
+index 0000000..a9ac5e6
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListManager.kt
 @@ -0,0 +1,225 @@
@@ -4357,7 +4495,7 @@ index 00000000000..a9ac5e6234b
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListSource.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListSource.kt
 new file mode 100644
-index 00000000000..42b7b6c5d5c
+index 0000000..42b7b6c
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListSource.kt
 @@ -0,0 +1,41 @@
@@ -4404,7 +4542,7 @@ index 00000000000..42b7b6c5d5c
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListVersion.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListVersion.kt
 new file mode 100644
-index 00000000000..a68aa0d4828
+index 0000000..a68aa0d
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/FilterListVersion.kt
 @@ -0,0 +1,33 @@
@@ -4443,7 +4581,7 @@ index 00000000000..a68aa0d4828
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/UpdatePolicy.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/UpdatePolicy.kt
 new file mode 100644
-index 00000000000..ed36e38b583
+index 0000000..ed36e38
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/core/tracking-protection/com/inweb/browser/privacy/lists/UpdatePolicy.kt
 @@ -0,0 +1,25 @@
@@ -4474,7 +4612,7 @@ index 00000000000..ed36e38b583
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_add.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_add.xml
 new file mode 100644
-index 00000000000..cf7972fd1d0
+index 0000000..cf7972f
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_add.xml
 @@ -0,0 +1,26 @@
@@ -4506,7 +4644,7 @@ index 00000000000..cf7972fd1d0
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_arrow_back.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_arrow_back.xml
 new file mode 100644
-index 00000000000..e8d1fd8f80e
+index 0000000..e8d1fd8
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_arrow_back.xml
 @@ -0,0 +1,26 @@
@@ -4538,7 +4676,7 @@ index 00000000000..e8d1fd8f80e
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_arrow_forward.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_arrow_forward.xml
 new file mode 100644
-index 00000000000..05481b67efc
+index 0000000..05481b6
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_arrow_forward.xml
 @@ -0,0 +1,26 @@
@@ -4570,7 +4708,7 @@ index 00000000000..05481b67efc
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_check_circle.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_check_circle.xml
 new file mode 100644
-index 00000000000..ec57086e91c
+index 0000000..ec57086
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_check_circle.xml
 @@ -0,0 +1,26 @@
@@ -4602,7 +4740,7 @@ index 00000000000..ec57086e91c
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_chevron_down.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_chevron_down.xml
 new file mode 100644
-index 00000000000..7059adcd1c6
+index 0000000..7059adc
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_chevron_down.xml
 @@ -0,0 +1,20 @@
@@ -4628,7 +4766,7 @@ index 00000000000..7059adcd1c6
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_chevron_right.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_chevron_right.xml
 new file mode 100644
-index 00000000000..081a716e694
+index 0000000..081a716
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_chevron_right.xml
 @@ -0,0 +1,20 @@
@@ -4654,7 +4792,7 @@ index 00000000000..081a716e694
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_chevron_up.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_chevron_up.xml
 new file mode 100644
-index 00000000000..f06ae7f4473
+index 0000000..f06ae7f
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_chevron_up.xml
 @@ -0,0 +1,20 @@
@@ -4680,7 +4818,7 @@ index 00000000000..f06ae7f4473
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_close.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_close.xml
 new file mode 100644
-index 00000000000..1ed88236943
+index 0000000..1ed8823
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_close.xml
 @@ -0,0 +1,26 @@
@@ -4712,7 +4850,7 @@ index 00000000000..1ed88236943
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_delete.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_delete.xml
 new file mode 100644
-index 00000000000..d067074f0d9
+index 0000000..d067074
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_delete.xml
 @@ -0,0 +1,44 @@
@@ -4762,7 +4900,7 @@ index 00000000000..d067074f0d9
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_home.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_home.xml
 new file mode 100644
-index 00000000000..cec0f2ca945
+index 0000000..cec0f2c
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_home.xml
 @@ -0,0 +1,26 @@
@@ -4794,7 +4932,7 @@ index 00000000000..cec0f2ca945
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_lock.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_lock.xml
 new file mode 100644
-index 00000000000..c5f3fdfda67
+index 0000000..c5f3fdf
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_lock.xml
 @@ -0,0 +1,26 @@
@@ -4826,7 +4964,7 @@ index 00000000000..c5f3fdfda67
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_menu.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_menu.xml
 new file mode 100644
-index 00000000000..65870752138
+index 0000000..6587075
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_menu.xml
 @@ -0,0 +1,32 @@
@@ -4864,7 +5002,7 @@ index 00000000000..65870752138
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_refresh.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_refresh.xml
 new file mode 100644
-index 00000000000..be92d05c53a
+index 0000000..be92d05
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_refresh.xml
 @@ -0,0 +1,26 @@
@@ -4896,7 +5034,7 @@ index 00000000000..be92d05c53a
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_search.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_search.xml
 new file mode 100644
-index 00000000000..97b3378cb22
+index 0000000..97b3378
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_search.xml
 @@ -0,0 +1,26 @@
@@ -4928,7 +5066,7 @@ index 00000000000..97b3378cb22
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_tab.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_tab.xml
 new file mode 100644
-index 00000000000..128290b9158
+index 0000000..128290b
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_tab.xml
 @@ -0,0 +1,26 @@
@@ -4960,7 +5098,7 @@ index 00000000000..128290b9158
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/values-bn/strings.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/values-bn/strings.xml
 new file mode 100644
-index 00000000000..f96671ba680
+index 0000000..f96671b
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/values-bn/strings.xml
 @@ -0,0 +1,201 @@
@@ -5167,7 +5305,7 @@ index 00000000000..f96671ba680
 +</resources>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/values/strings.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/values/strings.xml
 new file mode 100644
-index 00000000000..6c2ae95f169
+index 0000000..6c2ae95
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/values/strings.xml
 @@ -0,0 +1,208 @@
@@ -5381,7 +5519,7 @@ index 00000000000..6c2ae95f169
 +</resources>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/values/themes.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/values/themes.xml
 new file mode 100644
-index 00000000000..82bd3d7429b
+index 0000000..82bd3d7
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/values/themes.xml
 @@ -0,0 +1,9 @@
@@ -5396,7 +5534,7 @@ index 00000000000..82bd3d7429b
 +</resources>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/ui/home/HomeGlyph.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/ui/home/HomeGlyph.kt
 new file mode 100644
-index 00000000000..1f0ad42433e
+index 0000000..1f0ad42
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/ui/home/HomeGlyph.kt
 @@ -0,0 +1,163 @@
@@ -5565,10 +5703,10 @@ index 00000000000..1f0ad42433e
 +}
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/ui/home/InwebHomeRenderer.kt b/chrome/android/java/src/org/chromium/chrome/browser/inweb/ui/home/InwebHomeRenderer.kt
 new file mode 100644
-index 00000000000..524e6e46729
+index 0000000..94f48b5
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/ui/home/InwebHomeRenderer.kt
-@@ -0,0 +1,1042 @@
+@@ -0,0 +1,1045 @@
 +package com.inweb.browser.ui.home
 +
 +import androidx.compose.foundation.clickable
@@ -6128,7 +6266,8 @@ index 00000000000..524e6e46729
 +        items(sites, key = { it.id }) { site ->
 +            HomeRailTile(
 +                label = popularSiteLabel(site.category),
-+                supporting = site.url,
++                supporting = site.destinationName,
++                accessibilityLabel = site.accessibilityLabel,
 +                onClick = { onOpen(site) },
 +            )
 +        }
@@ -6466,13 +6605,15 @@ index 00000000000..524e6e46729
 +    label: String,
 +    onClick: () -> Unit,
 +    supporting: String? = null,
++    accessibilityLabel: String = label,
 +    icon: HomeGlyphKind? = null,
 +    enabled: Boolean = true,
 +) {
 +    Surface(
 +        modifier = Modifier
-+            .width(112.dp)
++            .width(128.dp)
 +            .heightIn(min = 96.dp)
++            .semantics { contentDescription = accessibilityLabel }
 +            .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
 +        shape = MaterialTheme.shapes.medium,
 +        tonalElevation = 1.dp,
@@ -6503,7 +6644,7 @@ index 00000000000..524e6e46729
 +            Text(
 +                text = label,
 +                style = MaterialTheme.typography.labelLarge,
-+                maxLines = 1,
++                maxLines = 2,
 +                overflow = TextOverflow.Ellipsis,
 +            )
 +            if (supporting != null) {
@@ -6511,7 +6652,7 @@ index 00000000000..524e6e46729
 +                    text = supporting,
 +                    style = MaterialTheme.typography.labelSmall,
 +                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-+                    maxLines = 1,
++                    maxLines = 2,
 +                    overflow = TextOverflow.Ellipsis,
 +                )
 +            }
