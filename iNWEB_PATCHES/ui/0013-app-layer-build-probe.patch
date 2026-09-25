@@ -33,7 +33,7 @@ new file mode 100644
 index 00000000000..7a1090ddea7
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/BUILD.gn
-@@ -0,0 +1,109 @@
+@@ -0,0 +1,120 @@
 +# iNWEB Browser — authored app layer (patch 0013, real-source probe).
 +#
 +# Sources are the authored src/core modules and the Home renderer from
@@ -78,6 +78,17 @@ index 00000000000..7a1090ddea7
 +  # failed with "unresolved reference 'R'" — every one of the 70 missing
 +  # string ids was a consequence of R not existing, not a missing string.
 +  resources_package = "com.inweb.browser"
++
++  # Our code is product code, not upstream Chromium code. Upstream documents
++  # chromium_code as "Whether this is Chromium-specific code", defaulted from
++  # path (anything under third_party/ is NOT Chromium code). Setting false is
++  # the correct, supported classification for us (internal_rules.gni:3390,
++  # applied at :3506) and disables strictness we need not satisfy:
++  #   (a) compile_java.py:242 asserts a file declares exactly ONE top-level
++  #       class. 54 of our Kotlin files declare more than one -- idiomatic
++  #       Kotlin. Splitting them into ~300 files would be the wrong fix.
++  #   (b) errorprone/checkstyle are skipped for non-Chromium code.
++  chromium_code = false
 +
 +  # Pure-JVM core modules (no android/androidx imports) + the Compose
 +  # renderer, compiled together: the renderer consumes the core directly.
@@ -4562,14 +4573,14 @@ index 00000000000..cf7972fd1d0
 +        android:pathData="M12,5v14"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +    <path
 +        android:pathData="M5,12h14"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_arrow_back.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_arrow_back.xml
 new file mode 100644
@@ -4594,14 +4605,14 @@ index 00000000000..e8d1fd8f80e
 +        android:pathData="M19,12H5"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +    <path
 +        android:pathData="M11,6l-6,6 6,6"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_arrow_forward.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_arrow_forward.xml
 new file mode 100644
@@ -4626,14 +4637,14 @@ index 00000000000..05481b67efc
 +        android:pathData="M5,12h14"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +    <path
 +        android:pathData="M13,6l6,6 -6,6"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_check_circle.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_check_circle.xml
 new file mode 100644
@@ -4658,14 +4669,14 @@ index 00000000000..ec57086e91c
 +        android:pathData="M3,12a9,9 0 1 0 18,0a9,9 0 1 0 -18,0"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +    <path
 +        android:pathData="M8,12.5l2.8,2.8 5.7,-5.7"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_chevron_down.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_chevron_down.xml
 new file mode 100644
@@ -4690,8 +4701,8 @@ index 00000000000..7059adcd1c6
 +        android:pathData="M5,9l7,7 7,-7"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_chevron_right.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_chevron_right.xml
 new file mode 100644
@@ -4716,8 +4727,8 @@ index 00000000000..081a716e694
 +        android:pathData="M9,5l7,7 -7,7"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_chevron_up.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_chevron_up.xml
 new file mode 100644
@@ -4742,8 +4753,8 @@ index 00000000000..f06ae7f4473
 +        android:pathData="M5,15l7,-7 7,7"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_close.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_close.xml
 new file mode 100644
@@ -4768,14 +4779,14 @@ index 00000000000..1ed88236943
 +        android:pathData="M6,6l12,12"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +    <path
 +        android:pathData="M18,6L6,18"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_delete.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_delete.xml
 new file mode 100644
@@ -4800,32 +4811,32 @@ index 00000000000..d067074f0d9
 +        android:pathData="M4,7h16"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +    <path
 +        android:pathData="M9,4h6v3H9z"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +    <path
 +        android:pathData="M6,7l1,13h10l1,-13"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +    <path
 +        android:pathData="M10,11v6"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +    <path
 +        android:pathData="M14,11v6"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_home.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_home.xml
 new file mode 100644
@@ -4850,14 +4861,14 @@ index 00000000000..cec0f2ca945
 +        android:pathData="M4,11l8,-7 8,7"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +    <path
 +        android:pathData="M6,10v10h12V10"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_lock.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_lock.xml
 new file mode 100644
@@ -4882,14 +4893,14 @@ index 00000000000..c5f3fdfda67
 +        android:pathData="M7,11V8a5,5 0 0 1 10,0v3"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +    <path
 +        android:pathData="M5,11h14v10H5z"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_menu.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_menu.xml
 new file mode 100644
@@ -4914,20 +4925,20 @@ index 00000000000..65870752138
 +        android:pathData="M4,7h16"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +    <path
 +        android:pathData="M4,12h16"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +    <path
 +        android:pathData="M4,17h16"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_refresh.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_refresh.xml
 new file mode 100644
@@ -4952,14 +4963,14 @@ index 00000000000..be92d05c53a
 +        android:pathData="M4.5,12a7.5,7.5 0 1 0 15,0a7.5,7.5 0 1 0 -15,0"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +    <path
 +        android:pathData="M19.5,5.5v3.5h-3.5"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_search.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_search.xml
 new file mode 100644
@@ -4984,14 +4995,14 @@ index 00000000000..97b3378cb22
 +        android:pathData="M4,10.5a6.5,6.5 0 1 0 13,0a6.5,6.5 0 1 0 -13,0"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +    <path
 +        android:pathData="M15,15l5.5,5.5"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_tab.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/drawable/ic_inweb_tab.xml
 new file mode 100644
@@ -5016,14 +5027,14 @@ index 00000000000..128290b9158
 +        android:pathData="M3,8h18v12H3z"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +    <path
 +        android:pathData="M3,8l3,-4h5l2,4"
 +        android:strokeColor="#FF000000"
 +        android:strokeWidth="2"
-+        android:strokeLineCap="Round"
-+        android:strokeLineJoin="Round" />
++        android:strokeLineCap="round"
++        android:strokeLineJoin="round" />
 +</vector>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/values-bn/strings.xml b/chrome/android/java/src/org/chromium/chrome/browser/inweb/res/values-bn/strings.xml
 new file mode 100644

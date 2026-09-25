@@ -179,3 +179,38 @@ Residual risk recorded honestly: aapt2 aborts on the FIRST conflict, so further
 our-resource-vs-Chromium collisions (e.g. `action_back`, `theme_light`,
 `omnibox_hint`) may surface after this one is cleared. We have no local
 Chromium tree to pre-compute the full collision set.
+
+## hop-37 — run 36177673027 @ 597e52d3 (completed failure) — both hop-36 fixes CONFIRMED
+
+`45-verdict.txt`: `BUILD: FAILED`, `build_exit=1`, no state published.
+Step 13 again reported "success" (the `continue-on-error` trap); the verdict
+step is the only trustworthy signal.
+
+Progress: `[33/1367]` -> `[35/1367]`.
+- **The `app_name` conflict is gone** — no more `failed to merge resource table`.
+- **compile_kt PASSED** — `quadraticTo()` cleared the deprecation, and the
+  `--java-srcjars=...assetres.srcjar` R fix keeps holding.
+
+Two NEW blockers, both now fixed in commit (this one):
+
+1. **javac one-class-per-file assertion.** `compile_java.py`:
+   `AssertionError: Chromium java files must only have one class:
+   BookmarkStore.kt found: ['BookmarkStore','InMemoryBookmarkStore']`.
+   Read from source — `compile_java.py:242`:
+   `assert not self._chromium_code or len(class_names) == 1`.
+   The check is gated on `_chromium_code`. A scan found **54** of our Kotlin
+   files with >1 top-level declaration (idiomatic Kotlin; e.g.
+   InwebHomeRenderer.kt has 31). Splitting them into ~300 files is the wrong
+   fix. The correct fix is `chromium_code = false` on `android_library`, which
+   upstream documents (internal_rules.gni:3390) as "Whether this is
+   Chromium-specific code", auto-defaulted from path ("anything under
+   third_party/ is NOT Chromium code"). Our code is product code, so `false`
+   is the accurate classification.
+
+2. **Vector drawable enum case.** 31x `strokeLineCap="Round"` +
+   31x `strokeLineJoin="Round"` across all 15 ic_inweb_*.xml:
+   `error: 'Round' is incompatible with attribute strokeLineCap (attr) enum
+   [butt=0, round=1, square=2]`. aapt2 enums are lowercase; fixed to `round`.
+
+Method note: instead of fixing one error per ~30-minute hop, both classes of
+defect were swept across the whole tree before dispatching.
