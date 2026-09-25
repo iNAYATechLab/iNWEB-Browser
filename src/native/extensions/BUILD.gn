@@ -1,0 +1,34 @@
+# iNWEB Browser — extension package inspection (patch 0015).
+#
+# This target does not claim or enable runtime capability. It validates local
+# CRX3/ZIP structure, manifest fields, CRC integrity, and manual update order
+# before an upstream installer is ever invoked.
+
+source_set("inweb_extension_installer") {
+  sources = [
+    "inweb_extension_archive.cc",
+    "inweb_extension_archive.h",
+    "inweb_extension_installer.cc",
+    "inweb_extension_installer.h",
+    "inweb_extension_policy.cc",
+    "inweb_extension_policy.h",
+  ]
+
+  deps = [
+    "//third_party/zlib",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+  sources = [
+    "inweb_extension_installer_unittest.cc",
+    "inweb_extension_policy_unittest.cc",
+  ]
+
+  deps = [
+    ":inweb_extension_installer",
+    "//testing/gtest",
+    "//third_party/zlib",
+  ]
+}
