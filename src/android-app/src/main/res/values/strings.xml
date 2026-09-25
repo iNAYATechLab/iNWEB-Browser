@@ -142,4 +142,67 @@
 
     <!-- Engine integration (explicit, honest binding-point label) -->
     <string name="engine_binding_point">Chromium content surface is not bound in this build configuration. The engine adapter ships with the Chromium build (see the integration plan).</string>
+
+    <!-- Home / new-tab renderer (§38) — ids from
+         docs/design/inweb-prototype/HOME-STRING-CATALOG.csv (59 ids, en + bn).
+         Landed by the Lead so the app-layer injection compiles against real ids. -->
+    <string name="home_product_name" translatable="false">iNWEB</string>
+    <string name="home_product_descriptor">Browser</string>
+    <string name="home_open_menu">Open menu</string>
+    <string name="home_privacy_center">Privacy Center</string>
+    <string name="home_privacy_active">Protection is active</string>
+    <string name="home_privacy_partial">Some protections are off</string>
+    <string name="home_privacy_loading">Loading protection status</string>
+    <string name="home_privacy_unavailable">Protection status is unavailable</string>
+    <string name="home_search_hint_web">Search or enter address</string>
+    <string name="home_search_hint_quran">Search surah, ayah or topic</string>
+    <string name="home_voice_search">Voice search</string>
+    <string name="home_voice_listening">Listening…</string>
+    <string name="home_voice_processing">Processing speech…</string>
+    <string name="home_voice_permission_denied">Microphone permission is denied</string>
+    <string name="home_voice_unavailable">Voice search is unavailable</string>
+    <string name="home_voice_error">Voice search failed. Try again.</string>
+    <string name="home_quick_access">Quick Access</string>
+    <string name="home_quick_access_empty">Add your first site</string>
+    <string name="home_add_site">Add site</string>
+    <string name="home_items_shown">%1$d shown</string>
+    <string name="home_see_all">See all</string>
+    <string name="home_popular_islamic_websites">Popular Islamic Websites</string>
+    <string name="home_shortcut_quran">Qur’an</string>
+    <string name="home_shortcut_hadith">Hadith</string>
+    <string name="home_shortcut_prayer">Prayer</string>
+    <string name="home_shortcut_qibla">Qibla</string>
+    <string name="home_shortcut_dua">Dua</string>
+    <string name="home_shortcut_halal_life">Halal Life</string>
+    <string name="home_shortcut_news">News</string>
+    <string name="home_popular_quran">Qur’an</string>
+    <string name="home_popular_hadith">Hadith</string>
+    <string name="home_popular_qa">Islamic Q&amp;A</string>
+    <string name="home_popular_articles">Articles</string>
+    <string name="home_popular_halal_life">Halal Life</string>
+    <string name="home_popular_news">News</string>
+    <string name="home_continue_reading_listening">Continue reading &amp; listening</string>
+    <string name="home_start_reading">Start reading</string>
+    <string name="home_continue">Continue</string>
+    <string name="home_reading_position">%1$s · Ayah %2$d</string>
+    <string name="home_daily_wisdom">Daily Wisdom</string>
+    <string name="home_wisdom_source">Source: %1$s</string>
+    <string name="home_save">Save</string>
+    <string name="home_remove_saved">Remove from saved</string>
+    <string name="home_prayer_times">Prayer Times</string>
+    <string name="home_prayer_setup">Set up Prayer Times</string>
+    <string name="home_prayer_setup_action">Choose location</string>
+    <string name="home_prayer_next">Next · %1$s · %2$s</string>
+    <string name="home_prayer_stale">Prayer times may be out of date</string>
+    <string name="home_prayer_method">Method: %1$s · Asr: %2$s</string>
+    <string name="home_prayer_fajr">Fajr</string>
+    <string name="home_prayer_dhuhr">Dhuhr</string>
+    <string name="home_prayer_asr">Asr</string>
+    <string name="home_prayer_maghrib">Maghrib</string>
+    <string name="home_prayer_isha">Isha</string>
+    <string name="home_retry">Try again</string>
+    <string name="home_failure_offline">No network connection</string>
+    <string name="home_failure_load">This content could not be loaded</string>
+    <string name="home_failure_permission">Permission is required</string>
+    <string name="home_failure_unsupported">This feature is not supported</string>
 </resources>
