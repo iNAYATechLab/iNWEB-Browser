@@ -1,0 +1,28 @@
+diff --git a/chrome/browser/ui/android/extensions/java/src/org/chromium/chrome/browser/ui/extensions/ExtensionUiBackendImpl.java b/chrome/browser/ui/android/extensions/java/src/org/chromium/chrome/browser/ui/extensions/ExtensionUiBackendImpl.java
+index 3b26ce1..3ae4c9d 100644
+--- a/chrome/browser/ui/android/extensions/java/src/org/chromium/chrome/browser/ui/extensions/ExtensionUiBackendImpl.java
++++ b/chrome/browser/ui/android/extensions/java/src/org/chromium/chrome/browser/ui/extensions/ExtensionUiBackendImpl.java
+@@ -6,6 +6,7 @@ package org.chromium.chrome.browser.ui.extensions;
+ 
+ import android.graphics.Bitmap;
+ 
++import org.chromium.base.CommandLine;
+ import org.chromium.build.annotations.NullMarked;
+ import org.chromium.build.annotations.Nullable;
+ import org.chromium.build.annotations.ServiceImpl;
+@@ -16,11 +17,14 @@ import org.chromium.content_public.browser.WebContents;
+ @NullMarked
+ @ServiceImpl(ExtensionUiBackend.class)
+ public class ExtensionUiBackendImpl implements ExtensionUiBackend {
++    // Build inclusion is not a capability claim. iNWEB keeps every extension
++    // surface closed unless a device-verification run opts in explicitly.
++    private static final String ENABLE_INWEB_EXTENSION_UI = "enable-inweb-extension-ui";
+     public ExtensionUiBackendImpl() {}
+ 
+     @Override
+     public boolean isEnabled(Profile profile) {
+-        return true;
++        return CommandLine.getInstance().hasSwitch(ENABLE_INWEB_EXTENSION_UI);
+     }
+ 
+     @Override
