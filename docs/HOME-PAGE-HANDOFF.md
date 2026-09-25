@@ -299,3 +299,79 @@ needed fixing, and is fixed with this commit: the row
 was vague, so it now names the real blockers (the app-layer build injection
 plus the Junior's view code), and these eight decisions are recorded here
 instead of living in a chat thread.
+
+### A9 — Review of the Junior's execution plan (2026-09-25)
+
+The Junior proposed: branch `feature/home-renderer-draft` from latest
+`main`, an Android renderer draft, the Lead handoff artifacts, mirroring
+the five design artifacts, and skipping `extension/0013`-`0016`.
+**Approved, with the following conditions.** They exist because the plan
+is sound but crosses one ownership line and makes one assumption that is
+right for the renderer and wrong for one field.
+
+**1. Ownership carve-out (explicit, narrow, revocable).**
+The renderer code lands under **`src/android-app/src/main/kotlin/com/inweb/browser/ui/home/`**
+— a new package, Lead-owned territory, opened for this work only:
+
+- **new files only** — no edits to any existing file under `src/android-app`
+  (no `BrowserScreen`, no `BrowserViewModel`, no `OmniboxBar`, no
+  `BrowserBottomBar`); wiring the single call site is the Lead's move
+- **no resource changes** — strings are delivered as a catalog, and the
+  Lead lands them into `src/android-app/src/main/res/` so the localization
+  and string gates stay under one owner
+- the draft must compile as a **standalone composable** over immutable
+  state plus lambdas: `HomePageModel` in, callbacks out. If it needs a
+  change to existing Lead-owned code to build, that is a finding to
+  report, not a change to make.
+
+**2. The string catalog is a blocking deliverable, not a nice-to-have.**
+The app-layer build injection carries `src/android-app` into the Chromium
+tree, and a patch that references `R.string.*` ids that do not exist will
+not compile. The catalog (id + `en` + `bn`) must therefore reach the Lead
+before the injection patch is generated, or the Home sources land one hop
+later.
+
+**3. JNI: `expected none` is accepted for the renderer, with one recorded
+exception.** No JNI exists anywhere in `src/android-app` today (no
+`external fun`, no `System.loadLibrary`). The Home privacy summary is fed
+by `SecurityCenterModel`, a pure-Kotlin data class built from the Kotlin
+engine's statistics — so the renderer needs no bridge.
+
+The exception: the count's **source of truth on a device is C++**, not
+Kotlin. Enforcement happens in `chrome/android/inweb/adblock/`
+(`0005`-`0007`), and that native engine exposes no counter today. A
+Kotlin-side counter on a device where blocking happens in C++ would count
+nothing while displaying a number — a fabricated figure (§57). So:
+
+- until a Lead-owned bridge exists, Home shows the **state** (Active /
+  Partial / Unavailable) and **no numeric count**
+- the bridge, when built, is Lead-owned and is not part of `ui/0026`
+
+**4. The renderer knows nothing about providers.** It renders what the
+model exposes. Which Islamic features are available is a `HomePageModel`
+decision, not a UI constant — so when a real provider appears the UI
+lights up without a renderer change, and until then nothing is hardcoded
+hidden in the view layer.
+
+**5. Sequencing.** The injection patch (Lead) lands first and carries
+`src/android-app` into the tree; the renderer's new files are picked up
+when the Lead regenerates that patch. `src/android-app` stays the single
+source of truth — the tree copy is generated, never edited.
+
+**6. Agreed:** `extension/0013`-`0016` is Lead-owned and not a
+prerequisite for Home; skipping it is correct.
+
+**Review checklist the Lead will apply to the branch:**
+
+- [ ] diff touches only `src/android-app/.../ui/home/**` (new), `src/core/home/**`,
+      `docs/design/inweb-prototype/**` — nothing else
+- [ ] `scripts/validate_authored_structure.sh` green (structural kotlinc gate)
+- [ ] `scripts/validate_kotlin_core.sh` green — 466 Kotlin tests
+- [ ] Python 80, storage inventory, manifest lint, string/localization parity
+- [ ] string catalog present with `en` + `bn` for every id the draft uses
+- [ ] data contract maps every rendered field to a `HomePageModel` field
+- [ ] callback contract: no navigation performed inside the renderer
+- [ ] provider-gated features absent from the view, driven by the model
+- [ ] no numeric privacy count anywhere in the draft
+- [ ] accessibility: 48dp targets, headings, focus order, 200% font scale,
+      dark Material 3
