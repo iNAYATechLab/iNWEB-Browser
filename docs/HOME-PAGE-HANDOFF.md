@@ -112,3 +112,190 @@ Consequences for you:
 
 Integration instructions (how this becomes `ui/0026-home-page` and where
 it hooks into the Chromium tree) are issued after this checklist passes.
+
+
+---
+
+## Lead decisions — 2026-09-25
+
+Answers to the eight questions the Junior raised when the Home core merged.
+These are Lead decisions, recorded here so they do not live only in a chat
+thread. Where a fact is quoted it was verified against the pinned tree
+(`154.0.8037.21`) or this repository, not recalled.
+
+### A1 — Integration handoff and hook paths
+
+Two layers, and a prerequisite that is new information:
+
+**Authored app layer (this repository, Lead-owned, Compose + Material 3):**
+
+| Path | Role |
+|---|---|
+| `src/android-app/src/main/kotlin/com/inweb/browser/ui/HomePage.kt` | the current Home; the approved Home replaces it |
+| `.../ui/BrowserScreen.kt` (line ~50) | renders `HomePage` for `inweb://home` |
+| `.../ui/OmniboxBar.kt` | **the single authoritative input** (see A3) |
+| `.../ui/BrowserBottomBar.kt` | navigation (see A4) |
+| `.../BrowserViewModel.kt` (lines 139-144, 480-483) | `homeShortcuts` / `homeRecent` / `homeBookmarks`, `refreshHome()` |
+
+**Chromium tree (patch), verified at tag `154.0.8037.21`:**
+
+- new sources under **`chrome/android/inweb/home/`** — the established
+  convention for iNWEB code in the tree (cf. `chrome/android/inweb/adblock/`),
+  with its own `BUILD.gn` and deps wiring into `chrome/android/BUILD.gn`
+- Compose is **available** in the pinned tree — `third_party/androidx/build.gradle.template`
+  pulls `androidx.compose.runtime`, `.material3:material3`, `.foundation`,
+  `.foundation-layout`, `.ui`, `.ui-text`, `.ui-graphics`, `.ui-unit`,
+  `activity-compose`, `fragment-compose`, `lifecycle-*-compose`,
+  `navigation-compose` — so the Compose authored layer is buildable in
+  principle. **How the GN target wires the Compose compiler plugin is NOT
+  verified yet** and will be proven by a probe build hop before any Home
+  code is written against it (no PASS-by-assumption).
+- NTP / homepage hooks (all confirmed present at the tag):
+  `chrome/android/java/src/org/chromium/chrome/browser/ntp/NewTabPage.java`,
+  `NewTabPageCoordinator.java`, `NewTabPageLayout.java`,
+  `NewTabPageManager.java`, `NewTabPageLayoutProperties.java`,
+  `NewTabPageLayoutViewBinder.java`;
+  `.../browser/homepage/HomepageManager.java`, `HomepagePolicyManager.java`
+- strings: `chrome/browser/ui/android/strings/android_chrome_strings.grd`
+  (as in `0002`); resources: `chrome/android/java/res_chromium_base/`
+  (as in `0001`/`0003`/`0004`)
+
+**Prerequisite (Lead, new): nothing injects `src/android-app` into the
+Chromium build yet.** No registered patch carries `.kt`/`.java`
+(`iNWEB_PATCHES/` contains only resource, string, and native C++ patches),
+so the authored Kotlin — 23 files — compiles nowhere today and is **not in
+the shipped APK**. The app-layer build injection therefore lands as its own
+patch, proven by a probe hop, **before** `ui/0026-home-page` can mean
+anything on a device.
+
+**Handoff the Junior owes the Lead** (Junior still writes no patch file, D2):
+the view code under `src/android-app`, the list of `chrome/...` paths it
+touches, the string ids with `en`/`bn` text, the data contract (which
+`HomePageModel` fields the renderer consumes and in what order), and any
+native/JNI need.
+
+### A2 — Bookmarks, Recent Pages, Downloads: sections or destinations?
+
+**Both, under one rule.** MASTER-SPEC §38 wins over the design on conflict
+(D3), and §38 lists bookmarks, recent pages and downloads as options of the
+new-tab experience — so they must be reachable *on* Home, not only behind
+navigation.
+
+- Home shows **bounded, read-only snapshots**: top N items + a count + a
+  "See all" affordance for each of the three.
+- A section with no data is **hidden entirely** (ADR-017 — no empty shells,
+  no placeholder counts).
+- The full management surfaces stay **navigation destinations** in the
+  approved bottom-nav order.
+- Data comes only through `HomeAdapters` over the existing
+  `HistoryStore` / `BookmarkStore` / `DownloadsStore` / `OfflineLibrary` —
+  no duplicate ranking, no second copy of `TopSites.compute`.
+- Privacy Center stays in the header (design §3): never duplicated as a
+  bottom card, never showing a number that is not real state.
+
+### A3 — One omnibox, one input path
+
+**`OmniboxBar` is the only text input owner. The Home search treatment is a
+presentation of it, not a second input.**
+
+- In Home state the toolbar omnibox takes a Home visual treatment
+  (centered, rounded, branded); the Home search surface is a
+  **focus-forwarding affordance** — tapping it focuses the omnibox. No
+  second `EditText`, no second classification path.
+- Tapping through keeps one IME, one suggestion source, one incognito
+  behaviour, one privacy path. Two inputs would silently fork all four, and
+  the design handoff itself forbids "two competing omniboxes".
+- `HomeSearch` (core) stays as the pure classification/intent layer
+  delegating to `OmniboxParser` — that is correct and unchanged; the rule is
+  about the **widget**, not the logic.
+- Qur'an mode is a **mode selector** on the same omnibox (routed intent),
+  not a separate field — and it stays hidden until a real provider exists
+  (A6).
+
+### A4 — Bottom navigation
+
+The approved order is authoritative: **Home, Bookmarks, Tabs, Downloads,
+Extensions, Menu**.
+
+- **The migration is Lead-owned and is NOT part of `ui/0026`.** It is a data
+  migration, and it lands as its own patch with its own build verification:
+  today's model is `ToolbarItem{BACK, FORWARD, HOME, TABS, MENU}`
+  (`src/core/customization/.../ToolbarConfigurator.kt`, lines 23-35)
+  persisted in the `inweb_toolbar` preferences through
+  `SharedPreferencesToolbarStore`, with ADR-029 corruption recovery.
+- Migration shape: versioned preferences (schema bump), old keys mapped to
+  new, old rows retained for rollback, unknown/new items falling back to the
+  authored default, and the **Extensions destination hidden until a real
+  binding exists** (`0013`-`0016`) — hidden, never fake-enabled.
+- Until that patch lands, Home stays reachable through the existing `HOME`
+  toolbar item and `inweb://home`.
+
+### A5 — Durable storage for Quick Access and widget configuration
+
+Lead-owned, following the existing seam/adapter pattern:
+
+- a new seam **`HomeStore`** plus adapters (`FileHomeStore` for the canonical
+  JSON snapshot; a `SharedPreferences` adapter only if the payload stays
+  genuinely small)
+- **atomic save:** write to a temp file → `fsync` → atomic rename; the
+  previous good file is kept briefly; a half-written file is never left behind
+- **corruption recovery:** parse/validation failure → authored default (empty
+  Quick Access, canonical section order), the unreadable file is set aside
+  for diagnosis, and the repair is reported through `lastRecovery` — the
+  ADR-029 pattern already used by `ToolbarStore`. Never a crash, never a
+  silent loss (§50/§51).
+- **`docs/STORAGE-INVENTORY.yaml` rows are added by the Lead** (seam +
+  adapters, with corruption and clear semantics — clear = app reset, since
+  this is user configuration, not browsing data). CI enforces it through
+  `scripts/validate_storage_inventory.py`.
+- The Junior's side stays pure: keep returning **canonical wire snapshots**
+  (the current design is right) and take the persistence port as a
+  constructor parameter so it is unit-testable with a fake. Do not add
+  repository or platform storage classes to `src/core/home`.
+
+### A6 — Islamic features: what is real today
+
+**None is integration-ready.** There is no provider, no licensed content, no
+API key, and no reviewed URL list in this repository.
+
+| Feature | State | What it needs to become real |
+|---|---|---|
+| Curated Islamic websites | closest | a reviewed, cited HTTPS list from product — a list, not an integration |
+| Prayer times | feasible offline | astronomical computation: a chosen calculation method, reference validation, location handling (permission + privacy), tests |
+| Qur'an search / reader, Continue Reading | hidden | licensed text + a real provider |
+| Voice search | hidden | Android speech recognition + permission + a privacy review of where audio goes |
+| Daily Wisdom | hidden | a reviewed, cited content source |
+
+Rule (§57, ADR-037): **a feature ships only with a real provider; until then
+it is hidden, not shown as disabled or "coming soon".** A permanently
+unavailable tile is a fake affordance, and a fake success is worse than an
+absent one. The sealed states in `HomeContent` (loading / unavailable /
+error / first-use) exist for features that *are* real and can fail — not as
+a way to display things we cannot deliver.
+
+### A7 — `feature/home-prototype`
+
+**It stays the reference/design branch; it is not landed as app code.**
+Three reasons: it is the D3 design source, it carries a whole-repo snapshot
+(workflows, docs) that would collide with `main`, and landing a
+non-building prototype tree into `main` would pollute the build path.
+
+I do not touch that branch (standing directive) and I read it from the
+branch. Its design artifacts
+(`COMPONENT-INVENTORY.md`, `CONTENT-LOCALIZATION-SPEC.md`,
+`DESIGN-HANDOFF.md`, `DESIGN-TOKENS.json`, `INTERACTION-STATE-SPEC.md`)
+are **not** mirrored on `main` today — only
+`docs/design/inweb-prototype/HOME-IMPLEMENTATION-PLAN.md` is. Mirroring them
+is the owner's move, not the Lead's: `docs/design/inweb-prototype/**` is
+Junior-owned, so I will not write there. On conflict, MASTER-SPEC §38 wins
+(D3).
+
+### A8 — Stale status rows
+
+Checked before answering: no "not started" text remains in either document —
+the live-status table was refreshed when the Home core merged. What still
+needed fixing, and is fixed with this commit: the row
+"`ui/0026-home-page` — Lead, blocked until the Android view layer exists"
+was vague, so it now names the real blockers (the app-layer build injection
+plus the Junior's view code), and these eight decisions are recorded here
+instead of living in a chat thread.

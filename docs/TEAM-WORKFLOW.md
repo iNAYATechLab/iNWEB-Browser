@@ -124,4 +124,4 @@ blocking: yes | no
 | 2026-09-25 | `src/core/home` — pure-JVM Home core (52 tests) reviewed, approved and merged into `main`; registered in `validate_kotlin_core.sh` (466 Kotlin tests enforced) | Junior → integrated by Lead |
 | 2026-09-25 | `feature/home-prototype` (design prototype + component inventory + localization spec) | Junior — Lead does not touch |
 | 2026-09-25 | Open question to the Junior: `src/core/home` Gradle files (CI uses pinned kotlinc, not Gradle) — issue #2 | Junior |
-| 2026-09-25 | Patch entry `ui/0026-home-page` | Lead, blocked until the Android view layer exists |
+| 2026-09-25 | Patch entry `ui/0026-home-page` | Lead, blocked on (a) the app-layer build injection — nothing puts `src/android-app` into the Chromium build yet — and (b) the Junior's view code. Lead decisions on all eight handoff questions: `docs/HOME-PAGE-HANDOFF.md` |
