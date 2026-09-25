@@ -2,6 +2,13 @@
 
 **Measured on the pinned tree, 2026-09-25. No patch has been written.**
 
+> **Decision (2026-09-25): Option 1 — documented deviation, accepted by the
+> project owner.** §16 is preserved as behavioural/specification intent; no
+> extension UI, no runtime binding, no placeholder affordance; patch ids
+> 0014–0017 stay reserved and unused. Recorded as **ADR-042** in
+> `docs/EXTENSION-DEVIATION.md`, with the reservation held in
+> `iNWEB_PATCHES/extension/RESERVED.md`. Nothing else is blocked by this.
+
 This branch exists to prepare the extension series. The first thing
 preparation required was checking whether the thing the series is
 supposed to bind to actually exists in the baseline. It does not.

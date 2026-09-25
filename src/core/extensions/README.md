@@ -8,8 +8,11 @@ comparison for sideload updates, and permission-review records.
 **Pure JVM, no Android dependency** — it compiles and tests with
 `bash scripts/validate_kotlin_core.sh` (pinned kotlinc + JUnit), and the
 Chromium `extension/` patches bind this model to the real WebExtensions
-runtime (registry entries 0013–0016, blocked on build infrastructure
-B-001).
+runtime (registry entries 0014–0017). **Not implemented:** the pinned
+Android baseline does not build the extensions platform
+(`enable_extensions = !is_android`), so §16 is preserved as specification
+intent only — see **ADR-042** (`docs/EXTENSION-DEVIATION.md`). The ids
+stay reserved and unused.
 
 ## Components
 
@@ -24,8 +27,9 @@ B-001).
 ## Honest boundaries
 
 - Nothing here installs or runs a real extension — the Chromium-side
-  installer, management UI, and runtime are the `extension/` patch
-  series (B-001).
+  installer, management UI, and runtime were the `extension/` patch
+  series. That series is reserved, not applied (ADR-042): this module is
+  the behavioural specification, not a running feature.
 - Expected failures are `RegistryResult.Err` values, never exceptions
   and never fake success (§16: no pretending an unsupported operation
   worked).
