@@ -170,8 +170,8 @@ class BrowserViewModel(
     /**
      * The §33 channel-availability set for THIS authored build: only the
      * downloads source is real today (the Phase 2 downloads core). The
-     * set grows as the event-source patches land (0018 offline,
-     * 0020 app-lock, 0021 VPN, the backup-failed binding) — a channel is
+     * set grows as the event-source patches land (0019 offline,
+     * 0021 app-lock, 0022 VPN, the backup-failed binding) — a channel is
      * never registered before its source exists (no stubs, ADR-030).
      */
     private val notificationPolicy = NotificationPolicy(

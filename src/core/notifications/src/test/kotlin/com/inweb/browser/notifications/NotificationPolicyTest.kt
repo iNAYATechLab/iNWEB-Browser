@@ -161,7 +161,7 @@ class NotificationPolicyTest {
 
     @Test
     fun unavailableChannelEventsAreSuppressedEvenWhenEnabledAndGranted() {
-        // a build without patch 0021: the VPN channel is absent, NOT stubbed
+        // a build without patch 0022: the VPN channel is absent, NOT stubbed
         val policy = NotificationPolicy(setOf(DOWNLOADS))
         policy.onSystemPermissionChanged(true)
         val decision = policy.decide(NotificationEvent.VPN_CONNECTED)

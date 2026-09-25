@@ -76,7 +76,7 @@ surfaces:
     kind: seam
     module: extensions
     stores: "Extension registry state (install/review/enable state machine with snapshots)"
-    location: "In-memory until the extension patches (0013–0016) persist registry state"
+    location: "In-memory until the extension patches (0014–0017) persist registry state"
     corruption: "Snapshot-restore recovery implemented in the core; the file form ships with the patches"
     clear: "Extension removal or app reset"
 
@@ -92,7 +92,7 @@ surfaces:
     kind: seam
     module: offline
     stores: "Offline library entries (byte quota + LRU eviction with pinning)"
-    location: "In-memory until the offline patches (0017–0019) persist the library"
+    location: "In-memory until the offline patches (0018–0020) persist the library"
     corruption: "Core enforces quota and atomic-failure semantics; the file form ships with the patches"
     clear: "Per-entry deletion + clear-browsing-data (offline pages)"
 
@@ -100,7 +100,7 @@ surfaces:
     kind: seam
     module: profiles
     stores: "Profile records + active profile id"
-    location: "In-memory until the profiles patch (0022) binds per-profile data directories"
+    location: "In-memory until the profiles patch (0023) binds per-profile data directories"
     corruption: "The registry seeds a default profile when the store is empty; ids are monotonic and never reused"
     clear: "Profile deletion (namespace retired by the caller) or app reset"
 

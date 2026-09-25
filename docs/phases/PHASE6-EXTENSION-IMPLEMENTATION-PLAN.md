@@ -4,7 +4,9 @@
 
 **Base:** `origin/main` at `02f1f72`
 
-**Status:** pre-code plan
+**Status:** locally implemented; independent patch round-trip and available
+repository validation complete. GN-format, pinned Chromium build, artifact audit,
+and device proof remain pending.
 
 ## 1. Current implementation inspected
 
@@ -35,9 +37,10 @@ that running build.
 
 ### 0014 — `extension-enable-android`
 
-- opt the iNWEB GN configs into Chromium's existing experimental
-  `enable_desktop_android_extensions` path (not the broader desktop-only
-  `enable_extensions` path);
+- add a default-false `enable_inweb_android_extensions` GN argument that
+  enters Chromium's existing experimental `enable_desktop_android_extensions`
+  path (not the broader desktop-only `enable_extensions` path), and opt the
+  iNWEB GN configs into that narrow argument;
 - include the build-time API audit tool;
 - update the Phase 6 facts and patch registry;
 - do not expose a navigation destination merely because the code compiles.
@@ -45,26 +48,28 @@ that running build.
 ### 0015 — `extension-management-ui`
 
 - add the authored CRX3/ZIP structural inspector and its native unit tests;
-- bind only to the already-built upstream Android management surfaces after a
-  real runtime availability signal;
-- preserve sideload review-before-enable and manual update ordering;
-- keep Chrome Web Store as discovery only, never promise direct installation.
+- compile it through Chromium's browser and unit-test build hooks;
+- retain the already-built upstream Android management surfaces, while their
+  runtime availability remains gated by `0016`;
+- remove the Chrome Web Store submenu row rather than imply that direct Web
+  Store installation is supported.
 
 ### 0016 — `extension-action-surfaces`
 
 - use Chromium's existing Android toolbar action, popup, and options routing;
 - add no fake action model;
-- expose surfaces only when the real extension backend is enabled for the
-  profile;
-- audit the resulting compiled API/surface registrations.
+- close the existing backend by default and permit it only when a device-test
+  launch supplies `--enable-inweb-extension-ui`;
+- audit the resulting compiled API/surface registrations before considering a
+  production feature gate.
 
-### 0017 — `extension-policy-wiring`
+### 0017 — `extension-policy-gate`
 
-- enforce permission review, disable/remove paths, update consent, MV2 notice,
-  and the built-in protection precedence/kill-switch boundary;
-- unsupported APIs return failure and stay out of the advertised support
-  matrix;
-- record the measured API matrix from the artifact, never the design target.
+- add a deterministic policy model for invalid/non-newer packages,
+  review-before-enable, added-permission review, and MV2 warning state;
+- compile and test the policy with the installer target;
+- do not claim runtime wiring, built-in-protection coexistence, unsupported-API
+  handling, or an API matrix until build and device evidence proves them.
 
 ## 4. Provider follow-up merged after PR #4
 

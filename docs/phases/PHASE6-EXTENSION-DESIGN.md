@@ -1,8 +1,8 @@
 # Phase 6 — Extension System Design (WebExtensions on Android)
 
-**Status:** authored design + investigation plan (Step 19). Everything that
-ships as code lands as tracked patches generated against the pinned
-baseline `154.0.8037.21` on build infrastructure (blocker B-001).
+**Status:** patches `0014`–`0017` prepared against pinned baseline
+`154.0.8037.21`; build, artifact audit, and device verification still pending
+(blocker B-001). Preparation is not a capability claim.
 **Governing requirements:** MASTER-SPEC §16 (the eight documentation items
 below), roadmap Phase 6; honesty rule: *"Do not pretend that opening an
 extension website equals extension support."*
@@ -16,17 +16,19 @@ basis, each point re-verified against the real tree when patches are
 generated:
 
 1. The WebExtensions runtime (`extensions/`, `chrome/browser/extensions`,
-   renderer-side bindings, IPC, isolated worlds) **exists in the tree** and
-   is desktop-gated for Android by GN flags and Android-specific source
-   exclusions — not absent. Enabling and completing it on Android is the
-   **Kiwi-Browser-proven approach** (a real shipped Android browser with
-   working extensions), which is the architecture chosen here.
+   renderer-side bindings, IPC, isolated worlds) **exists in the tree**. The
+   pinned baseline already has a separate, explicitly unstable
+   `enable_desktop_android_extensions` build path. iNWEB uses a narrow custom
+   opt-in to that path rather than setting the full desktop
+   `enable_extensions` flag.
 2. `declarativeNetRequest` (MV3 network filtering) and the MV3 service
    worker model are core subsystems; their Android availability must be
-   audited at build time (§7 step 2).
-3. Android Chrome lacks the extension **UI surfaces**: management page,
-   toolbar browser-action button, popup rendering, options page routing.
-   These are iNWEB patch work, not upstream gifts.
+   audited from the built artifact and on device (§7 step 2).
+3. The pinned tree already contains Android management/developer bridges,
+   app-menu entries, toolbar actions, popup contents and options routing.
+   iNWEB reuses them and adds no parallel fake model. Because the upstream
+   backend reports enabled whenever compiled, `0016` closes those surfaces by
+   default behind an explicit device-verification switch.
 4. The Chrome Web Store serves install payloads to recognized clients;
    depending on it for the primary flow couples us to Google behavior —
    the v1 installation model is sideload-first (§4).
@@ -63,6 +65,10 @@ release notes. The table is never hand-edited to look better.
 
 ## 4. The four models (§16 requirement)
 
+These are release acceptance targets. The prepared patches contain package
+inspection and policy decisions but do not yet prove or claim runtime install
+wiring.
+
 - **Permission model:** upstream install-time permission warnings,
   unchanged; runtime/optional permissions (MV3) prompt in an iNWEB dialog.
   No permission is ever granted implicitly by installation.
@@ -92,27 +98,19 @@ stop; that limitation is stated up front, not discovered later.
 
 ## 5. Component design (patch plan)
 
-New browser-process components (iNWEB overlay, not upstream edits where
-avoidable):
+iNWEB adds only package-inspection and review-policy components under
+`chrome/android/inweb/extensions/`. Management, toolbar, popup and options
+surfaces are the pinned upstream Android implementations; the patch series
+must not duplicate them.
 
-```text
-chrome/android/inweb/extensions/
-    inweb_extension_service_delegate   install/enable/disable/remove flow
-    inweb_extension_management_ui      the management screen (list, details,
-                                       permissions, errors, remove)
-    inweb_extension_action_surface     toolbar action button + popup dialog
-    inweb_extension_installer          CRX/ZIP parse, verify, version check
-```
-
-Planned registry entries (added only when generated against the real
-tree), continuing after `0012`:
+Generated registry entries, continuing after the Home/app-layer probe `0013`:
 
 | id | file | content | risk |
 |---|---|---|---|
-| `0013-extension-enable-android` | `extension/0013-extension-enable-android.patch` | GN/flag enablement + Android source-exclusion fixes + build-time API audit script | high (requires security review note) |
-| `0014-extension-management-ui` | `extension/0014-extension-management-ui.patch` | management screen + install flow (sideload + warnings) | medium |
-| `0015-extension-action-surfaces` | `extension/0015-extension-action-surfaces.patch` | toolbar action, popup dialog surface, options-page tab routing | medium |
-| `0016-extension-policy-wiring` | `extension/0016-extension-policy-wiring.patch` | permission prompts, disable paths, MV2 deprecation notice | medium |
+| `0014-extension-enable-android` | `extension/0014-extension-enable-android.patch` | default-false iNWEB opt-in to the experimental Android core + build-time API audit script | high (requires security review note) |
+| `0015-extension-management-ui` | `extension/0015-extension-management-ui.patch` | CRX3/ZIP inspector + Chromium build/test hooks; retain upstream management surfaces; suppress unsupported Web Store menu route | medium |
+| `0016-extension-action-surfaces` | `extension/0016-extension-action-surfaces.patch` | default-closed runtime/test gate for upstream Android extension surfaces | medium |
+| `0017-extension-policy-gate` | `extension/0017-extension-policy-gate.patch` | deterministic stage/review/new-permission/MV2 policy model + tests; no runtime support claim | medium |
 
 ## 6. Verification strategy
 
@@ -123,8 +121,8 @@ tree), continuing after `0012`:
 2. **Build-time audit:** a script that extracts the actually-registered
    extension APIs from the built APK and regenerates the §3 table —
    the release notes show reality, not intent.
-3. **C++ unit tests:** installer (valid/invalid/corrupt CRX, version
-   comparison), action surface lifecycle.
+3. **C++ unit tests:** archive/installer validation (valid/invalid/corrupt
+   packages and version comparison) plus stage/review/permission/MV2 policy.
 4. **On device:** install a known test extension (uBlock-class) — DNR rules
    fire, popup opens and interacts, storage persists across restart,
    disable/enable/remove work, permission warnings shown pre-install, and
@@ -132,7 +130,7 @@ tree), continuing after `0012`:
 
 ## 7. Honest boundaries
 
-- Until `0013–0016` build and pass §6, **iNWEB has zero extension
+- Until `0014–0017` build and pass §6, **iNWEB has zero extension
   support** — browsing the Web Store is just browsing (§16).
 - Every API status in §3 is a target until the build-time audit confirms
   it; the audit output is authoritative.

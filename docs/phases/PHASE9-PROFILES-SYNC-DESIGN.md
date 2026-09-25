@@ -102,12 +102,12 @@ file/in-memory seams so CI can test logic without a device.
 
 ## 6. Patch plan (registry entries added when the tree exists)
 
-Continuing the global order after `security/` (0020–0021):
+Continuing the global order after `security/` (0021–0022):
 
 | id | file | content | risk |
 |---|---|---|---|
-| `0022-ui-multi-profile` | `ui/0022-ui-multi-profile.patch` | profile switcher UI, per-profile data dirs at the browser-process level, store-namespace binding, incognito unchanged | high (isolation review required) |
-| `0023-settings-backup-restore` | `settings/0023-settings-backup-restore.patch` | backup/restore UI, Keystore-envelope encryption of the bundle, restore preview flow | medium |
+| `0023-ui-multi-profile` | `ui/0023-ui-multi-profile.patch` | profile switcher UI, per-profile data dirs at the browser-process level, store-namespace binding, incognito unchanged | high (isolation review required) |
+| `0024-settings-backup-restore` | `settings/0024-settings-backup-restore.patch` | backup/restore UI, Keystore-envelope encryption of the bundle, restore preview flow | medium |
 
 No sync patch exists — there is nothing to patch (§2).
 

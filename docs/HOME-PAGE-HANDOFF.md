@@ -226,7 +226,7 @@ Extensions, Menu**.
 - Migration shape: versioned preferences (schema bump), old keys mapped to
   new, old rows retained for rollback, unknown/new items falling back to the
   authored default, and the **Extensions destination hidden until a real
-  binding exists** (`0013`-`0016`) — hidden, never fake-enabled.
+  binding exists** (`0014`-`0017`) — hidden, never fake-enabled.
 - Until that patch lands, Home stays reachable through the existing `HOME`
   toolbar item and `inweb://home`.
 
@@ -304,7 +304,7 @@ instead of living in a chat thread.
 
 The Junior proposed: branch `feature/home-renderer-draft` from latest
 `main`, an Android renderer draft, the Lead handoff artifacts, mirroring
-the five design artifacts, and skipping `extension/0013`-`0016`.
+the five design artifacts, and skipping `extension/0014`-`0017`.
 **Approved, with the following conditions.** They exist because the plan
 is sound but crosses one ownership line and makes one assumption that is
 right for the renderer and wrong for one field.
@@ -358,7 +358,7 @@ hidden in the view layer.
 when the Lead regenerates that patch. `src/android-app` stays the single
 source of truth — the tree copy is generated, never edited.
 
-**6. Agreed:** `extension/0013`-`0016` is Lead-owned and not a
+**6. Agreed:** `extension/0014`-`0017` is Lead-owned and not a
 prerequisite for Home; skipping it is correct.
 
 **Review checklist the Lead will apply to the branch:**

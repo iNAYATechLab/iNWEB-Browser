@@ -47,7 +47,7 @@ documentation, store readiness.
   `discoverable: false` is the reviewed manual-extra hatch, reported in
   the gate output.
 - In-memory-only seams state honestly which patch will persist them
-  (e.g. ExtensionStore → 0013–0016) — no store is left ambiguous.
+  (e.g. ExtensionStore → 0014–0017) — no store is left ambiguous.
 
 ## 3. Remaining items (proposed order)
 

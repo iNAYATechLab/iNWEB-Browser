@@ -6,7 +6,7 @@ active-profile selection, and per-profile store routing.
 
 **Pure JVM, no Android dependency** — compiles and tests with
 `bash scripts/validate_kotlin_core.sh` (pinned kotlinc + JUnit); the
-`ui/` patch (0022) binds namespaces to real per-profile Chromium
+`ui/` patch (0023) binds namespaces to real per-profile Chromium
 user-data directories (build infrastructure, B-001).
 
 ## Components
