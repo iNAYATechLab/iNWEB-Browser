@@ -141,4 +141,3 @@ class InMemoryFilterListCache : FilterListCache {
         metadata.clear()
     }
 }
-
