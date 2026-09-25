@@ -217,7 +217,18 @@ jobs:
           timeout "${HOP_BUILD_MINUTES}m" bash scripts/build_android.sh development 2>&1 | tee b001-logs/30-build.log
           BUILD_EC=${PIPESTATUS[0]}
           echo "build_exit=$BUILD_EC" | tee -a b001-logs/30-build.log
-          exit "$BUILD_EC"
+          # 124 = the hop ran out of its time box: expected, package state and
+          # continue. ANY other non-zero exit is a real failure (gn gen error,
+          # compile error, missing artifact) and must not be reported as a
+          # successful hop: this step carries continue-on-error so the verdict
+          # step always runs, so the failure has to be re-raised there.
+          if [ "$BUILD_EC" -eq 124 ]; then
+            echo "build_status=timeout" >> "$GITHUB_OUTPUT"
+          elif [ "$BUILD_EC" -ne 0 ]; then
+            echo "build_status=failed" >> "$GITHUB_OUTPUT"
+          else
+            echo "build_status=ok" >> "$GITHUB_OUTPUT"
+          fi
 
       # ---- verdict: APK or resumable state ---------------------------------
       - name: Post-build evidence, APK check, state packaging
@@ -228,6 +239,18 @@ jobs:
           set -o pipefail
           WS="$PWD/chromium"
           OUT="$WS/src/out/inweb-development"
+          # A hop that failed for real is not a hop that succeeded slowly:
+          # say so, publish no resumable state, and fail the job.
+          if [ "${{ steps.build.outputs.build_status }}" = "failed" ]; then
+            {
+              echo "BUILD: FAILED — the build exited non-zero (see 30-build.log)."
+              echo "No resumable state is published: resuming from a stale out/"
+              echo "would hide the failure instead of fixing it."
+            } | tee b001-logs/45-verdict.txt
+            echo "done=false" >> "$GITHUB_OUTPUT"
+            echo "state=none" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
           {
             echo "--- build log tail ---"
             tail -25 b001-logs/30-build.log 2>/dev/null || echo "(no build log)"

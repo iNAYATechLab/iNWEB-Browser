@@ -1,3 +1,21 @@
+diff --git a/build/config/android/internal_rules.gni b/build/config/android/internal_rules.gni
+index 18231e57e25..2a94ad6ea4c 100644
+--- a/build/config/android/internal_rules.gni
++++ b/build/config/android/internal_rules.gni
+@@ -4007,6 +4007,13 @@ if (enable_java_templates) {
+           "//third_party/androidx/*",
+           "//chrome/browser/ui/android/bricks/internal/*",
+           "//android_webview/javatests/*",
++
++          # iNWEB (patch 0013): the authored app layer is Kotlin + Jetpack
++          # Compose and lives under this path. Upstream gates Kotlin behind
++          # this list to control its adoption; we add our own tree path
++          # rather than removing the assert, so the gate keeps applying to
++          # everything that is not ours.
++          "//chrome/android/java/src/org/chromium/chrome/browser/inweb/*",
+         ]
+         _found_kt = filter_exclude(_abs_kt_files, _kt_allowlist)
+         assert(
 diff --git a/chrome/android/BUILD.gn b/chrome/android/BUILD.gn
 index 2133a964d0c..be6d7929c97 100644
 --- a/chrome/android/BUILD.gn

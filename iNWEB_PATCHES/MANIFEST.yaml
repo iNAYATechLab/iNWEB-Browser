@@ -585,15 +585,22 @@ patches:
       //third_party/kotlinc/current/lib/compose-compiler-plugin.jar to
       kotlinc), carrying a single trivial @Composable, and wires it into
       chrome_java. Scaffolding, not a product surface: it is replaced by
-      the real app-layer injection once this is green. Verified against
-      the pinned tree before writing: the Compose AAR targets exist under
-      //third_party/androidx (material3, foundation, foundation-layout,
-      ui, ui-graphics, runtime, runtime-saveable, animation,
-      activity-compose, lifecycle-*-compose, navigation-compose) and
-      androidx.compose.material.icons does NOT exist in the tree at 154 —
-      so authored code must not import material icons.
+      the real app-layer injection once this is green. Second hunks: the
+      Kotlin allowlist in build/config/android/internal_rules.gni —
+      upstream permits .kt sources only at four patterns, so the assert
+      (_found_kt == []) rejected the probe at gn gen on the first attempt
+      (hop 28); this patch adds the iNWEB path to that list rather than
+      removing the assert, so the gate keeps applying to everything that
+      is not ours. Verified against the pinned tree before writing: the
+      Compose AAR targets exist under //third_party/androidx (material3,
+      foundation, foundation-layout, ui, ui-graphics, runtime,
+      runtime-saveable, animation, activity-compose, lifecycle-*-compose,
+      navigation-compose) and androidx.compose.material.icons does NOT
+      exist in the tree at 154 — so authored code must not import
+      material icons.
     upstream_files:
       - chrome/android/BUILD.gn
+      - build/config/android/internal_rules.gni
       - chrome/android/java/src/org/chromium/chrome/browser/inweb/app/BUILD.gn
       - chrome/android/java/src/org/chromium/chrome/browser/inweb/app/InwebProbe.kt
     risk: low
@@ -605,7 +612,10 @@ patches:
     rebase_notes: >-
       chrome/android/BUILD.gn is a large, frequently-upstream-churning
       file; the hunk adds one line inside android_library("chrome_java")
-      deps and should rebase trivially. Re-verify that enable_compose and
-      //third_party/kotlinc/current/lib/compose-compiler-plugin.jar still
-      exist in internal_rules.gni at the new pin; if upstream removes
-      either, the app layer needs a different Compose path.
+      deps and should rebase trivially. The internal_rules.gni hunk sits
+      inside the _kt_allowlist literal: if upstream changes which paths
+      are allowed (Kotlin adoption moves fast), re-add our path next to
+      theirs rather than deleting upstream entries. Re-verify that
+      enable_compose and //third_party/kotlinc/current/lib/
+      compose-compiler-plugin.jar still exist at the new pin; if upstream
+      removes either, the app layer needs a different Compose path.
