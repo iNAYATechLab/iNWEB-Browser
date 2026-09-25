@@ -7,7 +7,7 @@ configuration **only** when this parser returns `Ok` — no fake
 
 **Pure JVM, no Android dependency** — compiles and tests with
 `bash scripts/validate_kotlin_core.sh` (pinned kotlinc + JUnit); the
-`security/` patches (0020–0021) bind it to the real `VpnService` tunnel
+`security/` patches (0021–0022) bind it to the real `VpnService` tunnel
 module (build infrastructure, B-001).
 
 ## Components

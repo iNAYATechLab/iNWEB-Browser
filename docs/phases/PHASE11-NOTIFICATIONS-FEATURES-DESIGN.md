@@ -25,8 +25,8 @@ not at startup.
 |---|---|---|
 | Downloads | download complete / failed | real — `DownloadsStore` state machine (Phase 2 core) |
 | Security | backup failed (integrity/encryption), app-lock repeated failures | real when Phase 8/9 patches land |
-| VPN | connected / disconnected / reconnecting | real when `0021` lands — absent until then, NO stub channel |
-| Background | offline page saved, filter-list update failed | offline: real with `0018`; list-update failures are silent-by-design EXCEPT a persistent failure surfaced in the Security Center |
+| VPN | connected / disconnected / reconnecting | real when `0022` lands — absent until then, NO stub channel |
+| Background | offline page saved, filter-list update failed | offline: real with `0019`; list-update failures are silent-by-design EXCEPT a persistent failure surfaced in the Security Center |
 
 ### Explicitly absent (honest)
 

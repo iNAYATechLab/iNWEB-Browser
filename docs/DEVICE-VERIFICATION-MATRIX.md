@@ -99,7 +99,7 @@ phase's planned patch ids (registered plan, registry empty).
 | D5-3 | Memory: `dumpsys meminfo` PSS deltas (engine, lists, caches) | measurement | PHASE5 §5.3 |
 | D5-4 | Battery: `batterystats`/historian A/B over a scripted session; patches do not defeat tab-freezing / timer-throttling | measurement + patch review | PHASE5 §5.4 |
 
-### Phase 6 — Extensions (extension/0013–0016)
+### Phase 6 — Extensions (extension/0014–0017)
 
 | ID | Verify | Gate | Source |
 |---|---|---|---|
@@ -108,7 +108,7 @@ phase's planned patch ids (registered plan, registry empty).
 | D6-3 | Built-in protections remain active alongside the extension | manual | PHASE6 §6.4 |
 | D6-4 | Enforcement surface: scoped API surface + kill-switch active; unsupported API returns standard `lastError`, never fake success (closes G-10) | manual + audit | PHASE6 §6.4/§7 |
 
-### Phase 7 — Offline & data saver (offline/0017–0019)
+### Phase 7 — Offline & data saver (offline/0018–0020)
 
 | ID | Verify | Gate | Source |
 |---|---|---|---|
@@ -118,7 +118,7 @@ phase's planned patch ids (registered plan, registry empty).
 | D7-4 | **Clear cache does NOT remove saved pages** (user data ≠ HTTP cache) | manual (ADR-024) | PHASE7 §7.4 |
 | D7-5 | Data-saver mode blocks an image request; the counter increments by exactly one real request | scripted | PHASE7 §7.4 |
 
-### Phase 8 — VPN & security (security/0020–0021)
+### Phase 8 — VPN & security (security/0021–0022)
 
 | ID | Verify | Gate | Source |
 |---|---|---|---|
@@ -126,7 +126,7 @@ phase's planned patch ids (registered plan, registry empty).
 | D8-2 | VPN with a real test endpoint: traffic passes AND leaks nothing — DNS + kill-switch tested with always-on and block-without-VPN enabled | measurement | PHASE8 §7.4 |
 | D8-3 | Disconnect state truthfully shown; invalid config files rejected at import | manual | PHASE8 §7.4 |
 
-### Phase 9 — Profiles & backup (ui/0022, 0024)
+### Phase 9 — Profiles & backup (ui/0023, settings/0024)
 
 | ID | Verify | Gate | Source |
 |---|---|---|---|
@@ -143,7 +143,7 @@ phase's planned patch ids (registered plan, registry empty).
 | D10-4 | Touch-target audit | layout tooling | PHASE10 §4 |
 | D10-5 | bn-BD prose human review | per release, documented responsibility | PHASE10 §4 |
 
-### Phase 11 — Notifications & settings bindings (settings/0023 + preference bindings)
+### Phase 11 — Notifications & settings bindings (settings/0024 + preference bindings)
 
 | ID | Verify | Gate | Source |
 |---|---|---|---|
@@ -179,12 +179,12 @@ phase's planned patch ids (registered plan, registry empty).
 | G-02 fingerprinting resistance | — (upstream-preserved scope) | no custom implementation, no claims |
 | G-03 Keystore/BiometricPrompt binding | D8-1 | ADR-025 envelope design |
 | G-04 backup encryption | D9-2 | Android-layer encryption |
-| G-05 per-profile directories | D9-1 | patch 0022 |
+| G-05 per-profile directories | D9-1 | patch 0023 |
 | G-06 sync E2E encryption | — (future infrastructure) | §29 documented absence; no backend exists |
 | G-07 filter-list content pinning | D12-1 (checksum-mismatch path) | closed in the core at Step 44 (ADR-036): pin on download, verify on cache load, never serve a mismatch |
 | G-08 SBOM | B-8 | release engineering |
 | G-09 device verification of corruption contracts | D12-1 + D12-2 | ADR-033 contracts |
-| G-10 extension enforcement surface | D6-4 | patches 0013–0016 |
+| G-10 extension enforcement surface | D6-4 | patches 0014–0017 |
 
 ## 6. Honest boundaries
 

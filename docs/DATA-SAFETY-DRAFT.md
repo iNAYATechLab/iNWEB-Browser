@@ -40,10 +40,10 @@ app preferences) unless stated otherwise. "Leaves the device" is
 | Bookmarks (explicit user action only) | `filesDir/bookmarks.tsv` | per-entry deletion; app reset (deliberate user data — NOT in clear-browsing-data, ADR-034) | never |
 | Session snapshot (open tabs, crash-safe) | `filesDir/session.inweb` | clear-browsing-data (SESSION/TABS) | never |
 | Downloaded filter lists (disposable cache) | `filesDir/filter-lists/` | clear-browsing-data (FILTER_LIST_CACHE) — re-downloads by design | downloaded from public list sources (read-only) |
-| Offline library entries | in-memory until the offline patches (0017–0019) persist it | per-entry deletion + clear-browsing-data (OFFLINE_PAGES) — snapshots are user data, clear-cache never removes them (ADR-024) | never |
+| Offline library entries | in-memory until the offline patches (0018–0020) persist it | per-entry deletion + clear-browsing-data (OFFLINE_PAGES) — snapshots are user data, clear-cache never removes them (ADR-024) | never |
 | Downloads catalog | in-memory until the downloads patch persists it | clear-browsing-data once persisted; app reset | never |
-| Extension registry state | in-memory until the extension patches (0013–0016) persist it | extension removal; app reset | never |
-| Profiles (registry + active id) | in-memory until patch 0022 binds per-profile directories | profile deletion (namespace retired); app reset | never |
+| Extension registry state | in-memory until the extension patches (0014–0017) persist it | extension removal; app reset | never |
+| Profiles (registry + active id) | in-memory until patch 0023 binds per-profile directories | profile deletion (namespace retired); app reset | never |
 | Sync queue | in-memory; **no sync backend exists** (§29 documented absence) | not applicable — no sync data exists | never |
 | Backup bundles | exported files at a USER-CHOSEN location, encrypted at the Android layer (patch-pending) | user deletes the exported file; in-app restore preview gated | only by the user's own export action, encrypted |
 

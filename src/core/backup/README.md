@@ -5,7 +5,7 @@ The versioned, checksummed backup bundle behind MASTER-SPEC §32
 
 **Pure JVM, no Android dependency** — compiles and tests with
 `bash scripts/validate_kotlin_core.sh` (pinned kotlinc + JUnit); the
-`settings/` patch (0023) binds it to the backup/restore UI and the
+`settings/` patch (0024) binds it to the backup/restore UI and the
 Keystore-envelope encryption of the on-disk file (build infrastructure,
 B-001).
 

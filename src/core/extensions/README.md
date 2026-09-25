@@ -8,7 +8,7 @@ comparison for sideload updates, and permission-review records.
 **Pure JVM, no Android dependency** — it compiles and tests with
 `bash scripts/validate_kotlin_core.sh` (pinned kotlinc + JUnit), and the
 Chromium `extension/` patches bind this model to the real WebExtensions
-runtime (registry entries 0013–0016, blocked on build infrastructure
+runtime (registry entries 0014–0017, blocked on build infrastructure
 B-001).
 
 ## Components

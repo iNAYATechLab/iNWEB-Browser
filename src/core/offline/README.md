@@ -6,7 +6,7 @@ quota accounting, LRU eviction, and a persistence seam.
 
 **Pure JVM, no Android dependency** — it compiles and tests with
 `bash scripts/validate_kotlin_core.sh` (pinned kotlinc + JUnit); the
-`offline/` patches (0017+) bind it to the MHTML snapshot pipeline
+`offline/` patches (0018+) bind it to the MHTML snapshot pipeline
 (build infrastructure, B-001).
 
 ## Components

@@ -51,7 +51,7 @@ lists).
   security statement can be validated.
 - **Extensions on Android:** scope DECIDED in the Phase 6 design (upstream
   WebExtensions enabled on Android, sideload-first, ADR-023); enforcement surface
-  ships with patches 0013–0016.
+  ships with patches 0014–0017.
 - **VPN / Sync:** no protection exists until real infrastructure exists; UI will not
   claim otherwise (§57, §65).
 - **Source-level contracts:** all corruption/recovery contracts are CI-audited at the

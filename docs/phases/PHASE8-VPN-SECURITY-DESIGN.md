@@ -105,13 +105,13 @@ testable without a device:
 
 ## 6. Patch plan (registry entries added when the tree exists)
 
-Continuing the global order after `extension/` (0013–0016) and
-`offline/` (0017–0019):
+Continuing the global order after `extension/` (0014–0017) and
+`offline/` (0018–0020):
 
 | id | file | content | risk |
 |---|---|---|---|
-| `0020-security-app-lock` | `security/0020-security-app-lock.patch` | BiometricPrompt + Keystore envelope app lock, incognito gate, settings surface | medium |
-| `0021-security-vpn-tunnel` | `security/0021-security-vpn-tunnel.patch` | VpnService tunnel module + config import (bound to the validated core) + connection-state surface + always-on/kill-switch setup flow | **high** — security review note required |
+| `0021-security-app-lock` | `security/0021-security-app-lock.patch` | BiometricPrompt + Keystore envelope app lock, incognito gate, settings surface | medium |
+| `0022-security-vpn-tunnel` | `security/0022-security-vpn-tunnel.patch` | VpnService tunnel module + config import (bound to the validated core) + connection-state surface + always-on/kill-switch setup flow | **high** — security review note required |
 
 ## 7. Verification strategy
 

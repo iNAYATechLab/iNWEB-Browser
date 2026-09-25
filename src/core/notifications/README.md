@@ -31,7 +31,7 @@ B-001).
   are real (`availableChannels`, required — no default). An
   unavailable channel is never registered and its events are always
   suppressed (`CHANNEL_NOT_AVAILABLE`) — e.g. the VPN channel is
-  absent until patch `0021` lands.
+  absent until patch `0022` lands.
 - **Check order (fixed):** availability → user toggle → permission.
   The lazy ask fires ONLY for an event that would otherwise be shown.
 - **Every channel is off-able** (§33); defaults are all-on for the

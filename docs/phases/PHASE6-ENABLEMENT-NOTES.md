@@ -1,58 +1,67 @@
-# PHASE6 — 0013 enablement map (pinned tree @154.0.8037.21)
+# PHASE6 — 0014 enablement map (pinned tree @154.0.8037.21)
 
-Engineering notes for `0013-extension-enable-android`. Facts below were
-verified against the sparse clone (HEAD 0fa6d91e) on 2026-09-24.
-Sequencing decision at the end.
+Engineering notes for `0014-extension-enable-android`, verified against pinned
+Chromium commit `0fa6d91e2faf313da8332688a96bd98b9d983a4d` on 2026-09-25.
 
-## 1. Flag mechanics (verified)
+## 1. Flag mechanics (inspected)
 
-- `extensions/buildflags/buildflags.gni`:
-  - `enable_extensions = !is_android && !is_ios && !is_castos && !is_fuchsia`
-  - `enable_desktop_android_extensions = is_desktop_android`
-    (upstream's in-progress desktop-Android effort, crbug 356905053 —
-    very much in-development, targets desktop-form-factor Android)
-  - `enable_extensions_core = enable_extensions || enable_desktop_android_extensions`
-  - `enable_platform_apps`/`enable_hosted_apps` follow `enable_extensions`.
-- `build/config/chrome_build.gni`: `is_desktop_android = false` default;
-  asserts `target_os == "android"`. NOT for us (phone form factor).
-- **Our switch:** iNWEB repo `config/chromium/args-*.gn` sets
-  `enable_extensions = true` (repo-side arg, no Chromium patch needed
-  for the flag itself). The PATCH carries the tree fixes the flip
-  requires + the inweb components + the audit script.
+- `extensions/buildflags/buildflags.gni` currently defines:
+  - `enable_extensions = !is_android && !is_ios && !is_castos && !is_fuchsia`;
+  - `enable_desktop_android_extensions = is_desktop_android` as an explicitly
+    experimental, unstable Android extension path;
+  - `enable_extensions_core = enable_extensions ||
+    enable_desktop_android_extensions`;
+  - `enable_platform_apps` and `enable_hosted_apps` follow the full desktop
+    `enable_extensions` flag and remain false for the iNWEB phone build.
+- Patch `0014` adds a narrow, default-false
+  `enable_inweb_android_extensions` argument and folds only that argument into
+  `enable_desktop_android_extensions`.
+- The iNWEB development and release GN configs set the new argument to true.
+  They do **not** set the broader `enable_extensions` flag.
+- `components/guest_view/buildflags/buildflags.gni` already defaults
+  `enable_guest_view` to true on Android; no duplicate iNWEB override is needed.
 
-## 2. Android gating, measured (static map — the compiler is the oracle)
+## 2. Existing Android implementation (inspected)
 
-- `chrome/browser/BUILD.gn`: 2 `if (enable_extensions)` blocks (deps
-  pulls: platform_apps, controlled_frame, extensions_zero_state_promo,
-  //apps, …). Extension sources flow in mostly through the flag, not
-  raw `is_android` guards — the upstream desktop-android effort has
-  already centralized much of it.
-- `chrome/browser/extensions/BUILD.gn`: exists, 3281 lines, 28
-  android/flag guards.
-- `chrome/android/BUILD.gn`: 20 extension mentions.
-- Compile fallout surface: the `.cc` files pulled in by the flag that
-  call desktop-only chrome services. Cannot be enumerated statically
-  with confidence — the build hop is the oracle (that is why it runs
-  BEFORE 0013 authoring completes).
+The pinned tree already contains Android management/developer bridges,
+action-popup contents, toolbar coordination, app-menu entries, options routing,
+resources, JNI headers, and tests. iNWEB does not add parallel placeholder
+surfaces.
 
-## 3. Sequencing decision (2026-09-24)
+The critical honesty finding is that the pinned
+`ExtensionUiBackendImpl.isEnabled()` returns true whenever this implementation
+is compiled. Patch `0016` therefore changes that backend to require the
+explicit `--enable-inweb-extension-ui` verification switch. Compilation is not
+treated as proof of runtime support.
 
-1. **Build hop first** (run 35953643726, dispatched 2026-09-24,
-   resume from state-13, ninja -j6, ETA 2–4 h): compiles the 12-patch
-   series for the first time and produces the first alpha.2 candidate
-   with adblock + popup + cosmetic. Any compile error in 0005–0012 is
-   fixed as patch-file updates BEFORE 0013 lands.
-2. 0013 authoring then proceeds with a known-green baseline: flip
-   `enable_extensions` in args, dispatch a probe/dry-run hop, fix the
-   fallout iteratively (each fix = tree changes collected into the
-   0013 patch), audit script already drafted
-   (`src/native/extensions/tools/audit_extension_apis.py`, mirrored
-   into the patch tree).
-3. 0014–0016 depend on 0013 (strict order — extension code cannot
-   compile against an unenabled subsystem).
+## 3. Prepared patch sequence
 
-## 4. Honest boundary
+1. `0014` — narrow compile-time opt-in and artifact API-audit tool.
+2. `0015` — CRX3/ZIP package inspector, Chromium build/test hooks, and removal
+   of the Chrome Web Store submenu row so discovery is not represented as a
+   supported installation path.
+3. `0016` — default-closed gate around Chromium's existing Android extension
+   surfaces; opt-in is for device verification only.
+4. `0017` — deterministic first-install/update/permission/MV2 review policy
+   and tests. It is a decision model, not a claim that runtime installation is
+   wired.
 
-Until 0013 builds and passes PHASE6 §6, iNWEB has zero extension
-support. The §3 API table stays a target until the audit script runs
-against a real artifact.
+The patches were generated after the current non-extension build hop had
+started and therefore do not alter that hop.
+
+## 4. Build and release gates
+
+The patch series remains prepared but unproven until all of the following are
+green on the exact pin:
+
+1. independent and cumulative patch apply/reverse/re-apply;
+2. GN generation and affected Java/C++ compilation;
+3. Chromium Android extension unit/instrumentation tests;
+4. APK production and artifact API audit;
+5. physical-device permission, enable/disable/remove, popup, persistence, DNR,
+   and built-in-protection coexistence checks.
+
+Until those gates pass, normal builds keep the UI closed and iNWEB has **zero
+claimed extension support**. The API table remains a design target; no fake
+counts, placeholder capability, Web Store installation promise, or unsupported
+API success is permitted.

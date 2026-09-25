@@ -86,13 +86,13 @@ device (proposed Step 22):
 
 ## 6. Patch plan (registry entries added when the tree exists)
 
-Continuing the global order after `extension/` (0013–0016):
+Continuing the global order after `extension/` (0014–0017):
 
 | id | file | content | risk |
 |---|---|---|---|
-| `0017-offline-reader-mode` | `offline/0017-offline-reader-mode.patch` | distiller enablement + iNWEB reader surface | medium |
-| `0018-offline-page-snapshots` | `offline/0018-offline-page-snapshots.patch` | MHTML save path + offline library UI + quota/eviction binding to the core | medium |
-| `0019-offline-data-saver` | `offline/0019-offline-data-saver.patch` | data-saver rule-class wiring into the engine service + requests-avoided accounting | medium |
+| `0018-offline-reader-mode` | `offline/0018-offline-reader-mode.patch` | distiller enablement + iNWEB reader surface | medium |
+| `0019-offline-page-snapshots` | `offline/0019-offline-page-snapshots.patch` | MHTML save path + offline library UI + quota/eviction binding to the core | medium |
+| `0020-offline-data-saver` | `offline/0020-offline-data-saver.patch` | data-saver rule-class wiring into the engine service + requests-avoided accounting | medium |
 
 Cache controls (§18) bind through the settings surfaces — future
 `settings/` entries, cross-referenced here.

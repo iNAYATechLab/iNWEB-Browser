@@ -26,7 +26,7 @@ enum class NotificationChannel(val id: String) {
  *  - SECURITY: backup failed, app-lock repeated failures (sources
  *    real when the Phase 8/9 patches land)
  *  - VPN: connected / disconnected / reconnecting (source real when
- *    patch 0021 lands)
+ *    patch 0022 lands)
  *  - BACKGROUND: offline page saved (source real when 0018 lands)
  *
  * Deliberately NOT events: filter-list update failure (silent by
@@ -138,7 +138,7 @@ class InMemoryNotificationStore : NotificationStore {
  *
  * [availableChannels] is REQUIRED with no default: the build must
  * state explicitly which event sources are real in it (the design §1
- * table gates VPN on patch 0021, offline-page events on 0018, and so
+ * table gates VPN on patch 0022, offline-page events on 0019, and so
  * on). A channel that is not available is never registered and its
  * events are never shown — no stub channels, no stub events.
  *
