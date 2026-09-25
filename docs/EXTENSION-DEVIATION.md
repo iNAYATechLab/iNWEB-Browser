@@ -124,6 +124,13 @@ identity and documentation instead of being renumbered around a gap. See
 | 0016 | **closing** extension UI surfaces by default; opt-in only for device verification |
 | 0017 | policy gating that stages decisions, with **no runtime capability claim** |
 
+### Probe runs
+
+| Run | Commit | Outcome |
+|---|---|---|
+| 36158864743 | `65a90db` | **invalid** — run before the patch-0013 fix, so it failed on 0013's `glob()` in gn gen, not on anything to do with extensions. Recorded here rather than quietly re-run: a green result would have been meaningless and a red one would have blamed the wrong patch. |
+| (this run) | `159c35f` | pending — the real probe, on the corrected series |
+
 ### Probing rules
 
 - The probe runs in a **separate, controlled hop** and never delays the
