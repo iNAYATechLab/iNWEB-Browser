@@ -1,0 +1,257 @@
+diff --git a/chrome/android/inweb/extensions/BUILD.gn b/chrome/android/inweb/extensions/BUILD.gn
+index c2ab62c..1cccf50 100644
+--- a/chrome/android/inweb/extensions/BUILD.gn
++++ b/chrome/android/inweb/extensions/BUILD.gn
+@@ -1,7 +1,8 @@
+ # iNWEB Browser — extension package inspection (patch 0015).
+ #
+-# This target validates local CRX3/ZIP structure, manifest fields, CRC
+-# integrity, and manual update order. It does not install or enable anything.
++# This target does not claim or enable runtime capability. It validates local
++# CRX3/ZIP structure, manifest fields, CRC integrity, and manual update order
++# before an upstream installer is ever invoked.
+ 
+ source_set("inweb_extension_installer") {
+   sources = [
+@@ -9,6 +10,8 @@ source_set("inweb_extension_installer") {
+     "inweb_extension_archive.h",
+     "inweb_extension_installer.cc",
+     "inweb_extension_installer.h",
++    "inweb_extension_policy.cc",
++    "inweb_extension_policy.h",
+   ]
+ 
+   deps = [
+@@ -18,7 +21,10 @@ source_set("inweb_extension_installer") {
+ 
+ source_set("unittests") {
+   testonly = true
+-  sources = [ "inweb_extension_installer_unittest.cc" ]
++  sources = [
++    "inweb_extension_installer_unittest.cc",
++    "inweb_extension_policy_unittest.cc",
++  ]
+ 
+   deps = [
+     ":inweb_extension_installer",
+diff --git a/chrome/android/inweb/extensions/inweb_extension_policy.cc b/chrome/android/inweb/extensions/inweb_extension_policy.cc
+new file mode 100644
+index 0000000..55f23f5
+--- /dev/null
++++ b/chrome/android/inweb/extensions/inweb_extension_policy.cc
+@@ -0,0 +1,67 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/extensions/inweb_extension_policy.h"
++
++namespace inweb::extensions {
++
++ExtensionPolicyDecision::ExtensionPolicyDecision() = default;
++ExtensionPolicyDecision::~ExtensionPolicyDecision() = default;
++ExtensionPolicyDecision::ExtensionPolicyDecision(
++    const ExtensionPolicyDecision&) = default;
++ExtensionPolicyDecision& ExtensionPolicyDecision::operator=(
++    const ExtensionPolicyDecision&) = default;
++ExtensionPolicyDecision::ExtensionPolicyDecision(
++    ExtensionPolicyDecision&&) noexcept = default;
++ExtensionPolicyDecision& ExtensionPolicyDecision::operator=(
++    ExtensionPolicyDecision&&) noexcept = default;
++
++namespace {
++
++bool IsValidManifest(const ExtensionManifest& manifest) {
++  return !manifest.parse_error && !manifest.name.empty() &&
++         CompareVersions(manifest.version, manifest.version).has_value() &&
++         (manifest.manifest_version == 2 || manifest.manifest_version == 3);
++}
++
++}  // namespace
++
++ExtensionPolicyDecision EvaluateExtensionPolicy(
++    const ExtensionManifest& incoming,
++    const std::optional<ExtensionManifest>& installed,
++    const std::set<std::string>& reviewed_permissions) {
++  ExtensionPolicyDecision decision;
++  decision.show_mv2_deprecation_warning = incoming.manifest_version == 2;
++
++  if (!IsValidManifest(incoming)) {
++    decision.block_reason = PolicyBlockReason::kInvalidManifest;
++    return decision;
++  }
++
++  if (installed) {
++    const std::optional<int> order =
++        CompareVersions(installed->version, incoming.version);
++    if (!order || *order >= 0) {
++      decision.block_reason = PolicyBlockReason::kVersionNotNewer;
++      return decision;
++    }
++  }
++
++  decision.may_stage = true;
++  decision.block_reason = PolicyBlockReason::kNone;
++  for (const std::string& permission : incoming.permissions) {
++    if (!reviewed_permissions.contains(permission)) {
++      decision.added_permissions.insert(permission);
++    }
++  }
++  // Every first install needs an explicit package review, even when the
++  // manifest requests no warning-producing permissions. Updates require a
++  // new review only when they expand the accepted permission set.
++  decision.permission_review_required =
++      !installed.has_value() || !decision.added_permissions.empty();
++  decision.may_enable = !decision.permission_review_required;
++  return decision;
++}
++
++}  // namespace inweb::extensions
+diff --git a/chrome/android/inweb/extensions/inweb_extension_policy.h b/chrome/android/inweb/extensions/inweb_extension_policy.h
+new file mode 100644
+index 0000000..c7de010
+--- /dev/null
++++ b/chrome/android/inweb/extensions/inweb_extension_policy.h
+@@ -0,0 +1,53 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_EXTENSIONS_INWEB_EXTENSION_POLICY_H_
++#define CHROME_ANDROID_INWEB_EXTENSIONS_INWEB_EXTENSION_POLICY_H_
++
++#include <optional>
++#include <set>
++#include <string>
++
++#include "chrome/android/inweb/extensions/inweb_extension_installer.h"
++
++namespace inweb::extensions {
++
++// An install/update can be staged only after package inspection succeeds.
++// Staging never implies enablement: first installs and permission-expanding
++// updates require an explicit warning review before the runtime may enable.
++enum class PolicyBlockReason {
++  kNone,
++  kInvalidManifest,
++  kVersionNotNewer,
++};
++
++struct ExtensionPolicyDecision {
++  ExtensionPolicyDecision();
++  ~ExtensionPolicyDecision();
++  ExtensionPolicyDecision(const ExtensionPolicyDecision&);
++  ExtensionPolicyDecision& operator=(const ExtensionPolicyDecision&);
++  ExtensionPolicyDecision(ExtensionPolicyDecision&&) noexcept;
++  ExtensionPolicyDecision& operator=(ExtensionPolicyDecision&&) noexcept;
++
++  bool may_stage = false;
++  bool may_enable = false;
++  bool permission_review_required = true;
++  bool show_mv2_deprecation_warning = false;
++  PolicyBlockReason block_reason = PolicyBlockReason::kInvalidManifest;
++  std::set<std::string> added_permissions;
++};
++
++// Evaluates the iNWEB sideload/update policy without installing anything.
++//
++// |installed| is absent for a first install. |reviewed_permissions| is the
++// exact set previously accepted by the user. The decision is deterministic
++// and contains no runtime capability claim.
++ExtensionPolicyDecision EvaluateExtensionPolicy(
++    const ExtensionManifest& incoming,
++    const std::optional<ExtensionManifest>& installed,
++    const std::set<std::string>& reviewed_permissions);
++
++}  // namespace inweb::extensions
++
++#endif  // CHROME_ANDROID_INWEB_EXTENSIONS_INWEB_EXTENSION_POLICY_H_
+diff --git a/chrome/android/inweb/extensions/inweb_extension_policy_unittest.cc b/chrome/android/inweb/extensions/inweb_extension_policy_unittest.cc
+new file mode 100644
+index 0000000..cc5e848
+--- /dev/null
++++ b/chrome/android/inweb/extensions/inweb_extension_policy_unittest.cc
+@@ -0,0 +1,83 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/extensions/inweb_extension_policy.h"
++
++#include <utility>
++
++#include "testing/gtest/include/gtest/gtest.h"
++
++namespace inweb::extensions {
++namespace {
++
++ExtensionManifest Manifest(
++    const std::string& version = "1.0",
++    int manifest_version = 3,
++    std::vector<std::string> permissions = {"storage"}) {
++  ExtensionManifest manifest;
++  manifest.name = "Test Extension";
++  manifest.version = version;
++  manifest.manifest_version = manifest_version;
++  manifest.permissions = std::move(permissions);
++  return manifest;
++}
++
++TEST(InwebExtensionPolicyTest, FirstInstallStagesButNeverSilentlyEnables) {
++  const ExtensionPolicyDecision decision =
++      EvaluateExtensionPolicy(Manifest(), std::nullopt, {});
++  EXPECT_TRUE(decision.may_stage);
++  EXPECT_FALSE(decision.may_enable);
++  EXPECT_TRUE(decision.permission_review_required);
++  EXPECT_EQ(PolicyBlockReason::kNone, decision.block_reason);
++  EXPECT_EQ(std::set<std::string>({"storage"}), decision.added_permissions);
++}
++
++TEST(InwebExtensionPolicyTest, InvalidManifestAndNonNewerUpdateAreBlocked) {
++  ExtensionManifest invalid = Manifest();
++  invalid.name.clear();
++  EXPECT_EQ(PolicyBlockReason::kInvalidManifest,
++            EvaluateExtensionPolicy(invalid, std::nullopt, {}).block_reason);
++
++  const ExtensionManifest installed = Manifest("2.0");
++  const ExtensionPolicyDecision same =
++      EvaluateExtensionPolicy(Manifest("2.0"), installed, {"storage"});
++  EXPECT_FALSE(same.may_stage);
++  EXPECT_EQ(PolicyBlockReason::kVersionNotNewer, same.block_reason);
++
++  const ExtensionPolicyDecision older =
++      EvaluateExtensionPolicy(Manifest("1.9"), installed, {"storage"});
++  EXPECT_FALSE(older.may_stage);
++  EXPECT_EQ(PolicyBlockReason::kVersionNotNewer, older.block_reason);
++}
++
++TEST(InwebExtensionPolicyTest, UpdateWithoutNewPermissionsMayRemainEnabled) {
++  const ExtensionManifest installed = Manifest("1.0", 3, {"storage", "tabs"});
++  const ExtensionPolicyDecision decision = EvaluateExtensionPolicy(
++      Manifest("1.1", 3, {"storage"}), installed, {"storage", "tabs"});
++  EXPECT_TRUE(decision.may_stage);
++  EXPECT_TRUE(decision.may_enable);
++  EXPECT_FALSE(decision.permission_review_required);
++  EXPECT_TRUE(decision.added_permissions.empty());
++}
++
++TEST(InwebExtensionPolicyTest, AddedPermissionForcesReviewBeforeEnable) {
++  const ExtensionManifest installed = Manifest("1.0", 3, {"storage"});
++  const ExtensionPolicyDecision decision = EvaluateExtensionPolicy(
++      Manifest("2.0", 3, {"storage", "tabs"}), installed, {"storage"});
++  EXPECT_TRUE(decision.may_stage);
++  EXPECT_FALSE(decision.may_enable);
++  EXPECT_TRUE(decision.permission_review_required);
++  EXPECT_EQ(std::set<std::string>({"tabs"}), decision.added_permissions);
++}
++
++TEST(InwebExtensionPolicyTest, ManifestV2AlwaysCarriesDeprecationWarning) {
++  const ExtensionPolicyDecision decision =
++      EvaluateExtensionPolicy(Manifest("1.0", 2), std::nullopt, {});
++  EXPECT_TRUE(decision.may_stage);
++  EXPECT_TRUE(decision.show_mv2_deprecation_warning);
++  EXPECT_FALSE(decision.may_enable);
++}
++
++}  // namespace
++}  // namespace inweb::extensions

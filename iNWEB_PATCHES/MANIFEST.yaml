@@ -674,3 +674,102 @@ patches:
       hand-edit it. Re-verify enable_compose and
       //third_party/kotlinc/current/lib/compose-compiler-plugin.jar still
       exist at the new pin.
+
+  - id: 0014-extension-enable-android
+    file: extension/0014-extension-enable-android.patch
+    area: extension
+    description: >-
+      Compile-time opt-in for Chromium's existing experimental Android
+      extension core through a dedicated enable_inweb_android_extensions GN
+      argument, plus the artifact-based API audit tool. This is a high-risk
+      build probe, not an availability claim: extension UI remains closed by
+      0016 until explicit device verification.
+    upstream_files:
+      - extensions/buildflags/buildflags.gni
+      - chrome/android/inweb/extensions/tools/audit_extension_apis.py
+    risk: high
+    validation: >-
+      Security review boundary: does not enable the full desktop extension
+      flag, exposes no UI by itself, and reports no supported API without APK
+      evidence. Independent patch apply/reverse/re-apply, manifest/GN lint,
+      then a pinned Chromium build hop and artifact API audit are required.
+    rebase_notes: >-
+      Re-check enable_desktop_android_extensions and enable_extensions_core at
+      the pinned baseline. If upstream removes or stabilizes the experimental
+      path, prefer its supported Android switch and retire the iNWEB argument.
+
+  - id: 0015-extension-management-ui
+    file: extension/0015-extension-management-ui.patch
+    area: extension
+    description: >-
+      Prepared management/install layer: adds the host-tested CRX3/ZIP
+      structural inspector, manifest/version validation and native tests;
+      builds them in Chromium; retains upstream Manage Extensions surfaces;
+      and removes the Chrome Web Store app-menu item so discovery is not
+      misrepresented as a supported installation path. UI remains gated.
+    upstream_files:
+      - chrome/android/inweb/extensions/BUILD.gn
+      - chrome/android/inweb/extensions/inweb_extension_archive.cc
+      - chrome/android/inweb/extensions/inweb_extension_archive.h
+      - chrome/android/inweb/extensions/inweb_extension_installer.cc
+      - chrome/android/inweb/extensions/inweb_extension_installer.h
+      - chrome/android/inweb/extensions/inweb_extension_installer_unittest.cc
+      - chrome/android/java/src/org/chromium/chrome/browser/app/appmenu/AppMenuPropertiesDelegateImpl.java
+      - chrome/browser/BUILD.gn
+      - chrome/test/BUILD.gn
+    risk: medium
+    validation: >-
+      Sixteen extension native tests in the focused host harness after 0017;
+      eleven installer/archive tests independently at this patch boundary;
+      patch apply/reverse/re-apply; GN label validation; Chromium compile and
+      upstream Android extension tests required before exposure.
+    rebase_notes: >-
+      The app-menu hunk removes only the Web Store submenu row. Re-check
+      upstream menu construction and native extension BUILD/test hook slots.
+      Authored native sources remain under src/native/extensions.
+
+  - id: 0016-extension-action-surfaces
+    file: extension/0016-extension-action-surfaces.patch
+    area: extension
+    description: >-
+      Closes Chromium's existing Android extension management, toolbar action,
+      popup and options surfaces by default. A device-verification run may opt
+      in with --enable-inweb-extension-ui; normal builds expose nothing merely
+      because the experimental backend compiled.
+    upstream_files:
+      - chrome/browser/ui/android/extensions/java/src/org/chromium/chrome/browser/ui/extensions/ExtensionUiBackendImpl.java
+    risk: medium
+    validation: >-
+      Patch apply/reverse/re-apply and authored structural scan; Chromium Java
+      compilation; device tests with and without the explicit switch. Without
+      the switch the Extensions app-menu item and toolbar surfaces must remain
+      absent.
+    rebase_notes: >-
+      Upstream may replace ExtensionUiBackendImpl or add a stable feature
+      gate. Preserve the default-closed behavior and migrate to the supported
+      upstream gate instead of carrying a duplicate switch.
+
+  - id: 0017-extension-policy-gate
+    file: extension/0017-extension-policy-gate.patch
+    area: extension
+    description: >-
+      Deterministic sideload/update policy gate: invalid and non-newer packages
+      are blocked; every first install requires explicit review; permission-
+      expanding updates cannot enable before renewed review; and MV2 packages
+      carry a deprecation-warning signal. The gate stages decisions only and
+      makes no runtime capability claim.
+    upstream_files:
+      - chrome/android/inweb/extensions/BUILD.gn
+      - chrome/android/inweb/extensions/inweb_extension_policy.cc
+      - chrome/android/inweb/extensions/inweb_extension_policy.h
+      - chrome/android/inweb/extensions/inweb_extension_policy_unittest.cc
+    risk: medium
+    validation: >-
+      Five focused native policy tests plus eleven installer/archive tests;
+      independent and cumulative patch round-trip; GN validation; Chromium
+      native unit tests. Runtime wiring remains unavailable until the build/API
+      audit and on-device permission/disable/remove matrix are green.
+    rebase_notes: >-
+      Keep policy evaluation side-effect free. Any future bridge to Chromium's
+      ExtensionService must stage disabled first and preserve upstream
+      permission-warning and upgrade-consent semantics.

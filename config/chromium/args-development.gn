@@ -11,6 +11,11 @@
 target_os = "android"
 target_cpu = "arm64"
 
+# Phase 6 probe: opt into Chromium's existing experimental Android extension
+# core without claiming the full desktop extensions system. User-facing
+# surfaces remain separately gated until build, API-audit, and device proof.
+enable_inweb_android_extensions = true
+
 # Fast iteration for patch development. NOTE: component builds are
 # disallowed on Android upstream (BUILDCONFIG.gn asserts
 # !(current_os == "android" && is_component_build)) — first real-build

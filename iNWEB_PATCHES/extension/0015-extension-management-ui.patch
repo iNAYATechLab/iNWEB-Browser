@@ -1,0 +1,1161 @@
+diff --git a/chrome/android/inweb/extensions/BUILD.gn b/chrome/android/inweb/extensions/BUILD.gn
+new file mode 100644
+index 0000000..c2ab62c
+--- /dev/null
++++ b/chrome/android/inweb/extensions/BUILD.gn
+@@ -0,0 +1,28 @@
++# iNWEB Browser — extension package inspection (patch 0015).
++#
++# This target validates local CRX3/ZIP structure, manifest fields, CRC
++# integrity, and manual update order. It does not install or enable anything.
++
++source_set("inweb_extension_installer") {
++  sources = [
++    "inweb_extension_archive.cc",
++    "inweb_extension_archive.h",
++    "inweb_extension_installer.cc",
++    "inweb_extension_installer.h",
++  ]
++
++  deps = [
++    "//third_party/zlib",
++  ]
++}
++
++source_set("unittests") {
++  testonly = true
++  sources = [ "inweb_extension_installer_unittest.cc" ]
++
++  deps = [
++    ":inweb_extension_installer",
++    "//testing/gtest",
++    "//third_party/zlib",
++  ]
++}
+diff --git a/chrome/android/inweb/extensions/inweb_extension_archive.cc b/chrome/android/inweb/extensions/inweb_extension_archive.cc
+new file mode 100644
+index 0000000..2683ccb
+--- /dev/null
++++ b/chrome/android/inweb/extensions/inweb_extension_archive.cc
+@@ -0,0 +1,230 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/extensions/inweb_extension_archive.h"
++
++#include <cstring>
++
++#include "third_party/zlib/zlib.h"
++
++namespace inweb::extensions {
++
++namespace {
++
++constexpr uint8_t kCrxMagic[] = {'C', 'r', '2', '4'};
++constexpr uint32_t kCrxVersion3 = 3;
++
++// Bounds-checked little-endian reads. Every offset is validated with
++// RangeFits() before use, and all access goes through vector/string
++// operator[] — no raw pointer arithmetic or C-array indexing anywhere
++// in this file (unsafe-buffers-clean; hop-17 lesson).
++
++uint16_t ReadU16At(const std::vector<uint8_t>& d, size_t off) {
++  return static_cast<uint16_t>(d[off] | (d[off + 1] << 8));
++}
++
++uint32_t ReadU32At(const std::vector<uint8_t>& d, size_t off) {
++  return static_cast<uint32_t>(d[off]) |
++         (static_cast<uint32_t>(d[off + 1]) << 8) |
++         (static_cast<uint32_t>(d[off + 2]) << 16) |
++         (static_cast<uint32_t>(d[off + 3]) << 24);
++}
++
++// True when [off, off+len) lies fully inside d (overflow-safe).
++bool RangeFits(const std::vector<uint8_t>& d, size_t off, size_t len) {
++  return off <= d.size() && len <= d.size() - off;
++}
++
++}  // namespace
++
++Crx3Info ParseCrx3Container(const std::vector<uint8_t>& package) {
++  Crx3Info info;
++  if (package.size() < 12) {
++    info.error = "package too small for a CRX header";
++    return info;
++  }
++  if (std::memcmp(package.data(), kCrxMagic, sizeof(kCrxMagic)) != 0) {
++    info.error = "bad CRX magic";
++    return info;
++  }
++  const uint32_t version = ReadU32At(package, 4);
++  if (version != kCrxVersion3) {
++    info.error = "unsupported CRX version (only 3 is handled)";
++    return info;
++  }
++  const uint32_t header_size = ReadU32At(package, 8);
++  if (header_size == 0 ||
++      static_cast<uint64_t>(header_size) + 12 >= package.size()) {
++    info.error = "CRX header length out of bounds";
++    return info;
++  }
++  info.zip_offset = 12 + static_cast<size_t>(header_size);
++  info.ok = true;
++  return info;
++}
++
++ZipMemoryReader::ZipMemoryReader(std::vector<uint8_t> data)
++    : data_(std::move(data)) {}
++
++ZipMemoryReader::~ZipMemoryReader() = default;
++
++namespace {
++
++// End-of-central-directory signature.
++constexpr uint32_t kEocdSig = 0x06054b50;
++// Central-directory file-header signature.
++constexpr uint32_t kCdhSig = 0x02014b50;
++// Local file-header signature.
++constexpr uint32_t kLfhSig = 0x04034b50;
++// Maximum tolerated comment/search window for the EOCD.
++constexpr size_t kEocdSearchLimit = 65536;
++
++}  // namespace
++
++bool ZipMemoryReader::Open(std::string* error) {
++  entries_.clear();
++  error_.clear();
++  // Find the EOCD record scanning backwards (ZIP64 not supported —
++  // documented limit; extension packages never approach 4 GB).
++  if (data_.size() < 22) {
++    error_ = "not a ZIP (too small)";
++  } else {
++    const size_t search_start =
++        data_.size() > kEocdSearchLimit ? data_.size() - kEocdSearchLimit : 0;
++    size_t eocd = std::string::npos;
++    for (size_t i = data_.size() - 22 + 1; i-- > search_start;) {
++      if (ReadU32At(data_, i) == kEocdSig) {
++        eocd = i;
++        break;
++      }
++    }
++    if (eocd == std::string::npos || !RangeFits(data_, eocd, 22)) {
++      error_ = "end-of-central-directory not found";
++    } else {
++      const uint64_t entry_count = ReadU16At(data_, eocd + 10);
++      const uint64_t cd_offset = ReadU32At(data_, eocd + 16);
++      size_t p = static_cast<size_t>(cd_offset);
++      for (uint64_t i = 0; i < entry_count; ++i) {
++        if (!RangeFits(data_, p, 46) || ReadU32At(data_, p) != kCdhSig) {
++          error_ = "corrupt central directory";
++          break;
++        }
++        ZipEntry entry;
++        entry.method = static_cast<uint16_t>(ReadU16At(data_, p + 10));
++        entry.crc32 = ReadU32At(data_, p + 16);
++        entry.compressed_size = ReadU32At(data_, p + 20);
++        entry.uncompressed_size = ReadU32At(data_, p + 24);
++        entry.local_header_offset = ReadU32At(data_, p + 42);
++        const uint16_t name_len =
++            static_cast<uint16_t>(ReadU16At(data_, p + 28));
++        const uint16_t extra_len =
++            static_cast<uint16_t>(ReadU16At(data_, p + 30));
++        const uint16_t comment_len =
++            static_cast<uint16_t>(ReadU16At(data_, p + 32));
++        if (!RangeFits(data_, p + 46, name_len)) {
++          error_ = "corrupt entry name";
++          break;
++        }
++        entry.name.resize(name_len);
++        for (size_t k = 0; k < name_len; ++k) {
++          entry.name[k] = static_cast<char>(data_[p + 46 + k]);
++        }
++        entries_.push_back(std::move(entry));
++        p += 46 + name_len + extra_len + comment_len;
++      }
++    }
++  }
++  if (!error_.empty()) {
++    entries_.clear();
++    if (error) {
++      *error = error_;
++    }
++    return false;
++  }
++  return true;
++}
++
++bool ZipMemoryReader::HasEntry(const std::string& name) const {
++  for (const ZipEntry& entry : entries_) {
++    if (entry.name == name) {
++      return true;
++    }
++  }
++  return false;
++}
++
++std::optional<std::vector<uint8_t>> ZipMemoryReader::ReadEntry(
++    const std::string& name) {
++  error_.clear();
++  const ZipEntry* found = nullptr;
++  for (const ZipEntry& entry : entries_) {
++    if (entry.name == name) {
++      found = &entry;
++      break;
++    }
++  }
++  if (!found) {
++    error_ = "entry not found: " + name;
++    return std::nullopt;
++  }
++  // Validate the local header at the recorded offset.
++  const size_t lfh = static_cast<size_t>(found->local_header_offset);
++  if (!RangeFits(data_, lfh, 30) || ReadU32At(data_, lfh) != kLfhSig) {
++    error_ = "bad local header for " + name;
++    return std::nullopt;
++  }
++  const uint16_t name_len = static_cast<uint16_t>(ReadU16At(data_, lfh + 26));
++  const uint16_t extra_len = static_cast<uint16_t>(ReadU16At(data_, lfh + 28));
++  const size_t data_offset = lfh + 30 + name_len + extra_len;
++  if (!RangeFits(data_, data_offset, found->compressed_size)) {
++    error_ = "entry data out of bounds: " + name;
++    return std::nullopt;
++  }
++  std::vector<uint8_t> out(static_cast<size_t>(found->uncompressed_size));
++  if (found->method == 0) {  // stored
++    if (found->compressed_size != found->uncompressed_size) {
++      error_ = "stored entry size mismatch: " + name;
++      return std::nullopt;
++    }
++    out.assign(data_.begin() + data_offset,
++               data_.begin() + data_offset + out.size());
++  } else if (found->method == 8) {  // deflate (raw)
++    if (out.empty()) {
++      // An empty entry with method 8 is legal and means zero bytes.
++    } else {
++      // zlib's C API needs a raw pointer into the middle of data_.
++      // Copy the bounded compressed slice into a local buffer so this
++      // file contains no pointer arithmetic (unsafe-buffers-clean);
++      // extension-package slices are small, the copy is negligible.
++      std::vector<uint8_t> compressed(
++          data_.begin() + data_offset,
++          data_.begin() + data_offset + found->compressed_size);
++      z_stream stream = {};
++      stream.next_in = compressed.data();
++      stream.avail_in = static_cast<uInt>(compressed.size());
++      stream.next_out = out.data();
++      stream.avail_out = static_cast<uInt>(out.size());
++      if (inflateInit2(&stream, -15) != Z_OK ||  // raw deflate
++          inflate(&stream, Z_FINISH) != Z_STREAM_END) {
++        inflateEnd(&stream);
++        error_ = "deflate failed for " + name;
++        return std::nullopt;
++      }
++      inflateEnd(&stream);
++    }
++  } else {
++    error_ = "unsupported compression method for " + name;
++    return std::nullopt;
++  }
++  // CRC32 integrity — corruption fails loudly, never returns garbage.
++  const uint32_t actual =
++      static_cast<uint32_t>(crc32(0, out.data(), static_cast<uInt>(out.size())));
++  if (actual != found->crc32) {
++    error_ = "CRC mismatch for " + name;
++    return std::nullopt;
++  }
++  return out;
++}
++
++}  // namespace inweb::extensions
+diff --git a/chrome/android/inweb/extensions/inweb_extension_archive.h b/chrome/android/inweb/extensions/inweb_extension_archive.h
+new file mode 100644
+index 0000000..868aa5f
+--- /dev/null
++++ b/chrome/android/inweb/extensions/inweb_extension_archive.h
+@@ -0,0 +1,79 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_EXTENSIONS_INWEB_EXTENSION_ARCHIVE_H_
++#define CHROME_ANDROID_INWEB_EXTENSIONS_INWEB_EXTENSION_ARCHIVE_H_
++
++#include <cstdint>
++#include <optional>
++#include <string>
++#include <vector>
++
++namespace inweb::extensions {
++
++// CRX3 container information (structural parse only — see below).
++struct Crx3Info {
++  bool ok = false;
++  std::string error;
++  // Byte offset of the embedded ZIP archive inside the package.
++  size_t zip_offset = 0;
++};
++
++// Structural CRX3 parse: magic "Cr24", format version 3, 32-bit LE
++// header length, protobuf header bytes, then the ZIP payload.
++//
++// HONEST SCOPE (PHASE6 §4 security model): v1 verifies structure and
++// the ZIP's per-entry CRC32 integrity — it does NOT validate the CRX3
++// signature against a key store (iNWEB ships no store; sideloaded
++// packages are user-chosen local files, and the permission-warning
++// review before enable is the trust surface). Identity-signature
++// verification (Ed25519 over SignedData) is a documented, deferred
++// extension point — never claimed as present.
++Crx3Info ParseCrx3Container(const std::vector<uint8_t>& package);
++
++// One entry from a ZIP central directory.
++struct ZipEntry {
++  std::string name;
++  uint64_t compressed_size = 0;
++  uint64_t uncompressed_size = 0;
++  uint32_t crc32 = 0;
++  uint16_t method = 0;  // 0 = stored, 8 = deflate
++  // Offset of the local file header (needed to find the data).
++  uint64_t local_header_offset = 0;
++};
++
++// Minimal in-memory ZIP reader (local headers + central directory,
++// stored + deflate). Self-contained on zlib so it builds both in the
++// Chromium tree and on the host harness without shimming Chromium's
++// zip utilities. Every inflated entry is CRC32-verified — corrupt
++// payloads fail with an error instead of returning garbage.
++class ZipMemoryReader {
++ public:
++  explicit ZipMemoryReader(std::vector<uint8_t> data);
++  ~ZipMemoryReader();
++  ZipMemoryReader(const ZipMemoryReader&) = delete;
++  ZipMemoryReader& operator=(const ZipMemoryReader&) = delete;
++  ZipMemoryReader(ZipMemoryReader&&) = delete;
++  ZipMemoryReader& operator=(ZipMemoryReader&&) = delete;
++
++  // Parses the central directory. False + |error_| on malformed input.
++  bool Open(std::string* error);
++
++  // Returns and decompresses |name| (CRC-verified), or nullopt with
++  // |error_| set (missing entry, bad method, corrupt data).
++  std::optional<std::vector<uint8_t>> ReadEntry(const std::string& name);
++
++  bool HasEntry(const std::string& name) const;
++  const std::string& error() const { return error_; }
++  const std::vector<ZipEntry>& entries() const { return entries_; }
++
++ private:
++  std::vector<uint8_t> data_;
++  std::vector<ZipEntry> entries_;
++  std::string error_;
++};
++
++}  // namespace inweb::extensions
++
++#endif  // CHROME_ANDROID_INWEB_EXTENSIONS_INWEB_EXTENSION_ARCHIVE_H_
+diff --git a/chrome/android/inweb/extensions/inweb_extension_installer.cc b/chrome/android/inweb/extensions/inweb_extension_installer.cc
+new file mode 100644
+index 0000000..444fc6d
+--- /dev/null
++++ b/chrome/android/inweb/extensions/inweb_extension_installer.cc
+@@ -0,0 +1,380 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#include "chrome/android/inweb/extensions/inweb_extension_installer.h"
++
++#include <cctype>
++#include <map>
++
++#include "chrome/android/inweb/extensions/inweb_extension_archive.h"
++
++namespace inweb::extensions {
++
++namespace {
++
++// ---- Minimal JSON subset parser -------------------------------------
++// Objects, arrays, strings (with \" \\ \/ \b \f \n \r \t \uXXXX),
++// integer literals, true/false/null. Everything else is an error.
++// Written for the manifest fields iNWEB reads; it is NOT a general
++// JSON engine and says so.
++
++class JsonParser {
++ public:
++  explicit JsonParser(const std::string& text) : text_(text) {}
++
++  bool Parse(std::string* error) {
++    SkipWhitespace();
++    if (!ParseValue()) {
++      *error = "JSON parse error at offset " + std::to_string(pos_);
++      return false;
++    }
++    SkipWhitespace();  // tolerate trailing whitespace/newline
++    if (pos_ != text_.size()) {
++      *error = "JSON parse error at offset " + std::to_string(pos_);
++      return false;
++    }
++    return true;
++  }
++
++  const std::map<std::string, std::string>& strings() const {
++    return strings_;
++  }
++  const std::map<std::string, long>& ints() const { return ints_; }
++
++  // Path accessors: "permissions" is an array of strings under a
++  // top-level key; "permissions.3" is its fourth element.
++  std::vector<std::string> StringArray(const std::string& key) const {
++    std::vector<std::string> out;
++    for (size_t i = 0;; ++i) {
++      auto it = strings_.find(key + "." + std::to_string(i));
++      if (it == strings_.end()) {
++        break;
++      }
++      out.push_back(it->second);
++    }
++    return out;
++  }
++
++ private:
++  void SkipWhitespace() {
++    while (pos_ < text_.size() &&
++           std::isspace(static_cast<unsigned char>(text_[pos_]))) {
++      ++pos_;
++    }
++  }
++
++  bool Consume(char c) {
++    if (pos_ < text_.size() && text_[pos_] == c) {
++      ++pos_;
++      return true;
++    }
++    return false;
++  }
++
++  bool ParseValue(const std::string& path = "") {
++    SkipWhitespace();
++    if (pos_ >= text_.size()) {
++      return false;
++    }
++    const char c = text_[pos_];
++    if (c == '{') {
++      ++pos_;
++      if (Consume('}')) {
++        return true;
++      }
++      while (true) {
++        SkipWhitespace();
++        std::string key;
++        if (!ParseString(&key)) {
++          return false;
++        }
++        SkipWhitespace();
++        if (!Consume(':')) {
++          return false;
++        }
++        const std::string child =
++            path.empty() ? key : path + "." + key;
++        if (!ParseValue(child)) {
++          return false;
++        }
++        SkipWhitespace();
++        if (Consume(',')) {
++          continue;
++        }
++        return Consume('}');
++      }
++    }
++    if (c == '[') {
++      ++pos_;
++      if (Consume(']')) {
++        return true;
++      }
++      size_t index = 0;
++      while (true) {
++        const std::string child =
++            path.empty() ? std::to_string(index)
++                         : path + "." + std::to_string(index);
++        if (!ParseValue(child)) {
++          return false;
++        }
++        ++index;
++        SkipWhitespace();
++        if (Consume(',')) {
++          continue;
++        }
++        return Consume(']');
++      }
++    }
++    if (c == '"') {
++      std::string value;
++      if (!ParseString(&value)) {
++        return false;
++      }
++      strings_[path] = value;
++      return true;
++    }
++    if (std::isdigit(static_cast<unsigned char>(c)) || c == '-') {
++      size_t start = pos_;
++      ++pos_;
++      while (pos_ < text_.size() &&
++             std::isdigit(static_cast<unsigned char>(text_[pos_]))) {
++        ++pos_;
++      }
++      ints_[path] = std::stol(text_.substr(start, pos_ - start));
++      return true;
++    }
++    if (text_.compare(pos_, 4, "true") == 0) {
++      pos_ += 4;
++      strings_[path] = "true";
++      return true;
++    }
++    if (text_.compare(pos_, 5, "false") == 0) {
++      pos_ += 5;
++      strings_[path] = "false";
++      return true;
++    }
++    if (text_.compare(pos_, 4, "null") == 0) {
++      pos_ += 4;
++      return true;
++    }
++    return false;
++  }
++
++  bool ParseString(std::string* out) {
++    if (!Consume('"')) {
++      return false;
++    }
++    out->clear();
++    while (pos_ < text_.size()) {
++      const char c = text_[pos_++];
++      if (c == '"') {
++        return true;
++      }
++      if (c != '\\') {
++        out->push_back(c);
++        continue;
++      }
++      if (pos_ >= text_.size()) {
++        return false;
++      }
++      const char esc = text_[pos_++];
++      switch (esc) {
++        case '"': out->push_back('"'); break;
++        case '\\': out->push_back('\\'); break;
++        case '/': out->push_back('/'); break;
++        case 'b': out->push_back('\b'); break;
++        case 'f': out->push_back('\f'); break;
++        case 'n': out->push_back('\n'); break;
++        case 'r': out->push_back('\r'); break;
++        case 't': out->push_back('\t'); break;
++        case 'u': {
++          if (pos_ + 4 > text_.size()) {
++            return false;
++          }
++          const std::string hex = text_.substr(pos_, 4);
++          pos_ += 4;
++          for (char h : hex) {
++            if (!std::isxdigit(static_cast<unsigned char>(h))) {
++              return false;
++            }
++          }
++          // BMP only (no surrogate pairs — documented limit).
++          const uint32_t code = static_cast<uint32_t>(std::stoul(hex, nullptr, 16));
++          if (code < 0x80) {
++            out->push_back(static_cast<char>(code));
++          } else if (code < 0x800) {
++            out->push_back(static_cast<char>(0xC0 | (code >> 6)));
++            out->push_back(static_cast<char>(0x80 | (code & 0x3F)));
++          } else {
++            out->push_back(static_cast<char>(0xE0 | (code >> 12)));
++            out->push_back(static_cast<char>(0x80 | ((code >> 6) & 0x3F)));
++            out->push_back(static_cast<char>(0x80 | (code & 0x3F)));
++          }
++          break;
++        }
++        default:
++          return false;
++      }
++    }
++    return false;  // unterminated string
++  }
++
++  std::string text_;
++  size_t pos_ = 0;
++  std::map<std::string, std::string> strings_;
++  std::map<std::string, long> ints_;
++};
++
++std::optional<std::vector<long>> VersionComponents(const std::string& v) {
++  std::vector<long> parts;
++  size_t start = 0;
++  while (true) {
++    const size_t dot = v.find('.', start);
++    const std::string part =
++        dot == std::string::npos ? v.substr(start) : v.substr(start, dot - start);
++    if (part.empty() || part.size() > 9) {
++      return std::nullopt;
++    }
++    for (char c : part) {
++      if (!std::isdigit(static_cast<unsigned char>(c))) {
++        return std::nullopt;
++      }
++    }
++    parts.push_back(std::stol(part));
++    if (dot == std::string::npos) {
++      break;
++    }
++    start = dot + 1;
++  }
++  if (parts.empty() || parts.size() > 4) {
++    return std::nullopt;
++  }
++  return parts;
++}
++
++}  // namespace
++
++ExtensionManifest ParseManifest(const std::string& json) {
++  ExtensionManifest manifest;
++  JsonParser parser(json);
++  std::string error;
++  if (!parser.Parse(&error)) {
++    manifest.parse_error = error;
++    return manifest;
++  }
++  manifest.name = parser.strings().count("name") ? parser.strings().at("name") : "";
++  manifest.version =
++      parser.strings().count("version") ? parser.strings().at("version") : "";
++  manifest.manifest_version =
++      parser.ints().count("manifest_version") ? static_cast<int>(parser.ints().at("manifest_version")) : 0;
++  manifest.permissions = parser.StringArray("permissions");
++  return manifest;
++}
++
++std::optional<int> CompareVersions(const std::string& a, const std::string& b) {
++  const auto ca = VersionComponents(a);
++  const auto cb = VersionComponents(b);
++  if (!ca || !cb) {
++    return std::nullopt;
++  }
++  for (size_t i = 0; i < 4; ++i) {
++    const long x = i < ca->size() ? (*ca)[i] : 0;
++    const long y = i < cb->size() ? (*cb)[i] : 0;
++    if (x < y) {
++      return -1;
++    }
++    if (x > y) {
++      return 1;
++    }
++  }
++  return 0;
++}
++
++InspectionResult InspectPackage(const std::vector<uint8_t>& package) {
++  InspectionResult result;
++
++  std::vector<uint8_t> zip_bytes;
++  const Crx3Info crx = ParseCrx3Container(package);
++  if (crx.ok) {
++    result.is_crx = true;
++    zip_bytes.assign(package.begin() + static_cast<long>(crx.zip_offset),
++                     package.end());
++  } else if (package.size() >= 4 && package[0] == 'P' && package[1] == 'K') {
++    zip_bytes = package;
++  } else {
++    result.error = "neither a CRX3 package nor a ZIP archive: " + crx.error;
++    return result;
++  }
++
++  ZipMemoryReader reader(std::move(zip_bytes));
++  std::string zip_error;
++  if (!reader.Open(&zip_error)) {
++    result.error = "corrupt archive: " + zip_error;
++    return result;
++  }
++  if (!reader.HasEntry("manifest.json")) {
++    result.verdict = PackageVerdict::kNotAnExtension;
++    result.error = "no manifest.json — not an extension package";
++    return result;
++  }
++  auto manifest_bytes = reader.ReadEntry("manifest.json");
++  if (!manifest_bytes) {
++    result.verdict = PackageVerdict::kCorrupt;
++    result.error = "manifest.json unreadable: " + reader.error();
++    return result;
++  }
++  result.raw_manifest.assign(manifest_bytes->begin(), manifest_bytes->end());
++
++  result.manifest = ParseManifest(result.raw_manifest);
++  if (result.manifest.parse_error) {
++    result.verdict = PackageVerdict::kNotAnExtension;
++    result.error = "manifest.json: " + *result.manifest.parse_error;
++    return result;
++  }
++  if (result.manifest.name.empty()) {
++    result.verdict = PackageVerdict::kNotAnExtension;
++    result.error = "manifest.json: missing required field \"name\"";
++    return result;
++  }
++  if (!VersionComponents(result.manifest.version)) {
++    result.verdict = PackageVerdict::kNotAnExtension;
++    result.error = "manifest.json: missing or invalid \"version\"";
++    return result;
++  }
++  if (result.manifest.manifest_version != 2 &&
++      result.manifest.manifest_version != 3) {
++    result.verdict = PackageVerdict::kNotAnExtension;
++    result.error = "manifest.json: unsupported manifest_version (need 2 or 3)";
++    return result;
++  }
++  result.verdict = PackageVerdict::kValid;
++  return result;
++}
++
++UpdateDecision DecideUpdate(const std::optional<std::string>& installed,
++                            const std::string& incoming) {
++  if (!installed) {
++    return UpdateDecision::kAcceptFirstInstall;
++  }
++  const auto cmp = CompareVersions(*installed, incoming);
++  if (cmp && *cmp < 0) {
++    return UpdateDecision::kAcceptNewerVersion;
++  }
++  return UpdateDecision::kRejectOlderVersion;
++}
++
++
++// Out-of-line ctor/dtor definitions (chromium-style fallout fix).
++ExtensionManifest::ExtensionManifest() = default;
++ExtensionManifest::~ExtensionManifest() = default;
++
++
++ExtensionManifest::ExtensionManifest(ExtensionManifest&&) = default;
++ExtensionManifest& ExtensionManifest::operator=(ExtensionManifest&&) = default;
++
++
++ExtensionManifest::ExtensionManifest(const ExtensionManifest&) = default;
++ExtensionManifest& ExtensionManifest::operator=(const ExtensionManifest&) = default;
++
++}  // namespace inweb::extensions
+diff --git a/chrome/android/inweb/extensions/inweb_extension_installer.h b/chrome/android/inweb/extensions/inweb_extension_installer.h
+new file mode 100644
+index 0000000..b1f0ab1
+--- /dev/null
++++ b/chrome/android/inweb/extensions/inweb_extension_installer.h
+@@ -0,0 +1,80 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++#ifndef CHROME_ANDROID_INWEB_EXTENSIONS_INWEB_EXTENSION_INSTALLER_H_
++#define CHROME_ANDROID_INWEB_EXTENSIONS_INWEB_EXTENSION_INSTALLER_H_
++
++#include <cstdint>
++#include <optional>
++#include <string>
++#include <vector>
++
++namespace inweb::extensions {
++
++// The fields iNWEB reads from a manifest.json before offering install.
++// The full manifest is surfaced too (raw), because the management UI
++// shows the real permission list — never a summary we invented.
++struct ExtensionManifest {
++  ExtensionManifest();
++  ~ExtensionManifest();
++  ExtensionManifest(const ExtensionManifest&);
++  ExtensionManifest& operator=(const ExtensionManifest&);
++  ExtensionManifest(ExtensionManifest&&);
++  ExtensionManifest& operator=(ExtensionManifest&&);
++
++  std::string name;
++  std::string version;        // Chrome format: dot-separated integers.
++  int manifest_version = 0;   // 2 or 3 supported (PHASE6 MV2/MV3 policy)
++  std::vector<std::string> permissions;
++  std::optional<std::string> parse_error;  // set when parsing failed
++};
++
++// Structural parse of the manifest JSON subset iNWEB needs. Strict,
++// small, self-contained (no Chromium JSON dependency — it must build
++// on the host harness unchanged). Limits, documented not hidden:
++// strings/ints/bools/arrays/objects; unicode escapes; duplicate keys
++// keep the last value; no floats needed for these fields (a float
++// where an int is expected is a parse error).
++ExtensionManifest ParseManifest(const std::string& json);
++
++// Compares Chrome-format versions ("1.2.3.4", 1–4 numeric components,
++// missing components are 0). Returns: -1 (a<b), 0 (equal), 1 (a>b).
++// nullopt when either string is not a valid version.
++std::optional<int> CompareVersions(const std::string& a, const std::string& b);
++
++// Result of inspecting a sideloaded package.
++enum class PackageVerdict {
++  kValid,
++  kNotAnExtension,   // ZIP parsed but manifest missing/unreadable
++  kCorrupt,          // container/ZIP corruption
++};
++
++struct InspectionResult {
++  PackageVerdict verdict = PackageVerdict::kCorrupt;
++  std::string error;            // human-readable, shown in the UI as-is
++  ExtensionManifest manifest;
++  bool is_crx = false;          // came wrapped in a CRX3 container
++  // The raw manifest.json bytes (the UI may show the source of truth).
++  std::string raw_manifest;
++};
++
++// Inspects a sideloaded package: CRX3 container (structural) or plain
++// ZIP → CRC-verified manifest.json → manifest parse + required-field
++// validation (name, valid version, manifest_version 2 or 3).
++InspectionResult InspectPackage(const std::vector<uint8_t>& package);
++
++// Sideload update policy (PHASE6 §4 update model: manual re-sideload
++// with version comparison against the installed copy).
++enum class UpdateDecision {
++  kAcceptFirstInstall,  // nothing installed
++  kAcceptNewerVersion,
++  kRejectOlderVersion,  // same or older — the UI explains, never silently
++};
++
++UpdateDecision DecideUpdate(const std::optional<std::string>& installed,
++                            const std::string& incoming);
++
++}  // namespace inweb::extensions
++
++#endif  // CHROME_ANDROID_INWEB_EXTENSIONS_INWEB_EXTENSION_INSTALLER_H_
+diff --git a/chrome/android/inweb/extensions/inweb_extension_installer_unittest.cc b/chrome/android/inweb/extensions/inweb_extension_installer_unittest.cc
+new file mode 100644
+index 0000000..8b029e4
+--- /dev/null
++++ b/chrome/android/inweb/extensions/inweb_extension_installer_unittest.cc
+@@ -0,0 +1,292 @@
++// This Source Code Form is subject to the terms of the Mozilla Public
++// License, v. 2.0. If a copy of the MPL was not distributed with this
++// file, You can obtain one at https://mozilla.org/MPL/2.0/.
++
++// iNWEB Browser — extension installer unit tests (PHASE6 §6.3):
++// CRX3 structural parse, ZIP reading (stored + deflate, CRC-verified
++// corruption), manifest subset parse (required fields, unicode,
++// escapes, duplicates), version comparison, package inspection
++// (valid/invalid/corrupt CRX per the design), and the sideload update
++// decision.
++
++#include "chrome/android/inweb/extensions/inweb_extension_installer.h"
++
++#include <cstring>
++
++#include "chrome/android/inweb/extensions/inweb_extension_archive.h"
++#include "testing/gtest/include/gtest/gtest.h"
++#include "third_party/zlib/zlib.h"
++
++namespace inweb::extensions {
++
++namespace {
++
++// ---- tiny in-test ZIP builder (store + deflate via zlib) -----------
++
++std::vector<uint8_t> U32(uint32_t v) {
++  return {static_cast<uint8_t>(v), static_cast<uint8_t>(v >> 8),
++          static_cast<uint8_t>(v >> 16), static_cast<uint8_t>(v >> 24)};
++}
++std::vector<uint8_t> U16(uint16_t v) {
++  return {static_cast<uint8_t>(v), static_cast<uint8_t>(v >> 8)};
++}
++void Append(std::vector<uint8_t>* dst, const std::vector<uint8_t>& src) {
++  dst->insert(dst->end(), src.begin(), src.end());
++}
++void Append(std::vector<uint8_t>* dst, const std::string& s) {
++  dst->insert(dst->end(), s.begin(), s.end());
++}
++
++struct ZipFile {
++  std::string name;
++  std::string content;
++  bool deflate = false;
++};
++
++std::vector<uint8_t> BuildZip(const std::vector<ZipFile>& files) {
++  std::vector<uint8_t> out;
++  struct Central {
++    std::string name;
++    uint32_t crc, comp_size, uncomp_size, offset;
++    uint16_t method;
++  };
++  std::vector<Central> centrals;
++  for (const ZipFile& f : files) {
++    const uint32_t offset = static_cast<uint32_t>(out.size());
++    const uint32_t crc = static_cast<uint32_t>(
++        crc32(0, reinterpret_cast<const Bytef*>(f.content.data()),
++              static_cast<uInt>(f.content.size())));
++    std::vector<uint8_t> data(f.content.begin(), f.content.end());
++    uint16_t method = 0;
++    if (f.deflate) {
++      // ZIP entries carry RAW deflate streams (no zlib wrapper), so
++      // the builder emits raw deflate to match what real archivers
++      // produce — and what the reader's inflateInit2(-15) expects.
++      uLongf bound = compressBound(f.content.size());
++      std::vector<uint8_t> comp(bound);
++      uLongf comp_size = bound;
++      z_stream zs = {};
++      zs.next_in = const_cast<Bytef*>(
++          reinterpret_cast<const Bytef*>(f.content.data()));
++      zs.avail_in = static_cast<uInt>(f.content.size());
++      zs.next_out = comp.data();
++      zs.avail_out = static_cast<uInt>(bound);
++      if (deflateInit2(&zs, 9, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY) ==
++          Z_OK) {
++        deflate(&zs, Z_FINISH);
++        comp_size = static_cast<uLongf>(zs.total_out);
++        deflateEnd(&zs);
++      }
++      comp.resize(comp_size);
++      data = std::move(comp);
++      method = 8;
++    }
++    Append(&out, U32(0x04034b50));
++    Append(&out, U16(20));    // version needed
++    Append(&out, U16(0));     // flags
++    Append(&out, U16(method));
++    Append(&out, U16(0));     // time
++    Append(&out, U16(0));     // date
++    Append(&out, U32(crc));
++    Append(&out, U32(static_cast<uint32_t>(data.size())));
++    Append(&out, U32(static_cast<uint32_t>(f.content.size())));
++    Append(&out, U16(static_cast<uint16_t>(f.name.size())));
++    Append(&out, U16(0));     // extra len
++    Append(&out, f.name);
++    Append(&out, data);
++    centrals.push_back({f.name, crc, static_cast<uint32_t>(data.size()),
++                        static_cast<uint32_t>(f.content.size()), offset, method});
++  }
++  const uint32_t cd_offset = static_cast<uint32_t>(out.size());
++  for (const Central& c : centrals) {
++    Append(&out, U32(0x02014b50));
++    Append(&out, U16(20));    // version made by
++    Append(&out, U16(20));    // version needed
++    Append(&out, U16(0));     // flags
++    Append(&out, U16(c.method));
++    Append(&out, U16(0));     // time
++    Append(&out, U16(0));     // date
++    Append(&out, U32(c.crc));
++    Append(&out, U32(c.comp_size));
++    Append(&out, U32(c.uncomp_size));
++    Append(&out, U16(static_cast<uint16_t>(c.name.size())));
++    Append(&out, U16(0));     // extra
++    Append(&out, U16(0));     // comment
++    Append(&out, U16(0));     // disk
++    Append(&out, U16(0));     // internal attrs
++    Append(&out, U32(0));     // external attrs
++    Append(&out, U32(c.offset));
++    Append(&out, c.name);
++  }
++  const uint32_t cd_size = static_cast<uint32_t>(out.size()) - cd_offset;
++  Append(&out, U32(0x06054b50));
++  Append(&out, U16(0));       // disk
++  Append(&out, U16(0));       // cd disk
++  Append(&out, U16(static_cast<uint16_t>(centrals.size())));
++  Append(&out, U16(static_cast<uint16_t>(centrals.size())));
++  Append(&out, U32(cd_size));
++  Append(&out, U32(cd_offset));
++  Append(&out, U16(0));       // comment len
++  return out;
++}
++
++std::vector<uint8_t> WrapCrx3(const std::vector<uint8_t>& zip,
++                              const std::vector<uint8_t>& header) {
++  std::vector<uint8_t> out = {'C', 'r', '2', '4'};
++  Append(&out, U32(3));
++  Append(&out, U32(static_cast<uint32_t>(header.size())));
++  Append(&out, header);
++  Append(&out, zip);
++  return out;
++}
++
++const char* kManifestV3 =
++    "{\n"
++    "  \"name\": \"Example Blocker\",\n"
++    "  \"version\": \"1.2.0\",\n"
++    "  \"manifest_version\": 3,\n"
++    "  \"permissions\": [\"storage\", \"declarativeNetRequest\", \"tabs\"]\n"
++    "}\n";
++
++}  // namespace
++
++TEST(Crx3ContainerTest, ParsesWellFormedContainer) {
++  const std::vector<uint8_t> zip = BuildZip({{"manifest.json", kManifestV3}});
++  const Crx3Info crx = ParseCrx3Container(WrapCrx3(zip, {1, 2, 3, 4}));
++  ASSERT_TRUE(crx.ok);  // error: "%s" (see below)
++  EXPECT_EQ(16u, crx.zip_offset);  // 12-byte header prefix + 4-byte proto stub
++}
++
++TEST(Crx3ContainerTest, RejectsBadMagicVersionAndBounds) {
++  EXPECT_FALSE(ParseCrx3Container({'P', 'K', '3', '4', 0, 0, 0, 0}).ok);
++  std::vector<uint8_t> zip = BuildZip({{"manifest.json", kManifestV3}});
++  std::vector<uint8_t> v2 = {'C', 'r', '2', '4'};
++  Append(&v2, U32(2));
++  Append(&v2, U32(4));
++  Append(&v2, std::vector<uint8_t>{1, 2, 3, 4});
++  Append(&v2, zip);
++  EXPECT_FALSE(ParseCrx3Container(v2).ok);
++  std::vector<uint8_t> huge = {'C', 'r', '2', '4'};
++  Append(&huge, U32(3));
++  Append(&huge, U32(0xFFFFFF));  // header larger than the file
++  Append(&huge, std::vector<uint8_t>(zip));
++  EXPECT_FALSE(ParseCrx3Container(huge).ok);
++}
++
++TEST(ZipMemoryReaderTest, ReadsStoredAndDeflateEntries) {
++  const std::string long_text(5000, 'x');
++  const std::vector<uint8_t> zip =
++      BuildZip({{"manifest.json", std::string(kManifestV3), /*deflate=*/true},
++                {"raw.txt", "hello", /*deflate=*/false}});
++  ZipMemoryReader reader(zip);
++  ASSERT_TRUE(reader.Open(nullptr));
++  auto manifest = reader.ReadEntry("manifest.json");
++  ASSERT_TRUE(manifest);
++  EXPECT_EQ(std::string(kManifestV3),
++            std::string(manifest->begin(), manifest->end()));
++  auto raw = reader.ReadEntry("raw.txt");
++  ASSERT_TRUE(raw);
++  EXPECT_EQ("hello", std::string(raw->begin(), raw->end()));
++  EXPECT_FALSE(reader.ReadEntry("missing.txt").has_value());
++  (void)long_text;
++}
++
++TEST(ZipMemoryReaderTest, CorruptionFailsLoudly) {
++  std::vector<uint8_t> zip = BuildZip({{"a.txt", "hello world"}});
++  // Corrupt one payload byte (inside the stored entry data).
++  zip[40] ^= 0xFF;
++  ZipMemoryReader reader(std::move(zip));
++  ASSERT_TRUE(reader.Open(nullptr));
++  EXPECT_FALSE(reader.ReadEntry("a.txt").has_value());  // CRC mismatch
++  EXPECT_NE("", reader.error());
++}
++
++TEST(ManifestParserTest, ParsesRequiredFieldsAndPermissions) {
++  const ExtensionManifest m = ParseManifest(kManifestV3);
++  ASSERT_FALSE(m.parse_error.has_value());
++  EXPECT_EQ("Example Blocker", m.name);
++  EXPECT_EQ("1.2.0", m.version);
++  EXPECT_EQ(3, m.manifest_version);
++  EXPECT_EQ(3u, m.permissions.size());
++  EXPECT_EQ("storage", m.permissions[0]);
++  EXPECT_EQ("declarativeNetRequest", m.permissions[1]);
++}
++
++TEST(ManifestParserTest, HandlesEscapesUnicodeAndDuplicates) {
++  const ExtensionManifest m = ParseManifest(
++      "{\"name\": \"A\\\"B\\\\C\\u0986\\u09AE\", \"version\": \"1\", "
++      "\"version\": \"2\", \"manifest_version\": 2}");
++  ASSERT_FALSE(m.parse_error.has_value());
++  EXPECT_EQ("A\"B\\C\xe0\xa6\x86\xe0\xa6\xae", m.name);  // UTF-8 Bengali
++  EXPECT_EQ("2", m.version);  // duplicate key: last wins
++  EXPECT_EQ(2, m.manifest_version);
++}
++
++TEST(ManifestParserTest, RejectsMalformedJson) {
++  EXPECT_TRUE(ParseManifest("{\"name\": ").parse_error.has_value());
++  EXPECT_TRUE(ParseManifest("[1,2,3").parse_error.has_value());
++  EXPECT_TRUE(ParseManifest("{\"name\": \"a\"} trailing")
++                  .parse_error.has_value());
++}
++
++TEST(VersionTest, ChromeVersionOrdering) {
++  EXPECT_EQ(0, *CompareVersions("1.2.0", "1.2"));
++  EXPECT_EQ(-1, *CompareVersions("1.2.0", "1.2.1"));
++  EXPECT_EQ(1, *CompareVersions("1.10", "1.9"));
++  EXPECT_EQ(1, *CompareVersions("2.0.0.1", "2.0.0.0"));
++  EXPECT_EQ(-1, *CompareVersions("1", "1.0.0.1"));
++  EXPECT_FALSE(CompareVersions("1.x", "1.0").has_value());
++  EXPECT_FALSE(CompareVersions("", "1.0").has_value());
++  EXPECT_FALSE(CompareVersions("1.2.3.4.5", "1.0").has_value());
++}
++
++TEST(InspectPackageTest, AcceptsValidZipAndCrx3) {
++  const std::vector<uint8_t> zip = BuildZip({{"manifest.json", kManifestV3}});
++  InspectionResult plain = InspectPackage(zip);
++  EXPECT_EQ(PackageVerdict::kValid, plain.verdict);
++  EXPECT_FALSE(plain.is_crx);
++  EXPECT_EQ("Example Blocker", plain.manifest.name);
++  EXPECT_EQ(3u, plain.manifest.permissions.size());
++
++  InspectionResult crx = InspectPackage(WrapCrx3(zip, {9, 9}));
++  ASSERT_EQ(PackageVerdict::kValid, crx.verdict);
++  EXPECT_TRUE(crx.is_crx);
++}
++
++TEST(InspectPackageTest, ClassifiesCorruptAndNotAnExtension) {
++  // Garbage container.
++  EXPECT_EQ(PackageVerdict::kCorrupt,
++            InspectPackage({'n', 'o', 't', 'a', 'p', 'a', 'c', 'k'}).verdict);
++  // ZIP without manifest.json.
++  EXPECT_EQ(PackageVerdict::kNotAnExtension,
++            InspectPackage(BuildZip({{"readme.txt", "hi"}})).verdict);
++  // Manifest missing required fields.
++  EXPECT_EQ(
++      PackageVerdict::kNotAnExtension,
++      InspectPackage(BuildZip({{"manifest.json", "{\"name\": \"x\"}"}}))
++          .verdict);
++  // Unsupported manifest_version.
++  EXPECT_EQ(PackageVerdict::kNotAnExtension,
++            InspectPackage(BuildZip({{"manifest.json",
++                                      "{\"name\": \"x\", \"version\": \"1\", "
++                                      "\"manifest_version\": 1}"}}))
++                .verdict);
++  // Corrupt ZIP payload (CRC failure on manifest read).
++  std::vector<uint8_t> bad = BuildZip({{"manifest.json", kManifestV3}});
++  bad[45] ^= 0xFF;  // inside stored manifest data
++  const InspectionResult corrupt = InspectPackage(bad);
++  EXPECT_TRUE(corrupt.verdict == PackageVerdict::kCorrupt ||
++              corrupt.verdict == PackageVerdict::kNotAnExtension);
++  EXPECT_NE("", corrupt.error);
++}
++
++TEST(UpdateDecisionTest, SideloadVersionPolicy) {
++  EXPECT_EQ(UpdateDecision::kAcceptFirstInstall, DecideUpdate({}, "1.0"));
++  EXPECT_EQ(UpdateDecision::kAcceptNewerVersion,
++            DecideUpdate("1.2.0", "1.3"));
++  EXPECT_EQ(UpdateDecision::kRejectOlderVersion,
++            DecideUpdate("1.2.0", "1.2.0"));
++  EXPECT_EQ(UpdateDecision::kRejectOlderVersion, DecideUpdate("2.0", "1.9"));
++}
++
++}  // namespace inweb::extensions
+diff --git a/chrome/android/java/src/org/chromium/chrome/browser/app/appmenu/AppMenuPropertiesDelegateImpl.java b/chrome/android/java/src/org/chromium/chrome/browser/app/appmenu/AppMenuPropertiesDelegateImpl.java
+index 62ec141..5d0216a 100644
+--- a/chrome/android/java/src/org/chromium/chrome/browser/app/appmenu/AppMenuPropertiesDelegateImpl.java
++++ b/chrome/android/java/src/org/chromium/chrome/browser/app/appmenu/AppMenuPropertiesDelegateImpl.java
+@@ -573,7 +573,6 @@ public abstract class AppMenuPropertiesDelegateImpl implements AppMenuProperties
+         List<ListItem> submenuItems = new ArrayList<>();
+         submenuItems.add(buildExtensionsMenuItem(/* showIcon= */ false));
+         submenuItems.add(buildManageExtensionsItem());
+-        submenuItems.add(buildChromeWebstoreItem());
+ 
+         return new ListItem(
+                 shouldShowIconBeforeItem()
+diff --git a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
+index 9b1c6d5..b7cd850 100644
+--- a/chrome/browser/BUILD.gn
++++ b/chrome/browser/BUILD.gn
+@@ -1666,6 +1666,7 @@ source_set("core") {
+       "//chrome/android/inweb/adblock:inweb_adblock_engine",
+       "//chrome/android/inweb/adblock:inweb_adblock_throttle",
+       "//chrome/android/inweb/adblock:inweb_cosmetic_injector",
++      "//chrome/android/inweb/extensions:inweb_extension_installer",
+       "//chrome/android/inweb/popup:inweb_redirect_throttle",
+       "//chrome/browser/android",
+       "//chrome/browser/autocomplete",
+diff --git a/chrome/test/BUILD.gn b/chrome/test/BUILD.gn
+index b728d08..5cc6605 100644
+--- a/chrome/test/BUILD.gn
++++ b/chrome/test/BUILD.gn
+@@ -6254,6 +6254,7 @@ test("unit_tests") {
+       "//chrome/android:chrome_jni_headers",
+       "//chrome/android:delegate_public_impl_java",
+       "//chrome/android/inweb/adblock:unittests",
++      "//chrome/android/inweb/extensions:unittests",
+       "//chrome/android/inweb/popup:unittests",
+       "//chrome/android/modules/dev_ui/provider:native",
+       "//chrome/browser/android",

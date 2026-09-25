@@ -11,6 +11,10 @@
 target_os = "android"
 target_cpu = "arm64"
 
+# Compile the experimental Android extension core for release verification;
+# the production UI gate remains closed until API/device evidence is recorded.
+enable_inweb_android_extensions = true
+
 is_official_build = true
 is_component_build = false
 is_debug = false
