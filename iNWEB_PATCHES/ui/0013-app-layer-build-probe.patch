@@ -30,10 +30,10 @@ index 2133a964d0c..230c41911a5 100644
        ":chrome_public_apk_template_resources",
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/inweb/BUILD.gn b/chrome/android/java/src/org/chromium/chrome/browser/inweb/BUILD.gn
 new file mode 100644
-index 00000000000..e21d0bc6380
+index 00000000000..7a1090ddea7
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/inweb/BUILD.gn
-@@ -0,0 +1,106 @@
+@@ -0,0 +1,109 @@
 +# iNWEB Browser — authored app layer (patch 0013, real-source probe).
 +#
 +# Sources are the authored src/core modules and the Home renderer from
@@ -44,14 +44,11 @@ index 00000000000..e21d0bc6380
 +# iNWEB targets (chrome/android/inweb/{adblock,popup}/BUILD.gn). glob() is
 +# not used here because gn gen rejects it in this file at file scope as
 +# well as inside the template block — measured in hop 31 and again in
-+# hop 33, both failing with "Unknown function". Explicit lists also make
-+# the patch diff show exactly which files enter the build.
++# hop 33, both failing with "Unknown function".
 +
 +import("//build/config/android/rules.gni")
 +
 +android_resources("inweb_app_resources") {
-+  # The authored code imports com.inweb.browser.R, so the generated R.java
-+  # must be emitted into that package.
 +  custom_package = "com.inweb.browser"
 +  sources = [
 +    "res/drawable/ic_inweb_add.xml",
@@ -76,6 +73,12 @@ index 00000000000..e21d0bc6380
 +}
 +
 +android_library("inweb_app_java") {
++  # Makes generate_r_java() emit com.inweb.browser.R as a srcjar dep
++  # (internal_rules.gni): the authored code imports that R, and hop 34
++  # failed with "unresolved reference 'R'" — every one of the 70 missing
++  # string ids was a consequence of R not existing, not a missing string.
++  resources_package = "com.inweb.browser"
++
 +  # Pure-JVM core modules (no android/androidx imports) + the Compose
 +  # renderer, compiled together: the renderer consumes the core directly.
 +  sources = [
