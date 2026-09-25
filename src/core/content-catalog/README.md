@@ -13,9 +13,12 @@ only what has been **approved**.
 
 The rail shows only rows in `ApprovedPopularSitesCatalog.rows`, each
 carrying `destinationName` and `accessibilityLabel` supplied by the
-reviewer. A candidate that is not in the catalogue is dropped entirely.
-HTTPS validity is checked by the model (`HomeWebAddresses.isHttps`) and
-is deliberately *not* the same thing as approval — see
+reviewer. Locale routing can select only an explicitly approved URL variant;
+unknown locales fall back to the approved canonical URL. Production admission
+has no arbitrary-list parameter, so a caller cannot substitute candidates.
+A candidate that is not in the catalogue is dropped entirely. HTTPS validity
+is enforced at both the approval record and Home model boundaries and is
+still deliberately *not* the same thing as approval — see
 `docs/POPULAR-SITES-CANDIDATES.md`.
 
 ## Why the catalogue ships empty
@@ -37,7 +40,8 @@ enforced.
 
 ## Tests
 
-`ApprovedPopularSitesCatalogTest` — the shipped catalogue is empty so
-every category admits nothing; an unlisted candidate is not admitted; an
-approved row is admitted carrying its reviewed names; admission is
+`ApprovedPopularSitesCatalogTest` — the shipped catalogue is empty so every
+category admits nothing; an unlisted candidate is not admitted; approved
+locale routing selects only recorded URLs; required approval/name fields and
+HTTPS are enforced; duplicate stable IDs are rejected; and admission remains
 category-scoped.

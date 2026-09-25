@@ -12,18 +12,23 @@ package com.inweb.browser.contentcatalog
 
 import com.inweb.browser.home.PopularSite
 import com.inweb.browser.home.PopularSiteCategory
+import java.net.URI
 
 /**
  * One reviewed destination the Home rail is allowed to show.
  *
+ * Locale variants are part of the approval record. A locale can never rewrite
+ * or synthesize a URL: it selects an explicitly reviewed entry or falls back
+ * to [canonicalUrl].
+ *
  * The four approval fields are not decoration: an approval that cannot say
  * who approved it, when, for what scope and why cannot be audited later.
- * A row without them is not an approval.
  */
 data class ApprovedCatalogRow(
     val id: String,
     val category: PopularSiteCategory,
-    val url: String,
+    val canonicalUrl: String,
+    val localeVariantUrls: Map<String, String> = emptyMap(),
     val artworkId: String,
     val destinationName: String,
     val accessibilityLabel: String,
@@ -31,7 +36,52 @@ data class ApprovedCatalogRow(
     val approvedOn: String,
     val scope: String,
     val rationale: String,
-)
+) {
+    init {
+        require(id.matches(Regex("[a-z0-9]+(?:_[a-z0-9]+)*"))) {
+            "approved row id must be a stable lowercase identifier"
+        }
+        require(artworkId.isNotBlank()) { "approved row artworkId must not be blank" }
+        require(destinationName.isNotBlank()) { "approved row destinationName must not be blank" }
+        require(accessibilityLabel.isNotBlank()) { "approved row accessibilityLabel must not be blank" }
+        require(reviewerRole.isNotBlank()) { "approved row reviewerRole must not be blank" }
+        require(approvedOn.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) {
+            "approved row approvedOn must be an ISO date"
+        }
+        require(scope.isNotBlank()) { "approved row scope must not be blank" }
+        require(rationale.isNotBlank()) { "approved row rationale must not be blank" }
+        require(isValidHttps(canonicalUrl)) { "approved row canonicalUrl must be valid HTTPS" }
+        localeVariantUrls.forEach { (localeTag, url) ->
+            require(
+                normalizeLocaleTag(localeTag) == localeTag &&
+                    localeTag.matches(Regex("[a-z]{2,3}(?:-[a-z0-9]{2,8})*")),
+            ) {
+                "locale variant keys must be normalized BCP-47 tags"
+            }
+            require(isValidHttps(url)) { "approved locale URL must be valid HTTPS" }
+        }
+    }
+
+    fun urlFor(localeTag: String?): String {
+        val normalized = normalizeLocaleTag(localeTag.orEmpty())
+        if (normalized.isEmpty()) return canonicalUrl
+        return localeVariantUrls[normalized]
+            ?: localeVariantUrls[normalized.substringBefore('-')]
+            ?: canonicalUrl
+    }
+
+    private fun isValidHttps(value: String): Boolean = runCatching {
+        val uri = URI(value).normalize()
+        uri.scheme.equals("https", ignoreCase = true) &&
+            !uri.host.isNullOrBlank() &&
+            uri.userInfo == null
+    }.getOrDefault(false)
+
+    private fun normalizeLocaleTag(value: String): String = value
+        .trim()
+        .replace('_', '-')
+        .lowercase()
+}
 
 object ApprovedPopularSitesCatalog {
     /**
@@ -44,22 +94,30 @@ object ApprovedPopularSitesCatalog {
      */
     val rows: List<ApprovedCatalogRow> = emptyList()
 
-    /** Catalogue members only: anything not listed is dropped, silently and completely. */
-    fun admit(
+    /** Production admission has no arbitrary-list escape hatch. */
+    fun admit(category: PopularSiteCategory, localeTag: String?): List<PopularSite> =
+        admitApprovedRows(category, localeTag, rows)
+
+    fun isApproved(id: String): Boolean = rows.any { it.id == id }
+
+    /** Test seam is module-internal; production callers cannot substitute candidates. */
+    internal fun admitApprovedRows(
         category: PopularSiteCategory,
-        from: List<ApprovedCatalogRow> = rows,
-    ): List<PopularSite> =
-        from.filter { it.category == category }.map { row ->
+        localeTag: String?,
+        approvedRows: List<ApprovedCatalogRow>,
+    ): List<PopularSite> {
+        require(approvedRows.map { it.id }.distinct().size == approvedRows.size) {
+            "approved catalog stable IDs must be unique"
+        }
+        return approvedRows.filter { it.category == category }.map { row ->
             PopularSite(
                 id = row.id,
                 category = row.category,
-                url = row.url,
+                url = row.urlFor(localeTag),
                 artworkId = row.artworkId,
                 destinationName = row.destinationName,
                 accessibilityLabel = row.accessibilityLabel,
             )
         }
-
-    fun isApproved(id: String, from: List<ApprovedCatalogRow> = rows): Boolean =
-        from.any { it.id == id }
+    }
 }
