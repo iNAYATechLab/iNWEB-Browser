@@ -173,35 +173,6 @@ fun InwebHomeRenderer(
                     }
                 }
 
-                val snapshot = model.browserSnapshot
-                if (snapshot.recentPages.isNotEmpty()) {
-                    item(key = "recent-pages") {
-                        RecentPagesSection(
-                            pages = snapshot.recentPages,
-                            onOpen = { actions.onOpenUrl(it.url) },
-                            onSeeAll = actions.onSeeAllRecent,
-                        )
-                    }
-                }
-                if (snapshot.bookmarks.isNotEmpty()) {
-                    item(key = "bookmarks") {
-                        BookmarksSection(
-                            bookmarks = snapshot.bookmarks,
-                            onOpen = { actions.onOpenUrl(it.url) },
-                            onSeeAll = actions.onSeeAllBookmarks,
-                        )
-                    }
-                }
-                if (snapshot.recentDownloads.isNotEmpty()) {
-                    item(key = "downloads") {
-                        DownloadsSection(
-                            downloads = snapshot.recentDownloads,
-                            onOpen = { actions.onOpenDownload(it.id) },
-                            onSeeAll = actions.onSeeAllDownloads,
-                        )
-                    }
-                }
-
                 if (HomeSection.POPULAR_ISLAMIC_WEBSITES in model.visibleSections) {
                     item(key = HomeSection.POPULAR_ISLAMIC_WEBSITES.wireId) {
                         PopularSitesSection(
@@ -239,6 +210,35 @@ fun InwebHomeRenderer(
                             state = model.prayerTimes,
                             onSetup = actions.onSetupPrayerTimes,
                             onRetry = actions.onRetryPrayerTimes,
+                        )
+                    }
+                }
+
+                val snapshot = model.browserSnapshot
+                if (snapshot.recentPages.isNotEmpty()) {
+                    item(key = "recent-pages") {
+                        RecentPagesSection(
+                            pages = snapshot.recentPages,
+                            onOpen = { actions.onOpenUrl(it.url) },
+                            onSeeAll = actions.onSeeAllRecent,
+                        )
+                    }
+                }
+                if (snapshot.bookmarks.isNotEmpty()) {
+                    item(key = "bookmarks") {
+                        BookmarksSection(
+                            bookmarks = snapshot.bookmarks,
+                            onOpen = { actions.onOpenUrl(it.url) },
+                            onSeeAll = actions.onSeeAllBookmarks,
+                        )
+                    }
+                }
+                if (snapshot.recentDownloads.isNotEmpty()) {
+                    item(key = "downloads") {
+                        DownloadsSection(
+                            downloads = snapshot.recentDownloads,
+                            onOpen = { actions.onOpenDownload(it.id) },
+                            onSeeAll = actions.onSeeAllDownloads,
                         )
                     }
                 }
