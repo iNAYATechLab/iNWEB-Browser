@@ -83,3 +83,36 @@ reassigned, so that "where are the extension patches?" has a written
 answer instead of a gap. `src/core/extensions` stays as it is: implemented
 and tested, documented as the specification for a binding that the
 baseline cannot host yet.
+
+## Correction (2026-09-25): a finished series already exists on a branch
+
+After ADR-042 was accepted, `feature/extensions-0014-0017` was found on the
+remote: **six commits ahead of main, five behind, and never opened as a
+PR**. It contains all four extension patches plus design docs. My finding
+above was therefore incomplete — I measured the baseline correctly but
+presented the series as unwritten. It was written, and it is more careful
+than the option set I offered.
+
+| Patch | What it actually does |
+|---|---|
+| 0014 | build-time **audit tool** that regenerates the supported-API table from the built artifact ("reality, not intent"), plus a dedicated `enable_inweb_android_extensions` GN arg. Described as a *build probe, not an availability claim*. |
+| 0015 | host-tested CRX3/ZIP structural inspector, manifest/version validation and native tests; **removes** the Chrome Web Store app-menu item so discovery is not misrepresented; UI stays gated. |
+| 0016 | **closes by default** Chromium's existing Android extension management, toolbar action, popup and options surfaces; a device-verification run may opt in with `--enable-inweb-extension-ui`, so "normal builds expose nothing merely because the experimental backend compiled". |
+| 0017 | sideload/update policy gate: invalid and non-newer packages blocked, every first install needs explicit review, permission-expanding updates cannot enable before renewed review, MV2 deprecation warning. "Stages decisions only and makes no runtime capability claim." |
+
+Read against ADR-042's prohibitions, none of the four ships a capability,
+enables a runtime, or exposes a default UI — 0016 *removes* surfaces and
+0015 removes a misleading discovery path. The series matches the
+deviation's intent, and 0016 is stricter than what I proposed.
+
+Two things are still true and must be settled before any of it merges:
+
+1. **It has never been built.** The branch predates ADR-042 and the
+   current main; whether `enable_inweb_android_extensions` actually
+   compiles on Android is an open, measurable question — which is
+   precisely what patch 0014 calls itself a probe for.
+2. **It needs a rebase** onto a main that now carries ADR-042, PR #4 and
+   the content-catalog module.
+
+ADR-042 as accepted says the ids are reserved and unused. That sentence
+is now wrong as written, and the owner has been asked how to reconcile it.
