@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iNWEB Browser — A real Chromium-derived, privacy-first Android browser</title>
+<meta name="description" content="iNWEB Browser is a real Chromium-derived, privacy-focused Android browser built from Chromium source — not a WebView wrapper. Built-in ad blocking, extensions, offline library & Material 3 UI.">
+<style>
+  :root{
+    --font:ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --kotlin:#A97BFF;
+  }
+  html[data-theme="dark"]{
+    --bg:#0a0e13; --card:#10161d; --card-2:#151d27; --card-hover:#182230;
+    --border:#212e3d; --border-strong:#2c3c4f;
+    --text:#e9eef5; --text-2:#c3cfdc; --muted:#8a9bab; --faint:#5f7186;
+    --accent:#4f8ff7; --accent-soft:rgba(79,143,247,.13); --accent-text:#7ab2ff;
+    --accent2:#7c5cff; --green:#3fb950; --green-soft:rgba(63,185,80,.12);
+    --amber:#d29922; --amber-soft:rgba(210,153,34,.12);
+    --pink:#db61a2; --pink-soft:rgba(219,97,162,.12);
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 8px 28px rgba(0,0,0,.35);
+    --shadow-lift:0 2px 4px rgba(0,0,0,.4),0 14px 40px rgba(0,0,0,.5);
+    --chip:#1a2330; --input:#0d1319; color-scheme:dark;
+  }
+  html[data-theme="light"]{
+    --bg:#f4f7fa; --card:#fff; --card-2:#f7f9fb; --card-hover:#f0f4f8;
+    --border:#dde5ec; --border-strong:#c8d4df;
+    --text:#17222d; --text-2:#33445a; --muted:#5c7085; --faint:#8296a9;
+    --accent:#2f6fe4; --accent-soft:rgba(47,111,228,.10); --accent-text:#2f6fe4;
+    --accent2:#6c4cf0; --green:#1a7f37; --green-soft:rgba(26,127,55,.10);
+    --amber:#9a6700; --amber-soft:rgba(154,103,0,.10);
+    --pink:#bf3989; --pink-soft:rgba(191,57,137,.10);
+    --shadow:0 1px 2px rgba(23,34,45,.06),0 8px 24px rgba(23,34,45,.08);
+    --shadow-lift:0 2px 4px rgba(23,34,45,.08),0 14px 36px rgba(23,34,45,.14);
+    --chip:#eef2f6; --input:#fff; color-scheme:light;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:15.5px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent-text);text-decoration:none}
+  a:hover{text-decoration:underline}
+  button{font-family:inherit;cursor:pointer}
+  svg{flex:none;display:block}
+  .icon{width:16px;height:16px;fill:currentColor}
+  ::selection{background:rgba(79,143,247,.32)}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+  /* NAV */
+  .nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+  .nav-in{display:flex;align-items:center;gap:18px;height:60px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16.5px;letter-spacing:-.01em;color:var(--text)}
+  .brand:hover{text-decoration:none}
+  .brand-mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#fff;font-weight:900;font-size:15px;box-shadow:0 2px 10px color-mix(in srgb,var(--accent) 45%,transparent)}
+  .nav-links{display:flex;gap:4px;margin-left:auto}
+  .nav-links a{color:var(--muted);font-size:14px;font-weight:600;padding:8px 12px;border-radius:9px}
+  .nav-links a:hover{color:var(--text);background:var(--chip);text-decoration:none}
+  .icon-btn{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:transparent;border:1px solid transparent;color:var(--text-2);transition:.15s}
+  .icon-btn:hover{background:var(--chip);border-color:var(--border)}
+
+  /* HERO */
+  .hero{position:relative;overflow:hidden;border-bottom:1px solid var(--border)}
+  .hero::before{content:"";position:absolute;inset:0;pointer-events:none;background:
+    radial-gradient(700px 320px at 10% -10%,var(--accent-soft),transparent 70%),
+    radial-gradient(760px 340px at 92% -20%,rgba(124,92,255,.14),transparent 70%)}
+  .hero::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background-image:radial-gradient(color-mix(in srgb,var(--text) 9%,transparent) 1px,transparent 1px);
+    background-size:26px 26px;
+    mask-image:linear-gradient(to bottom,rgba(0,0,0,.65),transparent 88%);
+    -webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.65),transparent 88%)}
+  .hero-in{position:relative;display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center;padding:64px 0 56px}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-text);background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);padding:5px 13px;border-radius:999px}
+  .pill .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  h1{font-size:clamp(36px,5.4vw,56px);font-weight:850;letter-spacing:-.03em;line-height:1.06;margin:18px 0 14px}
+  h1 .grad{background:linear-gradient(100deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .tagline{font-size:18px;color:var(--text-2);max-width:560px}
+  .tagline b{color:var(--text)}
+  .hero-cta{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:8px;border-radius:11px;font-size:14.5px;font-weight:700;padding:12px 20px;border:1px solid var(--border-strong);background:var(--card-2);color:var(--text);transition:.15s;white-space:nowrap}
+  .btn:hover{background:var(--card-hover);border-color:var(--faint);text-decoration:none;transform:translateY(-1px)}
+  .btn .icon{width:16px;height:16px}
+  .btn-primary{background:linear-gradient(180deg,var(--accent),color-mix(in srgb,var(--accent) 82%,#000));border-color:color-mix(in srgb,var(--accent) 65%,#000);color:#fff;box-shadow:0 2px 12px color-mix(in srgb,var(--accent) 35%,transparent)}
+  .btn-primary:hover{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 90%,#fff),var(--accent))}
+  .btn-ghost{background:transparent}
+  .hero-note{margin-top:14px;font-size:12.5px;color:var(--faint)}
+
+  /* PHONE MOCKUP */
+  .phone-area{display:grid;place-items:center}
+  .phone{width:272px;height:560px;border-radius:38px;background:var(--card);border:1px solid var(--border-strong);box-shadow:var(--shadow-lift),0 0 0 6px color-mix(in srgb,var(--text) 6%,transparent);padding:14px;position:relative;transform:rotate(2deg);transition:transform .4s}
+  .phone:hover{transform:rotate(0) translateY(-4px)}
+  .phone-screen{height:100%;border-radius:26px;background:var(--input);border:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column}
+  .p-status{display:flex;justify-content:space-between;padding:9px 16px;font-size:11px;color:var(--faint)}
+  .p-omni{margin:4px 12px 10px;display:flex;align-items:center;gap:8px;background:var(--chip);border:1px solid var(--border);border-radius:999px;padding:9px 14px;font-size:12.5px;color:var(--muted)}
+  .p-omni .lock{color:var(--green)}
+  .p-tabbar{display:flex;gap:6px;padding:0 12px 8px}
+  .p-tab{flex:1;height:44px;border-radius:12px;background:var(--card-2);border:1px solid var(--border);display:flex;align-items:center;gap:7px;padding:0 10px;font-size:10.5px;color:var(--muted);overflow:hidden;white-space:nowrap}
+  .p-tab.active{border-color:var(--accent);color:var(--accent-text);background:var(--accent-soft)}
+  .p-tab i{width:14px;height:14px;border-radius:4px;background:linear-gradient(135deg,var(--accent),var(--accent2));flex:none}
+  .p-content{flex:1;margin:0 12px;border-radius:14px;background:var(--card-2);border:1px solid var(--border);padding:12px;display:flex;flex-direction:column;gap:9px}
+  .p-line{height:9px;border-radius:5px;background:var(--chip)}
+  .p-line.w60{width:60%}.p-line.w85{width:85%}.p-line.w75{width:75%}
+  .p-shield{margin-top:auto;display:flex;align-items:center;gap:9px;background:var(--green-soft);border:1px solid color-mix(in srgb,var(--green) 30%,transparent);border-radius:12px;padding:10px;color:var(--green);font-size:11px;font-weight:700}
+  .p-nav{display:flex;justify-content:space-around;align-items:center;padding:12px 8px 16px;color:var(--faint)}
+  .p-nav .fab{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#fff;box-shadow:0 4px 14px color-mix(in srgb,var(--accent) 45%,transparent);margin-top:-18px}
+  .float-badge{position:absolute;font-size:11.5px;font-weight:700;padding:7px 12px;border-radius:11px;background:var(--card);border:1px solid var(--border-strong);box-shadow:var(--shadow);color:var(--text-2);display:flex;gap:7px;align-items:center}
+  .fb1{top:44px;right:-6px;transform:rotate(-2deg)}
+  .fb2{bottom:96px;left:-14px;transform:rotate(2deg)}
+  .fb1 b{color:var(--green)}.fb2 b{color:var(--accent-text)}
+
+  /* TRUST BAR */
+  .trust{border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--card) 55%,transparent)}
+  .trust-in{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;padding:16px 0}
+  .t-chip{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--muted);background:var(--chip);border:1px solid var(--border);border-radius:999px;padding:7px 15px}
+  .t-chip b{color:var(--text)}
+
+  /* SECTIONS */
+  section{padding:68px 0}
+  .sec-head{max-width:640px;margin-bottom:36px}
+  .kicker{font-size:12.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-text)}
+  h2{font-size:clamp(26px,3.4vw,34px);font-weight:820;letter-spacing:-.022em;margin:8px 0 10px}
+  .sec-head p{color:var(--muted);font-size:16px}
+
+  /* FEATURES */
+  .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .feat{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:22px;transition:.18s}
+  .feat:hover{transform:translateY(-3px);border-color:var(--border-strong);box-shadow:var(--shadow-lift)}
+  .feat .f-icon{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;margin-bottom:14px}
+  .f-icon .icon{width:20px;height:20px}
+  .fi-blue{background:var(--accent-soft);color:var(--accent-text)}
+  .fi-purple{background:rgba(124,92,255,.13);color:var(--accent2)}
+  .fi-green{background:var(--green-soft);color:var(--green)}
+  .fi-amber{background:var(--amber-soft);color:var(--amber)}
+  .fi-pink{background:var(--pink-soft);color:var(--pink)}
+  .feat h3{font-size:16px;font-weight:750;margin-bottom:6px;letter-spacing:-.01em}
+  .feat p{color:var(--muted);font-size:13.8px}
+
+  /* COMPARE */
+  .compare{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+  .cmp-grid{display:grid;grid-template-columns:1fr 1fr}
+  .cmp-col{padding:28px}
+  .cmp-col+.cmp-col{border-left:1px solid var(--border)}
+  .cmp-col h3{font-size:15px;font-weight:750;display:flex;align-items:center;gap:9px;margin-bottom:16px}
+  .cmp-col ul{list-style:none;display:flex;flex-direction:column;gap:11px;font-size:14px;color:var(--muted)}
+  .cmp-col li{display:flex;gap:9px;align-items:flex-start}
+  .cmp-col li .icon{width:15px;height:15px;margin-top:3px}
+  .cmp-no .icon{color:var(--amber)}
+  .cmp-yes .icon{color:var(--green)}
+  .cmp-col.wrap-col{background:var(--card-2)}
+  .cmp-col.inweb-col{background:linear-gradient(180deg,var(--accent-soft),transparent)}
+  .cmp-tag{font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid var(--border-strong);color:var(--muted)}
+  .inweb-col .cmp-tag{color:var(--accent-text);border-color:color-mix(in srgb,var(--accent) 40%,transparent);background:var(--accent-soft)}
+
+  /* ENGINEERING */
+  .eng-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:16px;align-items:stretch}
+  .eng-card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:22px}
+  .eng-card h3{font-size:15px;font-weight:750;margin-bottom:14px;display:flex;gap:9px;align-items:center}
+  .mod{display:flex;justify-content:space-between;gap-10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);font-size:13.5px}
+  .mod:last-child{border-bottom:none}
+  .mod .m-name{color:var(--text-2);font-weight:600}
+  .mod .m-name small{display:block;color:var(--faint);font-weight:500;font-size:11.5px;margin-top:1px}
+  .mod .m-tests{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--green);background:var(--green-soft);padding:3px 10px;border-radius:999px;white-space:nowrap}
+  .facts{display:flex;flex-direction:column;gap:12px}
+  .fact{display:flex;gap:12px;align-items:flex-start;background:var(--card-2);border:1px solid var(--border);border-radius:13px;padding:14px 16px}
+  .fact .icon{color:var(--accent-text);margin-top:2px}
+  .fact b{display:block;font-size:13.5px}
+  .fact span{font-size:12.8px;color:var(--muted)}
+  .fact code{font-family:var(--mono);font-size:12px;background:var(--chip);border:1px solid var(--border);border-radius:6px;padding:1px 7px}
+
+  /* DOWNLOAD */
+  .dl-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .dl-card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:26px;display:flex;flex-direction:column;gap:14px}
+  .dl-card h3{font-size:18px;font-weight:800;letter-spacing:-.01em}
+  .ver{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--amber);background:var(--amber-soft);border:1px solid color-mix(in srgb,var(--amber) 32%,transparent);padding:4px 12px;border-radius:999px;width:fit-content}
+  .rel-list{list-style:none;display:flex;flex-direction:column;gap:9px}
+  .rel-list a{display:flex;justify-content:space-between;gap-10px;align-items:center;background:var(--card-2);border:1px solid var(--border);border-radius:12px;padding:12px 15px;font-size:13.5px;font-weight:600;transition:.15s}
+  .rel-list a:hover{border-color:var(--faint);text-decoration:none;background:var(--card-hover)}
+  .rel-list .date{font-size:12px;color:var(--faint);font-weight:500}
+  .dl-note{font-size:12.8px;color:var(--faint)}
+  code.inline{font-family:var(--mono);font-size:12.5px;background:var(--chip);border:1px solid var(--border);border-radius:7px;padding:2px 8px}
+
+  /* FAQ */
+  .faq{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+  details{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+  summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:17px 20px;font-weight:700;font-size:14.5px}
+  summary::-webkit-details-marker{display:none}
+  summary .chev{transition:.2s;color:var(--faint)}
+  details[open] .chev{transform:rotate(180deg)}
+  details .a{padding:0 20px 18px;color:var(--muted);font-size:14px}
+
+  /* CTA BAND */
+  .band{border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:
+    radial-gradient(600px 220px at 30% 0%,var(--accent-soft),transparent 70%),
+    radial-gradient(600px 220px at 75% 100%,rgba(124,92,255,.10),transparent 70%)}
+  .band-in{text-align:center;padding:56px 24px}
+  .band h2{margin-bottom:10px}
+  .band p{color:var(--muted);max-width:480px;margin:0 auto 24px}
+
+  /* FOOTER */
+  footer{padding:34px 0 44px;color:var(--faint);font-size:13px}
+  .foot-in{display:flex;gap:18px;flex-wrap:wrap;justify-content:space-between;align-items:center}
+  .foot-links{display:flex;gap:16px;flex-wrap:wrap}
+  .foot-links a{color:var(--muted)}
+
+  @media (max-width:920px){
+    .hero-in{grid-template-columns:1fr;padding:44px 0 46px}
+    .phone-area{order:-1}
+    .phone{transform:none;width:250px;height:520px}
+    .feat-grid{grid-template-columns:1fr 1fr}
+    .cmp-grid{grid-template-columns:1fr}
+    .cmp-col+.cmp-col{border-left:none;border-top:1px solid var(--border)}
+    .eng-grid,.dl-wrap{grid-template-columns:1fr}
+    .nav-links a:not(.keep){display:none}
+  }
+  @media (max-width:560px){
+    .feat-grid{grid-template-columns:1fr}
+    .wrap{padding:0 18px}
+    section{padding:52px 0}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== NAV ===================== -->
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="#">
+      <span class="brand-mark">iN</span>
+      iNWEB Browser
+    </a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#features">Features</a>
+      <a href="#engine">Why real Chromium</a>
+      <a href="#engineering">Engineering</a>
+      <a href="#download">Download</a>
+      <a href="https://github.com/iNWEB-Official/iNWEB-Browser" class="keep">
+        <svg class="icon" style="display:inline-block;vertical-align:-3px" viewBox="0 0 16 16"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
+        GitHub
+      </a>
+    </nav>
+    <button class="icon-btn" id="themeToggle" aria-label="Toggle theme">
+      <svg class="icon" id="themeIcon" viewBox="0 0 16 16"><path d="M9.598 1.591a.749.749 0 0 1 .785-.175 7.001 7.001 0 1 1-8.967 8.967.75.75 0 0 1 .961-.96 5.5 5.5 0 0 0 7.046-7.046.75.75 0 0 1 .175-.786Zm1.616 1.945a7 7 0 0 1-7.678 7.678 5.499 5.499 0 1 0 7.678-7.678Z"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- ===================== HERO ===================== -->
+<section class="hero" style="padding:0">
+  <div class="wrap hero-in">
+    <div>
+      <span class="pill"><span class="dot"></span>Chromium 154 baseline · v1.0.0-alpha.2</span>
+      <h1>A <span class="grad">real Chromium</span> browser for Android.</h1>
+      <p class="tagline">iNWEB Browser is built from the <b>upstream Chromium source code</b> — the same class as Brave, Vivaldi &amp; Kiwi — with a privacy-hardened patch series and a Material&nbsp;3 UI in Kotlin. <b>Not a WebView wrapper.</b></p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#download">
+          <svg class="icon" viewBox="0 0 16 16"><path d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14Zm4.47-4.53a.75.75 0 0 0 1.06 0l3.75-3.75a.749.749 0 1 0-1.06-1.06L8.75 7.19V1.75a.75.75 0 0 0-1.5 0v5.44L5.03 5.66a.749.749 0 1 0-1.06 1.06Z"/></svg>
+          Download alpha
+        </a>
+        <a class="btn" href="https://github.com/iNWEB-Official/iNWEB-Browser">
+          <svg class="icon" viewBox="0 0 16 16"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>
+          Star on GitHub
+        </a>
+      </div>
+      <p class="hero-note">Free &amp; open development · APK from GitHub Releases · Android</p>
+    </div>
+    <div class="phone-area">
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="p-status"><span>9:41</span><span>▲ ●▍</span></div>
+          <div class="p-omni"><span class="lock">🔒</span> inweb-official.github.io</div>
+          <div class="p-tabbar">
+            <div class="p-tab"><i></i> iNWEB Browser</div>
+            <div class="p-tab active"><i></i> Privacy first</div>
+            <div class="p-tab"><i></i> +3</div>
+          </div>
+          <div class="p-content">
+            <div class="p-line w60"></div>
+            <div class="p-line"></div>
+            <div class="p-line w85"></div>
+            <div class="p-line w75"></div>
+            <div class="p-line"></div>
+            <div class="p-shield">🛡 14 trackers blocked on this page</div>
+          </div>
+          <div class="p-nav">
+            <span>←</span><span>→</span>
+            <span class="fab">+</span>
+            <span>⧉</span><span>⋮</span>
+          </div>
+        </div>
+        <div class="float-badge fb1">🛡 <span><b>Adblock</b> built-in</span></div>
+        <div class="float-badge fb2">⚙️ <span><b>315</b> unit tests</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== TRUST ===================== -->
+<div class="trust">
+  <div class="wrap trust-in">
+    <span class="t-chip">🧬 <b>Chromium-derived</b> engine</span>
+    <span class="t-chip">🚫 <b>Ad &amp; tracker blocking</b> built-in</span>
+    <span class="t-chip">🧩 <b>Extensions</b> support</span>
+    <span class="t-chip">🎨 <b>Material 3</b> · Kotlin</span>
+    <span class="t-chip">🔓 Open development</span>
+  </div>
+</div>
+
+<!-- ===================== FEATURES ===================== -->
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="kicker">Features</div>
+      <h2>Everything a modern browser should be.</h2>
+      <p>Core modules are implemented and covered by unit tests before they ship — quality is part of the architecture, not an afterthought.</p>
+    </div>
+    <div class="feat-grid">
+      <div class="feat">
+        <div class="f-icon fi-blue"><svg class="icon" viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 0 1-.557 1.392l-2.5-1A.751.751 0 0 1 7 8.25v-3.5a.75.75 0 0 1 1.5 0Z"/></svg></div>
+        <h3>Real Chromium engine</h3>
+        <p>Compiled from the upstream Chromium source (pinned stable baseline) — the genuine Brave / Vivaldi / Kiwi class. Never Android WebView.</p>
+      </div>
+      <div class="feat">
+        <div class="f-icon fi-green"><svg class="icon" viewBox="0 0 16 16"><path d="M8.533.133a1.75 1.75 0 0 0-1.066 0l-5.25 1.68A1.75 1.75 0 0 0 1 3.48V7c0 1.566.32 3.182 1.303 4.682.983 1.498 2.585 2.813 5.032 3.855a1.697 1.697 0 0 0 1.33 0c2.447-1.042 4.049-2.357 5.032-3.855C14.68 10.182 15 8.566 15 7V3.48a1.75 1.75 0 0 0-1.217-1.667Zm.61 12.083c-.867 1.32-2.254 2.5-4.39 3.443a.2.2 0 0 1-.155 0c-2.136-.943-3.523-2.122-4.39-3.443C1.408 10.94 1.25 9.62 1.25 7V3.48c0-.252.16-.466.394-.545l5.25-1.68a.25.25 0 0 1 .154 0l5.25 1.68c.234.079.394.293.394.545V7c0 2.62-.158 3.94-.699 5.216Z"/></svg></div>
+        <h3>Ad &amp; tracker blocking</h3>
+        <p>EasyList-family filter engine with cosmetic filtering, per-site allowlists, and a combined URL matcher verified <b>165–259× faster</b>.</p>
+      </div>
+      <div class="feat">
+        <div class="f-icon fi-purple"><svg class="icon" viewBox="0 0 16 16"><path d="m8.878.392 5.25 3.045c.54.314.872.89.872 1.514v6.098a1.75 1.75 0 0 1-.872 1.514l-5.25 3.045a1.75 1.75 0 0 1-1.756 0l-5.25-3.045A1.75 1.75 0 0 1 1 11.049V4.951c0-.624.332-1.201.872-1.514L7.122.392a1.75 1.75 0 0 1 1.756 0ZM7.875 1.69l-4.63 2.685L8 7.133l4.755-2.758-4.63-2.685a.248.248 0 0 0-.25 0Z"/></svg></div>
+        <h3>Extensions</h3>
+        <p>A full extension lifecycle — install, review, enable/disable, update with consent, remove — with recorded permission reviews.</p>
+      </div>
+      <div class="feat">
+        <div class="f-icon fi-amber"><svg class="icon" viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 0 1-.557 1.392l-2.5-1A.751.751 0 0 1 7 8.25v-3.5a.75.75 0 0 1 1.5 0Z"/></svg></div>
+        <h3>Offline library</h3>
+        <p>Save pages for later with real byte quotas, LRU eviction, pinned favorites and atomic storage — no phantom offline files.</p>
+      </div>
+      <div class="feat">
+        <div class="f-icon fi-pink"><svg class="icon" viewBox="0 0 16 16"><path d="M4.25 2.5c-1.336 0-2.75 1.164-2.75 3 0 2.15 1.58 4.144 3.365 5.682A20.565 20.565 0 0 0 8 13.393a20.561 20.561 0 0 0 3.135-2.211C12.92 9.644 14.5 7.65 14.5 5.5c0-1.836-1.414-3-2.75-3-1.373 0-2.609.986-3.029 2.456a.749.749 0 0 1-1.442 0C6.859 3.486 5.623 2.5 4.25 2.5Z"/></svg></div>
+        <h3>Privacy by default</h3>
+        <p>Tracking protection is on from the first launch, with a Security Center model and clear per-site statistics.</p>
+      </div>
+      <div class="feat">
+        <div class="f-icon fi-blue"><svg class="icon" viewBox="0 0 16 16"><path d="M4.72 3.22a.75.75 0 0 1 1.06 1.06L2.06 8l3.72 3.72a.749.749 0 0 1-.018 1.042.749.749 0 0 1-1.042.018l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25Zm6.56 0a.75.75 0 1 0-1.06 1.06L13.94 8l-3.72 3.72a.749.749 0 0 0 .018 1.042.749.749 0 0 0 1.042.018l4.25-4.25a.75.75 0 0 0 0-1.06l-4.25-4.25Z"/></svg></div>
+        <h3>Built for the long run</h3>
+        <p>A tracked 24-patch series on pinned upstream tags keeps our changes reviewable and rebase-friendly — no giant unmaintainable fork.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== ENGINE / COMPARE ===================== -->
+<section id="engine" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="kicker">Architectural identity</div>
+      <h2>WebView wrapper vs. real Chromium-derived.</h2>
+      <p>Most "browsers" on the store are a thin skin over Android's WebView. iNWEB Browser belongs to a different category entirely.</p>
+    </div>
+    <div class="compare">
+      <div class="cmp-grid">
+        <div class="cmp-col wrap-col cmp-no">
+          <h3><span class="cmp-tag">Typical wrapper</span> WebView shell</h3>
+          <ul>
+            <li><svg class="icon" viewBox="0 0 16 16"><path d="M2.343 13.657A8 8 0 0 1 13.658 2.343 8 8 0 0 1 2.343 13.657ZM6.03 4.97a.751.751 0 0 0-1.042.018.751.751 0 0 0-.018 1.042L6.94 8 4.97 9.97a.749.749 0 0 0 .018 1.042.749.749 0 0 0 1.042.018L8 9.06l1.97 1.97a.749.749 0 0 0 1.042-.018.749.749 0 0 0 .018-1.042L9.06 8l1.97-1.97a.749.749 0 0 0-.018-1.042.749.749 0 0 0-1.042-.018L8 6.94Z"/></svg>Rebranded system WebView (Chromium-lite, frozen features)</li>
+            <li><svg class="icon" viewBox="0 0 16 16"><path d="M2.343 13.657A8 8 0 0 1 13.658 2.343 8 8 0 0 1 2.343 13.657ZM6.03 4.97a.751.751 0 0 0-1.042.018.751.751 0 0 0-.018 1.042L6.94 8 4.97 9.97a.749.749 0 0 0 .018 1.042.749.749 0 0 0 1.042.018L8 9.06l1.97 1.97a.749.749 0 0 0 1.042-.018.749.749 0 0 0 .018-1.042L9.06 8l1.97-1.97a.749.749 0 0 0-.018-1.042.749.749 0 0 0-1.042-.018L8 6.94Z"/></svg>Engine updates depend on the device's OS version</li>
+            <li><svg class="icon" viewBox="0 0 16 16"><path d="M2.343 13.657A8 8 0 0 1 13.658 2.343 8 8 0 0 1 2.343 13.657ZM6.03 4.97a.751.751 0 0 0-1.042.018.751.751 0 0 0-.018 1.042L6.94 8 4.97 9.97a.749.749 0 0 0 .018 1.042.749.749 0 0 0 1.042.018L8 9.06l1.97 1.97a.749.749 0 0 0 1.042-.018.749.749 0 0 0 .018-1.042L9.06 8l1.97-1.97a.749.749 0 0 0-.018-1.042.749.749 0 0 0-1.042-.018L8 6.94Z"/></svg>Limited rendering control, weak privacy guarantees</li>
+            <li><svg class="icon" viewBox="0 0 16 16"><path d="M2.343 13.657A8 8 0 0 1 13.658 2.343 8 8 0 0 1 2.343 13.657ZM6.03 4.97a.751.751 0 0 0-1.042.018.751.751 0 0 0-.018 1.042L6.94 8 4.97 9.97a.749.749 0 0 0 .018 1.042.749.749 0 0 0 1.042.018L8 9.06l1.97 1.97a.749.749 0 0 0 1.042-.018.749.749 0 0 0 .018-1.042L9.06 8l1.97-1.97a.749.749 0 0 0-.018-1.042.749.749 0 0 0-1.042-.018L8 6.94Z"/></svg>Cannot ship real Chromium features (flags, extensions, network stack)</li>
+          </ul>
+        </div>
+        <div class="cmp-col inweb-col cmp-yes">
+          <h3><span class="cmp-tag">iNWEB Browser</span> Chromium source build</h3>
+          <ul>
+            <li><svg class="icon" viewBox="0 0 16 16"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L1.72 8.78a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"/></svg>Full Chromium source — pinned upstream stable <b style="color:var(--text)">&nbsp;154.0.8037.21</b></li>
+            <li><svg class="icon" viewBox="0 0 16 16"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L1.72 8.78a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"/></svg>Engine evolves on our schedule via tracked patch overlay (ADR-001)</li>
+            <li><svg class="icon" viewBox="0 0 16 16"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L1.72 8.78a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"/></svg>Deep privacy modifications at the engine level — not site scripts</li>
+            <li><svg class="icon" viewBox="0 0 16 16"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L1.72 8.78a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"/></svg>Material 3 app layer in Kotlin, unit-tested core modules</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== ENGINEERING ===================== -->
+<section id="engineering" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="kicker">Engineering</div>
+      <h2>Tested core, transparent process.</h2>
+      <p>Every core module ships with unit tests. Development status is public in the repository.</p>
+    </div>
+    <div class="eng-grid">
+      <div class="eng-card">
+        <h3>🧪 Core modules — unit-tested</h3>
+        <div class="mod">
+          <span class="m-name">Browser shell<small>Tabs · omnibox · session · history · bookmarks · downloads · settings</small></span>
+          <span class="m-tests">150 tests</span>
+        </div>
+        <div class="mod">
+          <span class="m-name">Tracking protection<small>EasyList-family parser · cosmetic filtering · Security Center</small></span>
+          <span class="m-tests">116 tests</span>
+        </div>
+        <div class="mod">
+          <span class="m-name">Extensions<small>Install/review lifecycle · versioning · permission records</small></span>
+          <span class="m-tests">17 tests</span>
+        </div>
+        <div class="mod">
+          <span class="m-name">VPN core<small>Connection model &amp; state management</small></span>
+          <span class="m-tests">17 tests</span>
+        </div>
+        <div class="mod">
+          <span class="m-name">Offline library<small>Byte quota · LRU eviction · pinning · atomic persistence</small></span>
+          <span class="m-tests">15 tests</span>
+        </div>
+      </div>
+      <div class="eng-card">
+        <h3>📌 Facts &amp; status</h3>
+        <div class="facts">
+          <div class="fact">
+            <svg class="icon" viewBox="0 0 16 16"><path d="M9.598 1.591a.749.749 0 0 1 .785-.175 7.001 7.001 0 1 1-8.967 8.967.75.75 0 0 1 .961-.96 5.5 5.5 0 0 0 7.046-7.046.75.75 0 0 1 .175-.786Z"/></svg>
+            <div><b>Chromium baseline</b><span>Pinned upstream Android stable <code class="inline">154.0.8037.21</code> (2026-09-12)</span></div>
+          </div>
+          <div class="fact">
+            <svg class="icon" viewBox="0 0 16 16"><path d="M1.5 1.75V13.5h13.75a.75.75 0 0 1 0 1.5H.75a.75.75 0 0 1-.75-.75V1.75a.75.75 0 0 1 1.5 0Zm14.28 2.53-5.25 5.25a.75.75 0 0 1-1.06 0L7 7.06 4.28 9.78a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042l3.25-3.25a.75.75 0 0 1 1.06 0L10 7.94l4.72-4.72a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042Z"/></svg>
+            <div><b>Development phase</b><span>Stage 2 — iNWEB patch series authoring (4/24 patches)</span></div>
+          </div>
+          <div class="fact">
+            <svg class="icon" viewBox="0 0 16 16"><path d="M11.93 8.5a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5Zm-1.43-.75a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Z"/></svg>
+            <div><b>315 unit tests</b><span>Across five core modules, running on every change</span></div>
+          </div>
+          <div class="fact">
+            <svg class="icon" viewBox="0 0 16 16"><path d="M4.72 3.22a.75.75 0 0 1 1.06 1.06L2.06 8l3.72 3.72a.749.749 0 0 1-.018 1.042.749.749 0 0 1-1.042.018l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25Zm6.56 0a.75.75 0 1 0-1.06 1.06L13.94 8l-3.72 3.72a.749.749 0 0 0 .018 1.042.749.749 0 0 0 1.042.018l4.25-4.25a.75.75 0 0 0 0-1.06l-4.25-4.25Z"/></svg>
+            <div><b>Fork strategy</b><span>Tracked iNWEB patch overlay on pinned upstream tags (ADR-001)</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== DOWNLOAD ===================== -->
+<section id="download" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="kicker">Download</div>
+      <h2>Try the alpha.</h2>
+      <p>Early builds are published on GitHub Releases. This is pre-release software — expect rough edges and rapid iteration.</p>
+    </div>
+    <div class="dl-wrap">
+      <div class="dl-card">
+        <span class="ver">⬇ Latest pre-release</span>
+        <h3>v1.0.0-alpha.2</h3>
+        <p class="dl-note">Published 2026-09-24 · APK from the official GitHub Releases page only.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn btn-primary" href="https://github.com/iNWEB-Official/iNWEB-Browser/releases/tag/v1.0.0-alpha.2">Download APK</a>
+          <a class="btn" href="https://github.com/iNWEB-Official/iNWEB-Browser/releases">All releases</a>
+        </div>
+        <p class="dl-note">🔒 Tip: verify you're on <code class="inline">github.com/iNWEB-Official</code> before installing any APK.</p>
+      </div>
+      <div class="dl-card">
+        <h3>Release history</h3>
+        <ul class="rel-list">
+          <li><a href="https://github.com/iNWEB-Official/iNWEB-Browser/releases/tag/v1.0.0-alpha.2"><span>v1.0.0-alpha.2</span><span class="date">Sep 24, 2026</span></a></li>
+          <li><a href="https://github.com/iNWEB-Official/iNWEB-Browser/releases/tag/v1.0.0-alpha.1"><span>v1.0.0-alpha.1 — First APK (Engine Baseline)</span><span class="date">Sep 22, 2026</span></a></li>
+        </ul>
+        <p class="dl-note">🛠 Building from source? Clone the repo and follow the README — the patch series keeps every change inspectable.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FAQ ===================== -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head" style="margin-left:auto;margin-right:auto;text-align:center">
+      <div class="kicker">FAQ</div>
+      <h2>Common questions</h2>
+    </div>
+    <div class="faq">
+      <details>
+        <summary>Is iNWEB Browser just another WebView wrapper? <span class="chev">▾</span></summary>
+        <div class="a">No — and this is the project's non-negotiable architectural identity. It is compiled from the upstream Chromium source code with a tracked patch series, exactly like Brave, Vivaldi or Kiwi. The engine is never Android WebView, and no build step is allowed to turn it into one.</div>
+      </details>
+      <details>
+        <summary>Is the ad blocker a real filter engine? <span class="chev">▾</span></summary>
+        <div class="a">Yes. It parses EasyList-family filter lists, supports cosmetic filtering, per-site allowlists and statistics, and uses a combined URL matcher that is equivalence-verified to be 165–259× faster than naive matching. Filter lists are cached with SHA-256 content pinning.</div>
+      </details>
+      <details>
+        <summary>When is the stable version coming? <span class="chev">▾</span></summary>
+        <div class="a">The project is in Stage 2 (patch-series authoring) of its roadmap, with 4 of 24 patches complete and the engine baseline already shipped as alpha. Watch the repository or follow the releases page to catch new builds early.</div>
+      </details>
+      <details>
+        <summary>How can I contribute or report a bug? <span class="chev">▾</span></summary>
+        <div class="a">Head to the <a href="https://github.com/iNWEB-Official/iNWEB-Browser">GitHub repository</a> — open an issue for bugs or ideas. For security-sensitive reports, please use GitHub's private vulnerability reporting instead of a public issue.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== CTA BAND ===================== -->
+<div class="band">
+  <div class="band-in">
+    <h2>Star the project ⭐ · Watch the releases 👀</h2>
+    <p>iNWEB Browser is developed in the open by iNWEB Official — Pabna, Bangladesh.</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <a class="btn btn-primary" href="https://github.com/iNWEB-Official/iNWEB-Browser">Open GitHub repository</a>
+      <a class="btn btn-ghost" href="https://github.com/iNWEB-Official">iNWEB Official →</a>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== FOOTER ===================== -->
+<footer>
+  <div class="wrap foot-in">
+    <span>© 2026 <b>iNWEB Official</b> · iNWEB Browser site · Chromium is a trademark of Google LLC (this project is unaffiliated)</span>
+    <nav class="foot-links" aria-label="Footer">
+      <a href="https://github.com/iNWEB-Official/iNWEB-Browser">GitHub</a>
+      <a href="https://github.com/iNWEB-Official/iNWEB-Browser/releases">Releases</a>
+      <a href="https://inweb-official.github.io">Organization site</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var root=document.documentElement,btn=document.getElementById('themeToggle'),ic=document.getElementById('themeIcon');
+  var moon='<path d="M9.598 1.591a.749.749 0 0 1 .785-.175 7.001 7.001 0 1 1-8.967 8.967.75.75 0 0 1 .961-.96 5.5 5.5 0 0 0 7.046-7.046.75.75 0 0 1 .175-.786Zm1.616 1.945a7 7 0 0 1-7.678 7.678 5.499 5.499 0 1 0 7.678-7.678Z"/>';
+  var sun='<path d="M8 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-1.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm5.657-8.157a.75.75 0 0 1 0 1.061l-1.061 1.06a.749.749 0 1 1-1.06-1.06l1.06-1.06a.75.75 0 0 1 1.06 0Zm-9.193 9.193a.75.75 0 0 1 0 1.06l-1.06 1.061a.75.75 0 1 1-1.061-1.06l1.06-1.061a.75.75 0 0 1 1.061 0ZM8 0a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0V.75A.75.75 0 0 1 8 0ZM3 8a.75.75 0 0 1-.75.75H.75a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 3 8Zm13 0a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 16 8ZM8 13a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 8 13ZM2.343 2.343a.75.75 0 0 1 1.061 0l1.06 1.061a.751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018l-1.06-1.06a.75.75 0 0 1 0-1.06Zm9.193 9.193a.75.75 0 0 1 1.06 0l1.061 1.06a.751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018l-1.06-1.06a.75.75 0 0 1 0-1.06Z"/>';
+  btn.addEventListener('click',function(){
+    var dark=root.getAttribute('data-theme')==='dark';
+    root.setAttribute('data-theme',dark?'light':'dark');
+    ic.innerHTML=dark?sun:moon;
+  });
+  document.querySelectorAll('details').forEach(function(d){
+    d.addEventListener('toggle',function(){
+      if(d.open) document.querySelectorAll('details').forEach(function(o){if(o!==d)o.open=false});
+    });
+  });
+})();
+</script>
+</body>
+</html>
